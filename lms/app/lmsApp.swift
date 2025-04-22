@@ -10,7 +10,12 @@ import SwiftUI
 @main
 struct lmsApp: App {
     @StateObject private var themeManager = ThemeManager()
+    @StateObject private var networkMonitor = NetworkMonitor.shared
     @Environment(\.colorScheme) private var colorScheme
+
+    init() {
+        _ = NetworkMonitor.shared
+    }
     
     var body: some Scene {
         WindowGroup {
