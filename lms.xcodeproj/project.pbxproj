@@ -6,6 +6,16 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		9D45B7C62DB7C61C001FB1A6 /* DotLottie in Frameworks */ = {isa = PBXBuildFile; productRef = 9D45B7C52DB7C61C001FB1A6 /* DotLottie */; };
+		9D45B7C92DB7C653001FB1A6 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 9D45B7C82DB7C653001FB1A6 /* Auth */; };
+		9D45B7CB2DB7C653001FB1A6 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 9D45B7CA2DB7C653001FB1A6 /* Functions */; };
+		9D45B7CD2DB7C653001FB1A6 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 9D45B7CC2DB7C653001FB1A6 /* PostgREST */; };
+		9D45B7CF2DB7C653001FB1A6 /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 9D45B7CE2DB7C653001FB1A6 /* Realtime */; };
+		9D45B7D12DB7C653001FB1A6 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 9D45B7D02DB7C653001FB1A6 /* Storage */; };
+		9D45B7D32DB7C653001FB1A6 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 9D45B7D22DB7C653001FB1A6 /* Supabase */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		9D18190F2DB1775900BD3489 /* lms.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = lms.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +33,13 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9D45B7D32DB7C653001FB1A6 /* Supabase in Frameworks */,
+				9D45B7D12DB7C653001FB1A6 /* Storage in Frameworks */,
+				9D45B7CD2DB7C653001FB1A6 /* PostgREST in Frameworks */,
+				9D45B7CB2DB7C653001FB1A6 /* Functions in Frameworks */,
+				9D45B7C92DB7C653001FB1A6 /* Auth in Frameworks */,
+				9D45B7CF2DB7C653001FB1A6 /* Realtime in Frameworks */,
+				9D45B7C62DB7C61C001FB1A6 /* DotLottie in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +82,13 @@
 			);
 			name = lms;
 			packageProductDependencies = (
+				9D45B7C52DB7C61C001FB1A6 /* DotLottie */,
+				9D45B7C82DB7C653001FB1A6 /* Auth */,
+				9D45B7CA2DB7C653001FB1A6 /* Functions */,
+				9D45B7CC2DB7C653001FB1A6 /* PostgREST */,
+				9D45B7CE2DB7C653001FB1A6 /* Realtime */,
+				9D45B7D02DB7C653001FB1A6 /* Storage */,
+				9D45B7D22DB7C653001FB1A6 /* Supabase */,
 			);
 			productName = lms;
 			productReference = 9D18190F2DB1775900BD3489 /* lms.app */;
@@ -94,6 +118,10 @@
 			);
 			mainGroup = 9D1819062DB1775900BD3489;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				9D45B7C42DB7C61C001FB1A6 /* XCRemoteSwiftPackageReference "dotlottie-ios" */,
+				9D45B7C72DB7C653001FB1A6 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 9D1819102DB1775900BD3489 /* Products */;
 			projectDirPath = "";
@@ -330,6 +358,63 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		9D45B7C42DB7C61C001FB1A6 /* XCRemoteSwiftPackageReference "dotlottie-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/LottieFiles/dotlottie-ios";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+		9D45B7C72DB7C653001FB1A6 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		9D45B7C52DB7C61C001FB1A6 /* DotLottie */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9D45B7C42DB7C61C001FB1A6 /* XCRemoteSwiftPackageReference "dotlottie-ios" */;
+			productName = DotLottie;
+		};
+		9D45B7C82DB7C653001FB1A6 /* Auth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9D45B7C72DB7C653001FB1A6 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Auth;
+		};
+		9D45B7CA2DB7C653001FB1A6 /* Functions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9D45B7C72DB7C653001FB1A6 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Functions;
+		};
+		9D45B7CC2DB7C653001FB1A6 /* PostgREST */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9D45B7C72DB7C653001FB1A6 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = PostgREST;
+		};
+		9D45B7CE2DB7C653001FB1A6 /* Realtime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9D45B7C72DB7C653001FB1A6 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Realtime;
+		};
+		9D45B7D02DB7C653001FB1A6 /* Storage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9D45B7C72DB7C653001FB1A6 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Storage;
+		};
+		9D45B7D22DB7C653001FB1A6 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9D45B7C72DB7C653001FB1A6 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 9D1819072DB1775900BD3489 /* Project object */;
 }
