@@ -16,7 +16,11 @@ extension Color {
     }
     
     static func background(for colorScheme: ColorScheme) -> Color {
-        colorScheme == .dark ? Color(hex: ColorConstants.darkAccent) : Color(hex: ColorConstants.lightAccent)
+        colorScheme == .dark ? Color(hex: ColorConstants.darkBackground1) : Color(hex: ColorConstants.lightBackground1)
+    }
+    
+    static func TabbarBackground(for colorScheme: ColorScheme) -> Color {
+        colorScheme == .dark ? Color(hex: ColorConstants.darkBackground) : Color(hex: ColorConstants.lightBackground)
     }
     
     static func primary(for colorScheme: ColorScheme) -> Color {
