@@ -8,6 +8,7 @@
 import Foundation
 
 enum ColorConstants {
+    static let hello = "hello"
     // Light Theme Colors
     static let lightText = "#212121"
     static let lightBackground = "#fafafa"
