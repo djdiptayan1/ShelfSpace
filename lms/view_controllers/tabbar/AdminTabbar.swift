@@ -15,8 +15,13 @@ struct AdminTabbar: View {
         TabView(selection: $selectedTab) {
             HomeViewAdmin()
                 .tabItem {
-                    Image(systemName: "book.closed")
+                    Image(systemName: "house")
                     Text("Dashboard")
+                }
+            BookViewAdmin()
+                .tabItem {
+                    Image(systemName: "book.closed")
+                    Text("Books")
                 }
 
             UsersViewAdmin()
@@ -71,36 +76,4 @@ struct AdminTabbar_Previews: PreviewProvider {
                 .previewDisplayName("Dark Mode")
         }
     }
-}
-
-// Placeholder Views
-struct HomeViewAdmin: View {
-    var body: some View {
-        NavigationView {
-            Text("Home Screen Admin")
-                .navigationTitle("Home")
-        }
-    }
-}
-
-struct UsersViewAdmin: View {
-    var body: some View {
-        NavigationView {
-            Text("Users Screen Admin")
-                .navigationTitle("Users")
-        }
-    }
-}
-
-struct ManagePoliciesAdmin: View {
-    var body: some View {
-        NavigationView {
-            Text("Manage policies Screen Admin")
-                .navigationTitle("Manage")
-        }
-    }
-}
-
-#Preview {
-    AdminTabbar()
 }
