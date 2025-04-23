@@ -9,6 +9,7 @@ xcuserdata/
 *.xcscmblueprint
 *.xccheckout
 
+
 ## Xcode Patch
 *.xcodeproj/*
 !*.xcodeproj/project.pbxproj

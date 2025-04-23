@@ -186,7 +186,7 @@ struct LoginView: View {
                     autoplay: true,
                     loop: true,
                     mode: .bounce,
-                    speed: 1.0,
+                    speed: 1.0
                 )
             )
             .view()
