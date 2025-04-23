@@ -18,25 +18,24 @@ enum LoginError: Error {
 
 class LoginManager {
     static let shared = LoginManager()
-    
+
     private init() {}
-    
+
     func login(email: String, password: String) async throws -> (User, UserRole) {
         do {
             // Sign in with Supabase
             let response = try await supabase.auth.signIn(email: email, password: password)
-            
+
             // Store the JWT token in Keychain
             let accessToken = response.accessToken
             print("Access Token: \(accessToken)")
             try KeychainManager.shared.saveToken(accessToken)
 
-            
             // Get user's role from the database
             struct RoleResponse: Codable {
                 let role: UserRole
             }
-            
+
             let roleResponse: RoleResponse = try await supabase
                 .from("user_roles")
                 .select("role")
@@ -44,7 +43,7 @@ class LoginManager {
                 .single()
                 .execute()
                 .value
-            
+
             // Get user's metadata - proper handling of optional JSON
             let metadata = response.user.userMetadata
             let name: String
@@ -54,7 +53,7 @@ class LoginManager {
             } else {
                 name = email
             }
-            
+
             // Create User object
             let user = User(
                 id: response.user.id,
@@ -62,7 +61,7 @@ class LoginManager {
                 role: roleResponse.role,
                 name: name
             )
-            
+
             return (user, roleResponse.role)
         } catch {
             print("Login error: \(error)")
@@ -74,24 +73,24 @@ class LoginManager {
             throw LoginError.invalidCredentials
         }
     }
-    
+
     func signOut() async throws {
         // Delete the token from Keychain
         try KeychainManager.shared.deleteToken()
         // Sign out from Supabase
         try await supabase.auth.signOut()
     }
-    
+
     func getCurrentUser() async throws -> User? {
         do {
             let session = try await supabase.auth.session
             if session.user == nil { return nil }
             let sessionUser = session.user
-            
+
             struct RoleResponse: Codable {
                 let role: UserRole
             }
-            
+
             let roleResponse: RoleResponse = try await supabase
                 .from("user_roles")
                 .select("role")
@@ -99,7 +98,7 @@ class LoginManager {
                 .single()
                 .execute()
                 .value
-            
+
             let metadata = sessionUser.userMetadata
             let name: String
             if let nameValue = metadata["name"],
@@ -108,7 +107,7 @@ class LoginManager {
             } else {
                 name = sessionUser.email ?? "Unknown User"
             }
-            
+
             return User(
                 id: sessionUser.id,
                 email: sessionUser.email ?? "unknown@example.com",
@@ -120,7 +119,7 @@ class LoginManager {
             return nil
         }
     }
-    
+
     // Helper function to get the current JWT token
     func getCurrentToken() throws -> String {
         return try KeychainManager.shared.getToken()
