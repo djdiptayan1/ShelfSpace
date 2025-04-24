@@ -2,7 +2,7 @@
 //  librarianTabbar.swift
 //  lms
 //
-//  Created by Diptayan Jash on 18/04/25.
+//  Created by Navdeep on 24/04/25.
 //
 
 import Foundation
@@ -14,7 +14,7 @@ struct UserTabbar: View {
     @StateObject private var themeManager = ThemeManager()
     var body: some View {
         TabView(selection: $selectedTab) {
-            HomeViewUser()
+            HomeView()
                 .tag(0)
                 .tabItem {
                     Image(systemName: "house")
@@ -25,7 +25,7 @@ struct UserTabbar: View {
                 .tag(1)
                 .tabItem {
                     Image(systemName: "books.vertical.fill")
-                    Text("Collections")
+                    Text("My Books")
                 }
         }
         .accentColor(Color.primary(for: colorScheme))
@@ -56,14 +56,14 @@ struct UserTabbar: View {
     }
 }
 
-struct HomeViewUser: View {
-    var body: some View {
-        NavigationView {
-            Text("Home Screen user")
-                .navigationTitle("Home")
-        }
-    }
-}
+//struct HomeViewUser: View {
+//    var body: some View {
+//        NavigationView {
+//            Text("Home Screen user")
+//                .navigationTitle("Home")
+//        }
+//    }
+//}
 
 struct BookCollectionuser: View {
     var body: some View {
