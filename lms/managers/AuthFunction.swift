@@ -37,9 +37,11 @@ class LoginManager {
             }
 
             let roleResponse: RoleResponse = try await supabase
-                .from("user_roles")
+//                .from("user_roles")
+                .from("users")
                 .select("role")
-                .eq("id", value: response.user.id)
+//                .eq("id", value: response.user.id)
+                .eq("user_id", value: response.user.id)
                 .single()
                 .execute()
                 .value
@@ -92,9 +94,11 @@ class LoginManager {
             }
 
             let roleResponse: RoleResponse = try await supabase
-                .from("user_roles")
+//                .from("user_roles")
+                .from("users")
                 .select("role")
-                .eq("id", value: sessionUser.id)
+//                .eq("id", value: sessionUser.id)
+                .eq("user_id", value: sessionUser.id)
                 .single()
                 .execute()
                 .value
