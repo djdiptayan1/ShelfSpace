@@ -6,13 +6,14 @@
 //
 
 import Foundation
-import Foundation
 
 struct BookModel: Identifiable, Codable {
     let id: UUID                    // book_id
     let libraryId: UUID            // library_id
 
     let title: String              // title
+    let coverImageUrl: String?     // URL for cloud storage
+    let coverImageData: Data?      // Local image data
     let isbn: String?              // isbn
     let description: String?       // description
 
@@ -21,7 +22,7 @@ struct BookModel: Identifiable, Codable {
     let reservedCopies: Int?       // reserved_copies (optional with default 0)
 
     let authorIds: [UUID]          // author_ids
-    let authorNames: [String]       // author_names
+    let authorNames: [String]      // author_names
     let genreIds: [UUID]           // genre_ids
 
     let publishedDate: Date?       // published_date
@@ -31,6 +32,8 @@ struct BookModel: Identifiable, Codable {
         case id = "book_id"
         case libraryId = "library_id"
         case title
+        case coverImageUrl = "cover_image_url"
+        case coverImageData = "cover_image_data"
         case isbn
         case description
         case totalCopies = "total_copies"

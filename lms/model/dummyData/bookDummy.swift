@@ -12,6 +12,8 @@ let demoBooks: [BookModel] = [
         id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
         libraryId: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
         title: "The Swift Programming Language",
+        coverImageUrl: "https://images.apple.com/books/images/swift-book-cover-large.jpg",
+        coverImageData: nil,
         isbn: "9781491949863",
         description: "An in-depth guide to the Swift language by Apple.",
         totalCopies: 10,
@@ -27,6 +29,8 @@ let demoBooks: [BookModel] = [
         id: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!,
         libraryId: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
         title: "SwiftUI Essentials",
+        coverImageUrl: "https://images.apple.com/books/images/swift-book-cover-large.jpg",
+        coverImageData: nil,
         isbn: "9781950325022",
         description: "Learn how to build beautiful and modern UIs using SwiftUI.",
         totalCopies: 8,
@@ -42,6 +46,8 @@ let demoBooks: [BookModel] = [
         id: UUID(uuidString: "33333333-3333-3333-3333-333333333333")!,
         libraryId: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
         title: "Mastering Combine",
+        coverImageUrl: "https://images.apple.com/books/images/swift-book-cover-large.jpg",
+        coverImageData: nil,
         isbn: "9781098119443",
         description: "Understand reactive programming in Swift using Combine.",
         totalCopies: 6,
@@ -57,6 +63,8 @@ let demoBooks: [BookModel] = [
         id: UUID(uuidString: "44444444-4444-4444-4444-444444444444")!,
         libraryId: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
         title: "iOS Development with Swift",
+        coverImageUrl: "https://images.apple.com/books/images/swift-book-cover-large.jpg",
+        coverImageData: nil,
         isbn: "9780135264027",
         description: "Everything you need to start building iOS apps using Swift.",
         totalCopies: 12,
@@ -72,6 +80,8 @@ let demoBooks: [BookModel] = [
         id: UUID(uuidString: "55555555-5555-5555-5555-555555555555")!,
         libraryId: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
         title: "Advanced Swift",
+        coverImageUrl: "https://images.apple.com/books/images/swift-book-cover-large.jpg",
+        coverImageData: nil,
         isbn: "9780983066989",
         description: "A deep dive into advanced Swift programming topics.",
         totalCopies: 5,
@@ -86,4 +96,4 @@ let demoBooks: [BookModel] = [
         publishedDate: ISO8601DateFormatter().date(from: "2019-09-15T00:00:00Z"),
         addedOn: ISO8601DateFormatter().date(from: "2025-04-23T08:00:00Z")
     )
-]
+] 

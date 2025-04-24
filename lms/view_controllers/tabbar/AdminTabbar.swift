@@ -14,23 +14,27 @@ struct AdminTabbar: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             HomeViewAdmin()
+                .tag(0)
                 .tabItem {
                     Image(systemName: "house")
                     Text("Dashboard")
                 }
             BookViewAdmin()
+                .tag(1)
                 .tabItem {
                     Image(systemName: "book.closed")
                     Text("Books")
                 }
 
             UsersViewAdmin()
+                .tag(2)
                 .tabItem {
                     Image(systemName: "person.2.fill")
                     Text("Users")
                 }
 
             ManagePoliciesAdmin()
+                .tag(3)
                 .tabItem {
                     Image(systemName: "document.badge.gearshape.fill")
                     Text("Policies")

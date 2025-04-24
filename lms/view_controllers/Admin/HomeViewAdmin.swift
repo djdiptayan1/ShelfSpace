@@ -9,10 +9,14 @@ import Foundation
 import SwiftUI
 
 struct HomeViewAdmin: View {
+    @Environment(\.colorScheme) private var colorScheme
     var body: some View {
         NavigationView {
-            Text("Home Screen Admin")
-                .navigationTitle("Home")
+            ZStack{
+                ReusableBackground(colorScheme: colorScheme)
+                Text("Home Screen Admin")
+                    .navigationTitle("Home")
+            }
         }
     }
 }

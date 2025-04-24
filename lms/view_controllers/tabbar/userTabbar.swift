@@ -15,12 +15,14 @@ struct UserTabbar: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             HomeViewUser()
+                .tag(0)
                 .tabItem {
                     Image(systemName: "house")
                     Text("Home")
                 }
 
             BookCollectionuser()
+                .tag(1)
                 .tabItem {
                     Image(systemName: "books.vertical.fill")
                     Text("Collections")
