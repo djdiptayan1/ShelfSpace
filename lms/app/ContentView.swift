@@ -12,22 +12,6 @@ struct ContentView: View {
     @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
-//        NavigationView {
-//            VStack(spacing: 20) {
-//                Text("Library Management System")
-//                    .font(.title)
-//                    .foregroundColor(.text(for: colorScheme))
-//                
-//                Image(systemName: "book.fill")
-//                    .font(.system(size: 60))
-//                    .foregroundColor(.primary(for: colorScheme))
-//                
-//                Text("Welcome to your digital library")
-//                    .foregroundColor(.text(for: colorScheme))
-//            }
-//            .frame(maxWidth: .infinity, maxHeight: .infinity)
-//            .background(Color.background(for: colorScheme))
-//        }
         LoginView()
     }
 }
@@ -36,3 +20,5 @@ struct ContentView: View {
     ContentView()
         .environmentObject(ThemeManager())
 }
+
+
