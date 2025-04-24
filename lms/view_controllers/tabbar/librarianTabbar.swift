@@ -15,18 +15,21 @@ struct LibrarianTabbar: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             HomeViewlib()
+                .tag(0)
                 .tabItem {
                     Image(systemName: "book.closed")
                     Text("Books")
                 }
 
             UsersViewlib()
+                .tag(1)
                 .tabItem {
                     Image(systemName: "person.2.fill")
                     Text("Users")
                 }
 
             ManageViewlib()
+                .tag(2)
                 .tabItem {
                     Image(systemName: "tray.full.fill")
                     Text("Requests")
