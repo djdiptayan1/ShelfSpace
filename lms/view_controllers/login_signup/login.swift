@@ -328,7 +328,7 @@ struct LoginView: View {
 
         Task {
             do {
-                print("Attempting login for: \(state.email)")
+//                print("Attempting login for: \(state.email)")
                 let (user, role) = try await LoginManager.shared.login(email: state.email, password: state.password)
                 state.currentUser = user
 
