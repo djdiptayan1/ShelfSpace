@@ -78,7 +78,7 @@ struct LoginView: View {
                 ForgotPasswordView(colorScheme: colorScheme)
             }
             .sheet(isPresented: $state.showSignup) {
-                SignupView()
+                SignupContainerView()
             }
             .fullScreenCover(item: $state.destination) { destination in
                 switch destination {
@@ -104,6 +104,9 @@ struct LoginView: View {
             .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
                 guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene else { return }
                 self.isLandscape = windowScene.interfaceOrientation.isLandscape
+            }
+            .onTapGesture {
+                focusedField = nil
             }
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
@@ -234,8 +237,8 @@ struct LoginView: View {
                     iconName: "envelope.fill",
                     isSecure: false,
                     focusState: _focusedField,
-                    fieldType: .email,
-                    colorScheme: colorScheme
+                    colorScheme: colorScheme,
+                    fieldType: .email
                 )
                 .focused($focusedField, equals: .email)
                 .autocorrectionDisabled()
@@ -250,8 +253,7 @@ struct LoginView: View {
                     showSecureToggle: true,
                     secureToggleAction: { state.showPassword.toggle() },
                     focusState: _focusedField,
-                    fieldType: .password,
-                    colorScheme: colorScheme
+                    colorScheme: colorScheme, fieldType: .password
                 )
                 .focused($focusedField, equals: .password)
                 .textContentType(.password)
@@ -376,6 +378,8 @@ extension LoginError {
             return "An unknown error occurred. Please try again later."
         case .tokenError:
             return "Token error. Please log in again."
+        case .signupError(_):
+            return "Signup error. Please try again."
         }
     }
 }

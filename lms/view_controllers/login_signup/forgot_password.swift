@@ -8,7 +8,12 @@ struct ForgotPasswordView: View {
     @State private var showSuccessAlert = false
     @State private var showErrorAlert = false
     @State private var errorMessage = ""
+    @State private var focusedField: AuthFieldType?
     let colorScheme: ColorScheme
+    
+    enum AuthFieldType {
+        case email
+    }
     
     var body: some View {
         NavigationView {
@@ -113,6 +118,9 @@ struct ForgotPasswordView: View {
                     }
                 )
                 .navigationBarTitleDisplayMode(.inline)
+            }
+            .onTapGesture {
+                focusedField = nil
             }
         }
         .alert("Success", isPresented: $showSuccessAlert) {

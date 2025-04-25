@@ -7,7 +7,7 @@
 
 import Foundation
 import SwiftUI
-
+// Add this parameter to CustomTextField
 struct CustomTextField: View {
     @Binding var text: String
     let placeholder: String
@@ -16,15 +16,16 @@ struct CustomTextField: View {
     var showSecureToggle: Bool = false
     var secureToggleAction: (() -> Void)? = nil
     @FocusState var focusState: AuthFieldType?
-    let fieldType: AuthFieldType
     let colorScheme: ColorScheme
+    var keyboardType: UIKeyboardType = .default // Keep this parameter
+    let fieldType: AuthFieldType
     
     var body: some View {
         HStack(spacing: 12) {
             // Icon
             Image(systemName: iconName)
                 .font(.system(size: 16))
-                .foregroundColor(Color.text(for: colorScheme).opacity(0.5))
+                .foregroundColor(Color.accent(for: colorScheme))
                 .frame(width: 24)
             
             // Text input
@@ -36,7 +37,7 @@ struct CustomTextField: View {
                     TextField(placeholder, text: $text)
                         .textContentType(fieldType == .email ? .emailAddress : .none)
                         .textInputAutocapitalization(.never)
-                        .keyboardType(fieldType == .email ? .emailAddress : .default)
+                        .keyboardType(keyboardType) // Use the parameter here
                 }
             }
             .font(.system(size: 16, design: .rounded))

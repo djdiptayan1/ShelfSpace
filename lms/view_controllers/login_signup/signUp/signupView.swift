@@ -1,33 +1,19 @@
-//
-//  signup.swift
-//  lms
-//
-//  Created by Diptayan Jash on 17/04/25.
-//
-
-import Foundation
 import SwiftUI
 
-struct SignupView: View {
+struct signupView: View {
     @Environment(\.presentationMode) var presentationMode
-    @State private var email = ""
-    @State private var password = ""
-    @State private var confirmPassword = ""
+    @ObservedObject var viewModel: SignupModel
     @State private var showPassword = false
     @State private var showConfirmPassword = false
-    @State private var isSignupProcessing = false
-    @State private var showError = false
-    @State private var errorMessage = ""
-    @State private var selectedImage: UIImage?
     @State private var showImagePicker = false
     @FocusState private var focusedField: AuthFieldType?
     @Environment(\.colorScheme) private var colorScheme
-    
+
     var body: some View {
         GeometryReader { geometry in
             ZStack {
                 ReusableBackground(colorScheme: colorScheme)
-                
+
                 ScrollView {
                     VStack(spacing: 30) {
                         // Profile Image Section
@@ -36,8 +22,8 @@ struct SignupView: View {
                                 Circle()
                                     .fill(Color.primary(for: colorScheme).opacity(0.1))
                                     .frame(width: 120, height: 120)
-                                
-                                if let image = selectedImage {
+
+                                if let image = viewModel.selectedImage {
                                     Image(uiImage: image)
                                         .resizable()
                                         .scaledToFill()
@@ -48,7 +34,7 @@ struct SignupView: View {
                                         .font(.system(size: 60))
                                         .foregroundColor(Color.primary(for: colorScheme))
                                 }
-                                
+
                                 Button {
                                     showImagePicker = true
                                 } label: {
@@ -65,21 +51,20 @@ struct SignupView: View {
                             }
                         }
                         .padding(.bottom, 10)
-                        
+
                         Text("Create Account")
                             .font(.system(size: 28, weight: .bold, design: .rounded))
                             .foregroundColor(Color.text(for: colorScheme))
-                        
+
                         Text("Enter your details to get started")
                             .font(.system(size: 16, weight: .medium, design: .rounded))
                             .foregroundColor(Color.text(for: colorScheme).opacity(0.7))
                             .padding(.bottom, 20)
-                        
+
                         // Form Fields
                         VStack(spacing: 16) {
-                            // Email Field
                             CustomTextField(
-                                text: $email,
+                                text: $viewModel.email,
                                 placeholder: "Email ID",
                                 iconName: "envelope.fill",
                                 isSecure: false,
@@ -88,10 +73,9 @@ struct SignupView: View {
                                 fieldType: .email
                             )
                             .focused($focusedField, equals: .email)
-                            
-                            // Password Field
+
                             CustomTextField(
-                                text: $password,
+                                text: $viewModel.password,
                                 placeholder: "Password",
                                 iconName: "lock.fill",
                                 isSecure: !showPassword,
@@ -102,10 +86,9 @@ struct SignupView: View {
                                 fieldType: .password
                             )
                             .focused($focusedField, equals: .password)
-                            
-                            // Confirm Password Field
+
                             CustomTextField(
-                                text: $confirmPassword,
+                                text: $viewModel.confirmPassword,
                                 placeholder: "Confirm Password",
                                 iconName: "lock.fill",
                                 isSecure: !showConfirmPassword,
@@ -118,29 +101,39 @@ struct SignupView: View {
                             .focused($focusedField, equals: .confirmPassword)
                         }
                         .padding(.horizontal, 24)
-                        
-                        if showError {
-                            Text(errorMessage)
+
+                        if viewModel.showError {
+                            Text(viewModel.errorMessage)
                                 .font(.system(size: 14, design: .rounded))
                                 .foregroundColor(.red)
                                 .padding(.horizontal, 24)
                         }
-                        
+
                         Button {
                             withAnimation {
-                                signupAction()
+                                if viewModel.isStep1Valid {
+                                    viewModel.createAuthAccount { success in
+                                        
+                                        if success {
+                                            viewModel.nextStep()
+                                        }
+                                    }
+                                } else {
+                                    viewModel.errorMessage = "Please fill in all fields correctly."
+                                    viewModel.showError = true
+                                }
                             }
                         } label: {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 12)
                                     .fill(Color.secondary(for: colorScheme))
-                                
-                                if isSignupProcessing {
+
+                                if viewModel.isLoading {
                                     ProgressView()
                                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                         .scaleEffect(1.2)
                                 } else {
-                                    Text("Create Account")
+                                    Text("Continue")
                                         .font(.system(size: 16, weight: .semibold, design: .rounded))
                                         .foregroundColor(.white)
                                 }
@@ -148,9 +141,9 @@ struct SignupView: View {
                             .frame(height: 54)
                             .padding(.horizontal, 24)
                         }
-                        .disabled(isSignupProcessing || !isFormValid)
-                        .opacity(isFormValid ? 1 : 0.7)
-                        
+                        .disabled(viewModel.isLoading || !viewModel.isStep1Valid)
+                        .opacity(viewModel.isStep1Valid ? 1 : 0.7)
+
                         Spacer()
                     }
                     .padding(.top, geometry.size.height * 0.05)
@@ -158,20 +151,6 @@ struct SignupView: View {
                     .frame(minHeight: geometry.size.height)
                 }
             }
-            .navigationBarItems(
-                leading: Button(action: {
-                    presentationMode.wrappedValue.dismiss()
-                }) {
-                    Image(systemName: "arrow.left")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(Color.text(for: colorScheme))
-                        .padding(8)
-                        .background(
-                            Circle()
-                                .fill(Color.text(for: colorScheme).opacity(0.1))
-                        )
-                }
-            )
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
@@ -182,44 +161,11 @@ struct SignupView: View {
                 }
             }
             .sheet(isPresented: $showImagePicker) {
-                ImagePicker(image: $selectedImage)
+                ImagePicker(image: $viewModel.selectedImage)
             }
             .onTapGesture {
                 focusedField = nil
             }
-        }
-    }
-    
-    private var isFormValid: Bool {
-        !email.isEmpty &&
-        !password.isEmpty &&
-        !confirmPassword.isEmpty &&
-        password == confirmPassword
-    }
-    
-    private func signupAction() {
-        focusedField = nil
-        isSignupProcessing = true
-        showError = false
-        
-        // Simulate signup process
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            isSignupProcessing = false
-            presentationMode.wrappedValue.dismiss()
-        }
-    }
-}
-
-struct SignupView_Previews: PreviewProvider {
-    static var previews: some View {
-        Group {
-            SignupView()
-                .preferredColorScheme(.light)
-                .previewDisplayName("Light Mode")
-            
-            SignupView()
-                .preferredColorScheme(.dark)
-                .previewDisplayName("Dark Mode")
         }
     }
 }
