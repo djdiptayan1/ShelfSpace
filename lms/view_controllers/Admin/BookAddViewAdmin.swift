@@ -611,7 +611,7 @@ struct BookAddViewAdmin: View {
             authorNames: bookData.authorNames,
             genreIds: bookData.genreIds,
             publishedDate: bookData.publishedDate,
-            addedOn: Date(),
+            addedOn: Date()
         )
         
         // Call the onSave closure with the new book
