@@ -146,8 +146,7 @@ struct UsersViewAdmin: View {
                             viewModel.isShowingAddMember = true
                         }
                     }) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title2)
+                        Image(systemName: "plus")
                             .foregroundColor(Color.primary(for: colorScheme))
                     }
                 }
