@@ -13,7 +13,7 @@ enum UserRole: String, Codable {
     case member
 }
 
-struct User: Identifiable, Codable {
+struct User: Identifiable, Codable, Equatable, Hashable {
     let id: UUID
     let email: String
     let role: UserRole
