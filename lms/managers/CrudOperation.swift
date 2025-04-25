@@ -13,24 +13,24 @@ func insertUser(userData: [String: AnyEncodable], completion: @escaping (Bool) -
         do {
             let token = try KeychainManager.shared.getToken()
             print("Sending user data to API with token: \(token)")
-            
+
             guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/users") else {
                 throw URLError(.badURL)
             }
-            
+
             var request = URLRequest(url: url)
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.setValue("application/json", forHTTPHeaderField: "Accept")
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            
+
             // Fix: Don't access wrappedValue, just encode the AnyEncodable objects directly
             let jsonData = try JSONEncoder().encode(userData)
             request.httpBody = jsonData
-            
+
             let (data, response) = try await URLSession.shared.data(for: request)
-            
-            guard let httpResponse = response as? HTTPURLResponse, 200..<300 ~= httpResponse.statusCode else {
+
+            guard let httpResponse = response as? HTTPURLResponse, 200 ..< 300 ~= httpResponse.statusCode else {
                 let errorMsg = String(data: data, encoding: .utf8) ?? "Unknown error"
                 print("API Error: \(errorMsg)")
                 DispatchQueue.main.async {
@@ -38,7 +38,7 @@ func insertUser(userData: [String: AnyEncodable], completion: @escaping (Bool) -
                 }
                 return
             }
-            
+
             print("User inserted successfully")
             DispatchQueue.main.async {
                 completion(true)
@@ -51,7 +51,6 @@ func insertUser(userData: [String: AnyEncodable], completion: @escaping (Bool) -
         }
     }
 }
-
 
 func fetchLibraries(completion: @escaping (Result<[Library], Error>) -> Void) {
     Task {
@@ -85,7 +84,7 @@ func fetchLibraries(completion: @escaping (Result<[Library], Error>) -> Void) {
                 let data: [Library]
                 let pagination: Pagination
             }
-            
+
             struct Pagination: Codable {
                 let totalItems: Int
                 let currentPage: Int
@@ -108,13 +107,61 @@ func fetchLibraries(completion: @escaping (Result<[Library], Error>) -> Void) {
         }
     }
 }
-func fetchUser() {
-    
+
+func addLibrians(email: String,
+                 password: String,
+                 name: String,
+                 completion: @escaping (Result<UUID, Error>) -> Void) {
+    Task {
+        do {
+            // Sign up the user with Supabase Auth - only email and password
+            let authResponse = try await supabase.auth.signUp(
+                email: email,
+                password: password
+            )
+            let session = try await supabase.auth.session
+            let accessToken = session.accessToken
+
+            try KeychainManager.shared.saveToken(accessToken)
+            print("Access Token while adding librian: \(accessToken)")
+            // Get the user ID from the auth response
+            let userId = authResponse.user.id
+
+            // Return success with the user ID
+            DispatchQueue.main.async {
+                completion(.success(userId))
+            }
+        } catch let error as AuthError {
+            // Handle Auth errors specifically
+            DispatchQueue.main.async {
+                print("Auth Signup Error: \(error)")
+                completion(.failure(LoginError.signupError("Authentication error during signup: \(error.localizedDescription)")))
+            }
+        } catch {
+            // Handle any other errors
+            DispatchQueue.main.async {
+                print("Generic Signup Error: \(error)")
+                completion(.failure(error)) // Pass the original error
+            }
+        }
+    }
 }
 
 func fetchGenres(completion: @escaping (Result<[String], Error>) -> Void) {
     Task {
         do {
+            let token = try KeychainManager.shared.getToken()
+            print("fetching libraries with token: \(token)")
+
+            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/genres") else {
+                throw URLError(.badURL)
+            }
+
+            var request = URLRequest(url: url)
+            request.httpMethod = "GET"
+            request.setValue("application/json", forHTTPHeaderField: "Accept")
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
             // Use 'supabase' instead of 'client'
             let response = try await supabase
                 .from("genres")
@@ -145,6 +192,17 @@ func fetchGenres(completion: @escaping (Result<[String], Error>) -> Void) {
 func fetchAuthors(completion: @escaping (Result<[String], Error>) -> Void) {
     Task {
         do {
+            let token = try KeychainManager.shared.getToken()
+            print("fetching libraries with token: \(token)")
+
+            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/authors") else {
+                throw URLError(.badURL)
+            }
+
+            var request = URLRequest(url: url)
+            request.httpMethod = "GET"
+            request.setValue("application/json", forHTTPHeaderField: "Accept")
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             let response = try await supabase
                 .from("authors")
                 .select("name")
@@ -162,17 +220,17 @@ func uploadBooks() {
     Task {
         do {
             let token = try KeychainManager.shared.getToken()
-            
+
             guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/books") else {
                 throw URLError(.badURL)
             }
-            
+
             var request = URLRequest(url: url)
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Accept")
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            
+
             // Prepare the request body
 //            let requestBody: [String: Any] = [
 //                "library_id": "69d0dbf0-5e5c-4117-afeb-b43aa1d950cb", // You might want to make this dynamic
@@ -188,28 +246,28 @@ func uploadBooks() {
 //                "publisher": bookData.publisher,
 //                "language": bookData.language
 //            ]
-            
+
             // Convert the dictionary to JSON data
 //            let jsonData = try JSONSerialization.data(withJSONObject: requestBody)
 //            request.httpBody = jsonData
-            
+
             // Perform the request
             let (data, response) = try await URLSession.shared.data(for: request)
-            
+
             // Check response status
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw URLError(.badServerResponse)
             }
-            
+
             if httpResponse.statusCode == 200 || httpResponse.statusCode == 201 {
                 // Success
                 print("Book uploaded successfully")
-                
+
                 // Process response if needed
                 if let responseJSON = try? JSONSerialization.jsonObject(with: data) {
                     print("Response: \(responseJSON)")
                 }
-                
+
                 // Handle success (e.g., show success message, navigate back)
                 DispatchQueue.main.async {
                     // Update UI or navigate
@@ -232,6 +290,7 @@ func uploadBooks() {
         }
     }
 }
+
 private func formatDate(_ date: Date) -> String {
     let formatter = ISO8601DateFormatter()
     formatter.formatOptions = [.withInternetDateTime]
