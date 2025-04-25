@@ -13,6 +13,7 @@ struct BookDetailsStep: View {
     @Binding var showImagePicker: Bool
     let onSave: () -> Void
     @Environment(\.colorScheme) private var colorScheme
+    @State private var focusedField: String?
     
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -243,6 +244,9 @@ struct BookDetailsStep: View {
                 .opacity(bookData.bookTitle.isEmpty ? 0.6 : 1.0)
             }
             .padding(.bottom, 32)
+        }
+        .onTapGesture {
+            focusedField = nil
         }
     }
 }
