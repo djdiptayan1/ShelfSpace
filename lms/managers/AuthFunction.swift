@@ -17,55 +17,57 @@ enum LoginError: Error {
     case signupError(String)
 }
 
+struct APIUserResponse: Codable {
+
+    let role: UserRole
+    let name: String
+    let library_id : String
+
+}
 class LoginManager {
     static let shared = LoginManager()
 
     private init() {}
 
     func login(email: String, password: String) async throws -> (User, UserRole) {
+        
+
         do {
             // Sign in with Supabase
             let response = try await supabase.auth.signIn(email: email, password: password)
 
-            // Store the JWT token in Keychain
+            // Save JWT Token in Keychain
             let accessToken = response.accessToken
-            print("Access Token: \(accessToken)")
             try KeychainManager.shared.saveToken(accessToken)
 
-            // Get user's role from the database
-            struct RoleResponse: Codable {
-                let role: UserRole
+            // Get the token back from Keychain
+
+            // Build the secure API request
+            print(response.user.id)
+            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/users/\(response.user.id)") else {
+                throw URLError(.badURL)
             }
 
-            let roleResponse: RoleResponse = try await supabase
-                //                .from("user_roles")
-                .from("users")
-                .select("role")
-                //                .eq("id", value: response.user.id)
-                .eq("user_id", value: response.user.id)
-                .single()
-                .execute()
-                .value
+            var request = URLRequest(url: url)
+            request.httpMethod = "GET"
+            request.setValue("application/json", forHTTPHeaderField: "Accept")
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
 
-            // Get user's metadata - proper handling of optional JSON
-            let metadata = response.user.userMetadata
-            let name: String
-            if let nameValue = metadata["name"],
-               let nameString = nameValue.stringValue {
-                name = nameString
-            } else {
-                name = email
-            }
+            let (data, _) = try await URLSession.shared.data(for: request)
 
-            // Create User object
+            // Decode the JSON into your APIUserResponse model
+            let decodedResponse = try JSONDecoder().decode(APIUserResponse.self, from: data)
+
+            // Construct User object
             let user = User(
                 id: response.user.id,
-                email: email,
-                role: roleResponse.role,
-                name: name
+                email: response.user.email!,
+                role: decodedResponse.role,
+                name: decodedResponse.name,
+                library_id: decodedResponse.library_id
             )
 
-            return (user, roleResponse.role)
+            return (user, decodedResponse.role)
         } catch {
             print("Login error: \(error)")
             if let postgrestError = error as? PostgrestError {
@@ -127,38 +129,29 @@ class LoginManager {
 
     func getCurrentUser() async throws -> User? {
         do {
-            let session = try await supabase.auth.session
-            if session.user == nil { return nil }
-            let sessionUser = session.user
-
-            struct RoleResponse: Codable {
-                let role: UserRole
+            let accessToken = try getCurrentToken()
+            let user = try await supabase.auth.user()
+            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/users/\(user.id)") else {
+                throw URLError(.badURL)
             }
 
-            let roleResponse: RoleResponse = try await supabase
-//                .from("user_roles")
-                .from("users")
-                .select("role")
-//                .eq("id", value: sessionUser.id)
-                .eq("user_id", value: sessionUser.id)
-                .single()
-                .execute()
-                .value
+            var request = URLRequest(url: url)
+            request.httpMethod = "GET"
+            request.setValue("application/json", forHTTPHeaderField: "Accept")
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
 
-            let metadata = sessionUser.userMetadata
-            let name: String
-            if let nameValue = metadata["name"],
-               let nameString = nameValue.stringValue {
-                name = nameString
-            } else {
-                name = sessionUser.email ?? "Unknown User"
-            }
+            let (data, _) = try await URLSession.shared.data(for: request)
 
+            // Decode the JSON into your APIUserResponse model
+            let decodedResponse = try JSONDecoder().decode(APIUserResponse.self, from: data)
+
+            // Construct User object
             return User(
-                id: sessionUser.id,
-                email: sessionUser.email ?? "unknown@example.com",
-                role: roleResponse.role,
-                name: name
+                id: user.id,
+                email: user.email!,
+                role: decodedResponse.role,
+                name: decodedResponse.name,
+                library_id: decodedResponse.library_id
             )
         } catch {
             print("Error getting current user: \(error)")
