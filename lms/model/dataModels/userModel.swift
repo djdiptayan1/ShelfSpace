@@ -15,9 +15,10 @@ enum UserRole: String, Codable {
 
 struct User: Identifiable, Codable, Equatable, Hashable {
     let id: UUID
-    let email: String
+    var email: String
     let role: UserRole
-    let name: String
+    var name: String
+    var library_id: String
     var profileImage: Data?
     
     enum CodingKeys: String, CodingKey {
@@ -25,6 +26,7 @@ struct User: Identifiable, Codable, Equatable, Hashable {
         case email
         case role
         case name
+        case library_id
         case profileImage
     }
     
@@ -34,14 +36,16 @@ struct User: Identifiable, Codable, Equatable, Hashable {
         email = try container.decode(String.self, forKey: .email)
         role = try container.decode(UserRole.self, forKey: .role)
         name = try container.decode(String.self, forKey: .name)
+        library_id = try container.decode(String.self, forKey: .library_id)
         profileImage = try container.decodeIfPresent(Data.self, forKey: .profileImage)
     }
     
-    init(id: UUID, email: String, role: UserRole, name: String, profileImage: Data? = nil) {
+    init(id: UUID, email: String, role: UserRole, name: String, library_id: String, profileImage: Data? = nil) {
         self.id = id
         self.email = email
         self.role = role
         self.name = name
+        self.library_id = library_id
         self.profileImage = profileImage
     }
     
