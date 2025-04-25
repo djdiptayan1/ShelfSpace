@@ -7,21 +7,75 @@
 
 import SwiftUI
 import Charts
+import NavigationBarLargeTitleItems
 
 struct HomeViewAdmin: View {
     @Environment(\.colorScheme) private var colorScheme
-    
+    @State private var lastHostingView: UIView!
+    @State private var isShowingProfile = false
     var body: some View {
         NavigationView {
             ZStack {
                 ReusableBackground(colorScheme: colorScheme)
+
                 ScrollView {
-                    AdminAnalyticsView()
-                        .padding(.top)
+//                    VStack() {
+//                        headerSection
+                        AdminAnalyticsView()
+//                    }
+//                    .padding()
                 }
-                .navigationTitle("Admin Dashboard")
+                .navigationTitle("Library Name")
+                .navigationBarLargeTitleItems(trailing: ProfileIcon(isShowingProfile: $isShowingProfile))}
+        }
+        .sheet(isPresented: $isShowingProfile) {
+                   ProfileViewAdmin()
+               }
+    }
+    
+
+    // MARK: - Header
+    private var headerSection: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Welcome Navdeep!")
+                    .font(.title2)
+                    .foregroundColor(Color.text(for: colorScheme))
+
+                Text("Library Name")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .foregroundColor(Color.text(for: colorScheme))
+            }
+
+            Spacer()
+
+            Button(action: {
+                // Profile action
+            }) {
+                Image(systemName: "person.circle.fill")
+                    .resizable()
+                    .frame(width: 44, height: 44)
+                    .foregroundColor(Color.primary(for: colorScheme).opacity(0.9))
             }
         }
+    }
+}
+struct ProfileIcon: View {
+    @Binding var isShowingProfile: Bool
+    
+    var body: some View {
+        Button(action: {
+            isShowingProfile = true
+        }) {
+            Image(systemName: "person.circle.fill")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .foregroundColor(.red)
+                .frame(width: 36, height: 36)
+        }
+        .padding([.trailing], 20)
+        .padding([.top], 5)
     }
 }
 

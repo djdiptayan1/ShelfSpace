@@ -1,5 +1,5 @@
 {
-  "originHash" : "e554adf3faad20c1df543b8c8c3ea97c77f18b2b65a5c4b8e4ebca041b069412",
+  "originHash" : "d16a79e1dba508cd0db09731519d8db00f80476259068aeb92d85c6bad9b13e7",
   "pins" : [
     {
       "identity" : "dotlottie-ios",
@@ -8,6 +8,15 @@
       "state" : {
         "branch" : "main",
         "revision" : "5882d81ccb677e2da0175fc9c97980bb61af3eb9"
+      }
+    },
+    {
+      "identity" : "navigationbarlargetitleitems",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/markvanwijnen/NavigationBarLargeTitleItems.git",
+      "state" : {
+        "branch" : "master",
+        "revision" : "fcc30c002db356825e5be0c09cca852b4bc51998"
       }
     },
     {

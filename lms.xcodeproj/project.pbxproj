@@ -14,6 +14,7 @@
 		9D45B7CF2DB7C653001FB1A6 /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 9D45B7CE2DB7C653001FB1A6 /* Realtime */; };
 		9D45B7D12DB7C653001FB1A6 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 9D45B7D02DB7C653001FB1A6 /* Storage */; };
 		9D45B7D32DB7C653001FB1A6 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 9D45B7D22DB7C653001FB1A6 /* Supabase */; };
+		9D9842F02DBB8BDD0070D9AF /* NavigationBarLargeTitleItems in Frameworks */ = {isa = PBXBuildFile; productRef = 9D9842EF2DBB8BDD0070D9AF /* NavigationBarLargeTitleItems */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -33,6 +34,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9D9842F02DBB8BDD0070D9AF /* NavigationBarLargeTitleItems in Frameworks */,
 				9D45B7D32DB7C653001FB1A6 /* Supabase in Frameworks */,
 				9D45B7D12DB7C653001FB1A6 /* Storage in Frameworks */,
 				9D45B7CD2DB7C653001FB1A6 /* PostgREST in Frameworks */,
@@ -89,6 +91,7 @@
 				9D45B7CE2DB7C653001FB1A6 /* Realtime */,
 				9D45B7D02DB7C653001FB1A6 /* Storage */,
 				9D45B7D22DB7C653001FB1A6 /* Supabase */,
+				9D9842EF2DBB8BDD0070D9AF /* NavigationBarLargeTitleItems */,
 			);
 			productName = lms;
 			productReference = 9D18190F2DB1775900BD3489 /* lms.app */;
@@ -121,6 +124,7 @@
 			packageReferences = (
 				9D45B7C42DB7C61C001FB1A6 /* XCRemoteSwiftPackageReference "dotlottie-ios" */,
 				9D45B7C72DB7C653001FB1A6 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				9D9842EE2DBB8BDD0070D9AF /* XCRemoteSwiftPackageReference "NavigationBarLargeTitleItems" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 9D1819102DB1775900BD3489 /* Products */;
@@ -376,6 +380,14 @@
 				minimumVersion = 2.5.1;
 			};
 		};
+		9D9842EE2DBB8BDD0070D9AF /* XCRemoteSwiftPackageReference "NavigationBarLargeTitleItems" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/markvanwijnen/NavigationBarLargeTitleItems.git";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -413,6 +425,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 9D45B7C72DB7C653001FB1A6 /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Supabase;
+		};
+		9D9842EF2DBB8BDD0070D9AF /* NavigationBarLargeTitleItems */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 9D9842EE2DBB8BDD0070D9AF /* XCRemoteSwiftPackageReference "NavigationBarLargeTitleItems" */;
+			productName = NavigationBarLargeTitleItems;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
