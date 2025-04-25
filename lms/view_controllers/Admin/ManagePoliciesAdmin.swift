@@ -357,25 +357,25 @@ struct ReservationSettingsView: View {
                                     .font(.system(size: 18, weight: .semibold, design: .rounded))
                                     .foregroundColor(Color.text(for: colorScheme))
                                 
-                                Text("\(Int(holdDurationDays)) Days")
+                                Text("\(Int(holdDurationDays)) Hours")
                                     .font(.system(size: 36, weight: .bold, design: .rounded))
                                     .foregroundColor(Color.primary(for: colorScheme))
                                     .frame(maxWidth: .infinity, alignment: .center)
                                     .padding(.vertical, 10)
                                 
                                 // iOS-style slider
-                                Slider(value: $holdDurationDays, in: 1...30, step: 1)
+                                Slider(value: $holdDurationDays, in: 1...48, step: 1)
                                     .accentColor(Color.primary(for: colorScheme))
                                     .padding(.vertical, 10)
                                 
                                 HStack {
-                                    Text("1 Day")
+                                    Text("1 Hour")
                                         .font(.system(size: 14))
                                         .foregroundColor(Color.text(for: colorScheme).opacity(0.6))
                                     
                                     Spacer()
                                     
-                                    Text("30 Days")
+                                    Text("48 Hours")
                                         .font(.system(size: 14))
                                         .foregroundColor(Color.text(for: colorScheme).opacity(0.6))
                                 }
