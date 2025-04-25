@@ -14,6 +14,7 @@ enum LoginError: Error {
     case unknownError
     case roleNotFound
     case tokenError
+    case signupError(String)
 }
 
 class LoginManager {
@@ -37,10 +38,10 @@ class LoginManager {
             }
 
             let roleResponse: RoleResponse = try await supabase
-//                .from("user_roles")
+                //                .from("user_roles")
                 .from("users")
                 .select("role")
-//                .eq("id", value: response.user.id)
+                //                .eq("id", value: response.user.id)
                 .eq("user_id", value: response.user.id)
                 .single()
                 .execute()
@@ -73,6 +74,47 @@ class LoginManager {
                 }
             }
             throw LoginError.invalidCredentials
+        }
+    }
+
+    func signUp(
+        email: String,
+        password: String,
+        completion: @escaping (Result<UUID, Error>) -> Void
+    ) {
+        Task {
+            do {
+                // Sign up the user with Supabase Auth - only email and password
+                let authResponse = try await supabase.auth.signUp(
+                    email: email,
+                    password: password
+                )
+                let session = try await supabase.auth.session
+                let accessToken = session.accessToken
+
+                try KeychainManager.shared.saveToken(accessToken)
+                print("Access Token while signing up: \(accessToken)")
+                // Get the user ID from the auth response
+                let userId = authResponse.user.id
+
+                // Return success with the user ID
+                DispatchQueue.main.async {
+                    completion(.success(userId))
+                }
+
+            } catch let error as AuthError {
+                // Handle Auth errors specifically
+                DispatchQueue.main.async {
+                    print("Auth Signup Error: \(error)")
+                    completion(.failure(LoginError.signupError("Authentication error during signup: \(error.localizedDescription)")))
+                }
+            } catch {
+                // Handle any other errors
+                DispatchQueue.main.async {
+                    print("Generic Signup Error: \(error)")
+                    completion(.failure(error)) // Pass the original error
+                }
+            }
         }
     }
 
