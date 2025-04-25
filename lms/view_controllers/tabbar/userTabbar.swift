@@ -27,6 +27,7 @@ struct UserTabbar: View {
                     Image(systemName: "books.vertical.fill")
                     Text("My Books")
                 }
+
         }
         .accentColor(Color.primary(for: colorScheme))
         .onAppear {
@@ -65,14 +66,6 @@ struct UserTabbar: View {
 //    }
 //}
 
-struct BookCollectionuser: View {
-    var body: some View {
-        NavigationView {
-            Text("Books collection Screen user")
-                .navigationTitle("Books")
-        }
-    }
-}
 #Preview {
     UserTabbar()
 }

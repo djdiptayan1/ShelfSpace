@@ -1,445 +1,9 @@
-////
-////  HomeViewUser.swift
-////  lms
-////
-////  Created by Navdeep Lakhlan on 24/04/25.
-////
-//import SwiftUI
 //
-//// MARK: - Data Models
-//struct Book: Identifiable {
-//    let id = UUID()
-//    let imageName: String
-//    let title: String
-//    let author: String
-//    let genres: [String]
-//    let description: String
-//}
+//  BookDetailView.swift
+//  lms
 //
-//struct Author: Identifiable {
-//    let id = UUID()
-//    let imageName: String
-//    let name: String
-//}
+//  Created by Navdeep Lakhlan on 23/04/25.
 //
-//// MARK: - Main View
-//struct HomeView: View {
-//    // MARK: - Properties
-//    @State private var searchText = ""
-//    
-//    // Sample data
-//    let categories = ["Romance", "Fiction", "Thriller", "Action", "Sci-Fi", "Mystery"]
-//    let newArrivals = [
-//        Book(imageName: "book1", title: "Create Your Own Business", author: "Alex Michaelides",
-//             genres: ["Thriller", "Mystery"], description: "A psychological thriller about a woman who shoots her husband and then stops speaking."),
-//        Book(imageName: "book2", title: "Project Hail Mary", author: "Andy Weir",
-//             genres: ["Sci-Fi", "Adventure"], description: "An astronaut wakes up alone on a spacecraft with no memory of who he is or how he got there."),
-//        Book(imageName: "book3", title: "Dune", author: "Frank Herbert",
-//             genres: ["Sci-Fi", "Classic"], description: "A epic science fiction saga set in a distant future amidst a feudal interstellar society and people.")
-//    ]
-//    
-//    let recommendations = [
-//        Book(imageName: "book4", title: "The Midnight Library", author: "Matt Haig",
-//             genres: ["Fiction", "Fantasy"], description: ""),
-//        Book(imageName: "book5", title: "Atomic Habits", author: "James Clear",
-//             genres: ["Self-Help", "Nonfiction"], description: ""),
-//        Book(imageName: "book6", title: "Business Design", author: "Delia Owens",
-//             genres: ["Fiction", "Mystery"], description: "")
-//    ]
-//    
-//    let topSelling = [
-//        Book(imageName: "book7", title: "It Ends With Us", author: "Colleen Hoover",
-//             genres: [], description: ""),
-//        Book(imageName: "book8", title: "The Song of Achilles", author: "Madeline Miller",
-//             genres: [], description: ""),
-//        Book(imageName: "book9", title: "Educated", author: "Tara Westover",
-//             genres: [], description: "")
-//    ]
-//    
-//    let authors = [
-//        Author(imageName: "author1", name: "Stephen King"),
-//        Author(imageName: "author2", name: "J.K. Rowling"),
-//        Author(imageName: "author3", name: "Agatha Christie")
-//    ]
-//
-//    // MARK: - Main Body
-//    var body: some View {
-//        GeometryReader { geometry in
-//            NavigationView {
-//                ZStack {
-//                    ScrollView {
-//                        VStack(alignment: .leading, spacing: 24) {
-//                            headerSection
-//                            SearchBarUser(text: $searchText)
-//                            categoriesSection
-//                            newArrivalsSection(geometry: geometry)
-//                            recommendationsSection(geometry: geometry)
-//                            topSellingSection(geometry: geometry)
-//                            authorsSection(geometry: geometry)
-//                            Spacer(minLength: 80)
-//                        }
-//                        .padding(.vertical)
-//                    }
-//                    
-//                   
-//                }
-//                .navigationBarHidden(true)
-//            }
-//        }
-//    }
-//    
-//    // MARK: - View Components
-//    
-//    // Header Section
-//    private var headerSection: some View {
-//        HStack {
-//            VStack(alignment: .leading) {
-//                Text("Welcome Navdeep!")
-//                    .font(.headline)
-//                Text("Library Name")
-//                    .font(.title)
-//                    .fontWeight(.bold)
-//            }
-//            
-//            Spacer()
-//            
-//            Button(action: { /* Profile action */ }) {
-//                Image(systemName: "person.circle")
-//                    .resizable()
-//                    .frame(width: 44, height: 44)
-//                    .foregroundColor(.primary)
-//            }
-//        }
-//        .padding(.horizontal)
-//    }
-//    
-//    // Categories Section
-//    private var categoriesSection: some View {
-//        ScrollView(.horizontal, showsIndicators: false) {
-//            HStack(spacing: 12) {
-//                ForEach(categories, id: \.self) { category in
-//                    VStack(spacing: 2) {
-//                        Image(systemName: iconForCategory(category))
-//                            .resizable()
-//                            .aspectRatio(contentMode: .fit)
-//                            .frame(width: 30, height: 30)
-//                        
-//                        Text(category)
-//                            .font(.subheadline)
-//                    }
-//                    .padding(.vertical, 8)
-//                    .padding(.horizontal, 12)
-//                    .background(Color.blue.opacity(0.2))
-//                    .cornerRadius(8)
-//                }
-//            }
-//            .padding(.horizontal)
-//        }
-//    }
-//    
-//    // New Arrivals Section
-//    private func newArrivalsSection(geometry: GeometryProxy) -> some View {
-//        VStack(alignment: .leading) {
-//            sectionHeader(title: "New Arrivals", seeMoreAction: {})
-//            
-//            ScrollView(.horizontal, showsIndicators: false) {
-//                HStack(spacing: 20) {
-//                    ForEach(newArrivals) { book in
-//                        NewArrivalCard(book: book)
-//                            .frame(width: geometry.size.width - 30)
-//                    }
-//                }
-//                .padding([.top, .horizontal])
-//                .padding(.bottom, 18)
-//            }
-//        }
-//    }
-//    
-//    // Recommendations Section
-//    private func recommendationsSection(geometry: GeometryProxy) -> some View {
-//        VStack(alignment: .leading) {
-//            sectionHeader(title: "Recommendations", seeMoreAction: {})
-//            
-//            ScrollView(.horizontal, showsIndicators: false) {
-//                HStack(spacing: 20) {
-//                    ForEach(recommendations) { book in
-//                        RecommendationCard(book: book)
-//                            .frame(width: (geometry.size.width - 180))
-//                    }
-//                }
-//                .padding([ .top, .horizontal])
-//                .padding(.bottom,18)
-//            }
-//        }
-//    }
-//    
-//    // Top Selling Section
-//    private func topSellingSection(geometry: GeometryProxy) -> some View {
-//        VStack(alignment: .leading) {
-//            sectionHeader(title: "Top Selling", seeMoreAction: {})
-//            
-//            ScrollView(.horizontal, showsIndicators: false) {
-//                HStack {
-//                    ForEach(Array(topSelling.enumerated()), id: \.element.id) { index, book in
-//                        TopSellingCard(index: index + 1, book: book)
-//                            .frame(width: (geometry.size.width - 210))
-//                    }
-//                    .padding([.bottom, .top, .horizontal])
-//                }
-//            }
-//        }
-//    }
-//    
-//    // Authors Section
-//    private func authorsSection(geometry: GeometryProxy) -> some View {
-//        VStack(alignment: .leading) {
-//            sectionHeader(title: "Author's", seeMoreAction: {})
-//            
-//            ScrollView(.horizontal, showsIndicators: false) {
-//                HStack(spacing: 20) {
-//                    ForEach(authors) { author in
-//                        AuthorCard(author: author)
-//                            .frame(width: (geometry.size.width - 100)/2)
-//                    }
-//                }
-//                .padding([.bottom, .top, .horizontal])
-//            }
-//        }
-//    }
-//    
-//    
-//    // MARK: - Helper Functions
-//    private func sectionHeader(title: String, seeMoreAction: @escaping () -> Void) -> some View {
-//        HStack {
-//            Text(title)
-//                .font(.title2)
-//                .fontWeight(.bold)
-//            
-//            Spacer()
-//            
-//            Button("See more", action: seeMoreAction)
-//                .foregroundColor(.blue)
-//        }
-//        .padding(.horizontal)
-//    }
-//    
-//    private func iconForCategory(_ category: String) -> String {
-//        switch category.lowercased() {
-//        case "romance": return "heart"
-//        case "fiction": return "book"
-//        case "thriller": return "theatermasks"
-//        case "action": return "bolt"
-//        case "sci-fi": return "atom"
-//        case "mystery": return "questionmark.circle"
-//        default: return "bookmark"
-//        }
-//    }
-//}
-//
-//
-//struct NewArrivalCard: View {
-//    let book: Book
-//    
-//    var body: some View {
-//        VStack(alignment: .leading, spacing: 15) {
-//            HStack(alignment: .center, spacing: 12) { // Changed to alignment: .top
-//                Image(book.imageName)
-//                    .resizable()
-//                    .background(Color.gray.opacity(0.2))
-//                    .aspectRatio(contentMode: .fill)
-//                    .frame(width: 130, height: 180)
-//                    .cornerRadius(10)
-//                    .clipped()
-//                    .shadow(color: Color.black.opacity(0.2), radius: 12, x: 0, y: 6)
-//                
-//                VStack(alignment: .leading, spacing: 20) { // Reduced spacing from 30 to 12
-//                    // Book title with flexible height
-//                    Text(book.title)
-//                        .font(.title3)
-//                        .fontWeight(.semibold)
-//                        .lineLimit(4) // Allow up to 2 lines
-//                        .minimumScaleFactor(0.9) // Shrink text slightly if needed
-//                        .fixedSize(horizontal: false, vertical: true) // Allow vertical expansion
-//                    
-//                    // Author name
-//                    Text(book.author)
-//                        .font(.headline)
-//                        .foregroundColor(.secondary)
-//                        .lineLimit(1)
-//                    
-//                    // Genres
-//                    //FlexibleGenreTags(genres: book.genres)
-//                    HStack(spacing: 8) {
-//                        ForEach(book.genres, id: \.self) { genre in
-//                            Text(genre)
-//                                .font(.system(size: 14, weight: .medium))
-//                                .padding(.horizontal, 10)
-//                                .padding(.vertical, 4)
-//                                .background(Color.blue.opacity(0.2))
-//                                .cornerRadius(8)
-//                        }
-//                    }
-//                }
-//                .frame(maxWidth: .infinity, alignment: .leading) // Take remaining space
-//            }
-//            
-//            // Description
-//            Text(book.description)
-////                .font(.headline)
-//                .lineLimit(3)
-//                .foregroundColor(.gray)
-//                .font(.system(size:17, weight: .bold, design: .default))
-//            
-//        }
-//        .padding(16)
-//        .background(Color.white)
-//        .cornerRadius(12)
-//        .shadow(color: Color.black.opacity(0.15), radius: 15, x: 0, y: 8)
-//        
-//
-//    }
-//}
-//
-//
-//
-//
-//
-//
-//struct RecommendationCard: View {
-//    let book: Book
-//    
-//    var body: some View {
-//        VStack(alignment: .leading, spacing: 12) {
-//            Image(book.imageName)
-//                .resizable()
-//                .aspectRatio(contentMode: .fit)
-//                .frame(width:190 ,height: 200)
-//                .background(Color.gray.opacity(0.2))
-//                .cornerRadius(16)
-//                .clipped()
-//                .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 5)
-//            
-//            VStack(alignment: .leading, spacing: 12) {
-//                Text(book.title)
-//                    .font(.headline)
-//                    .lineLimit(2)
-//                
-//                Text(book.author)
-//                    .font(.subheadline)
-//                    .foregroundColor(.secondary)
-//                
-//                HStack(spacing: 6) {
-//                    ForEach(book.genres.prefix(2), id: \.self) { genre in
-//                        Text(genre)
-//                            .font(.system(size: 16, weight: .medium))
-//                            .padding(.horizontal, 8)
-//                            .padding(.vertical, 3)
-//                            .background(Color.blue.opacity(0.15))
-//                            .cornerRadius(8)
-//                    }
-//                }
-//            }
-//        }
-//        .padding(12)
-//        .background(Color.white)
-//        .cornerRadius(18)
-//        .shadow(color: Color.black.opacity(0.15), radius: 12, x: 0, y: 6)
-//    }
-//}
-//
-//struct TopSellingCard: View {
-//    let index: Int
-//    let book: Book
-//    
-//    var body: some View {
-//        VStack(spacing: 5) {
-//            Text("\(index)")
-//                .font(.title3)
-//                .fontWeight(.bold)
-//                .frame(width: 32, height: 32)
-//                .background(Circle().fill(Color.blue.opacity(0.7)))
-//                .foregroundColor(.white)
-//                .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
-//            
-//            Image(book.imageName)
-//                .resizable()
-//                .aspectRatio(contentMode: .fit)
-//                .frame(width: 180,height: 180)
-//                .background(Color.gray.opacity(0.2))
-//                .cornerRadius(12)
-//                .clipped()
-//                .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
-//            Text(book.title)
-//                .font(.headline)
-//                .lineLimit(2)
-//            
-//            Text(book.author)
-//                .font(.subheadline)
-//                .foregroundColor(.secondary)
-//        }
-//        .padding(12)
-//        .background(Color.white)
-//        .cornerRadius(16)
-//        .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
-//    }
-//}
-//
-//struct AuthorCard: View {
-//    let author: Author
-//    
-//    var body: some View {
-//        VStack(spacing: 10) {
-//            Image(author.imageName)
-//                .resizable()
-//                .aspectRatio(contentMode: .fit)
-//                .frame(width: 130, height: 130)
-//                .clipShape(Circle())
-//                .clipped()
-//                .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
-//            
-//            Text(author.name)
-//                .font(.subheadline)
-//                .fontWeight(.medium)
-//                .lineLimit(2)
-//        }
-//        .padding(12)
-//        .background(Color.white)
-//        .cornerRadius(16)
-//        .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
-//    }
-//}
-//
-//// MARK: - Search Bar
-//struct SearchBarUser: View {
-//    @Binding var text: String
-//    
-//    var body: some View {
-//        HStack {
-//            TextField("Search books", text: $text)
-//                .padding(12)
-//                .padding(.horizontal, 28)
-//                .background(Color(.systemGray6))
-//                .cornerRadius(12)
-//                .overlay(
-//                    HStack {
-//                        Image(systemName: "magnifyingglass")
-//                            .foregroundColor(.gray)
-//                            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-//                            .padding(.leading, 12)
-//                    }
-//                )
-//        }
-//        .padding(.horizontal)
-//    }
-//}
-//
-//// MARK: - Preview
-//struct HomeView_Previews: PreviewProvider {
-//    static var previews: some View {
-//        HomeView()
-//    }
-//}
-
 
 import SwiftUI
 
@@ -527,7 +91,8 @@ struct HomeView: View {
         Author(imageName: "author3", name: "Agatha Christie")
     ]
 
-    // MARK: - Main Body
+    // MARK: - MAIN BODY
+    
     var body: some View {
         GeometryReader { geometry in
             NavigationView {
@@ -560,7 +125,6 @@ struct HomeView: View {
                             
                             // Display selected genre as chip if any
                             if let genre = selectedGenre {
-                                
                                 HStack {
                                     Text("Filtering by: ")
                                         .foregroundColor(Color.text(for: colorScheme))
@@ -576,8 +140,8 @@ struct HomeView: View {
                                     Button(action: {
                                         withAnimation {
                                             selectedGenre = nil
-                                            showSearchResults = false // Ensure home screen is shown
-                                            searchText = "" // Optional: Clear search text
+                                            showSearchResults = false
+                                            searchText = ""
                                         }
                                     }) {
                                         Image(systemName: "xmark.circle.fill")
@@ -596,7 +160,7 @@ struct HomeView: View {
                                 .edgesIgnoringSafeArea(.top)
                                 .shadow(color: Color.primary(for: colorScheme).opacity(0.1), radius: 5, x: 0, y: 3)
                         )
-                        .zIndex(1) // Ensure header stays on top
+                        .zIndex(1)
                         
                         // Content based on search/filter state
                         if showSearchResults || selectedGenre != nil {
@@ -622,7 +186,8 @@ struct HomeView: View {
         }
         .foregroundColor(Color.text(for: colorScheme))
     }
-    // MARK: - View Components
+    
+    // MARK: - SECTION FOR VIEW COMPONENT
     
     // Header Section
     private var headerSection: some View {
@@ -649,7 +214,8 @@ struct HomeView: View {
         .padding(.horizontal)
     }
     
-    // Categories Section
+    // MARK: - SECTION FOR CATEGORIES
+    
     private var categoriesSection: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
@@ -660,11 +226,11 @@ struct HomeView: View {
                             showSearchResults = true
                         }
                     }) {
-                        VStack(spacing: 4) {
+                        VStack(spacing: 5) {
                             Image(systemName: iconForCategory(category))
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
-                                .frame(width: 30, height: 30)
+                                .frame(width: 25, height: 25)
                                 .foregroundColor(Color.primary(for: colorScheme))
                             
                             Text(category)
@@ -673,12 +239,6 @@ struct HomeView: View {
                         }
                         .padding(.vertical, 12)
                         .padding(.horizontal, 18)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(selectedGenre == category ?
-                                      Color.primary(for: colorScheme).opacity(0.3) :
-                                      Color.gray.opacity(0.15))
-                        )
                     }
                 }
             }
@@ -686,7 +246,8 @@ struct HomeView: View {
         }
     }
     
-    // New Arrivals Section
+    // MARK: - SECTION FOR NEW ARRIVAL
+    
     private func newArrivalsSection(geometry: GeometryProxy) -> some View {
         VStack(alignment: .leading) {
             sectionHeader(title: "New Arrivals", seeMoreAction: {})
@@ -694,8 +255,11 @@ struct HomeView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 20) {
                     ForEach(newArrivals) { book in
-                        NewArrivalCard(book: book, colorScheme: colorScheme)
-                            .frame(width: geometry.size.width - 30)
+                        NavigationLink(destination: BookDetailView(book: book)) {
+                            NewArrivalCard(book: book, colorScheme: colorScheme)
+                                .frame(width: geometry.size.width - 30)
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
                 }
                 .padding([.top, .horizontal])
@@ -704,7 +268,8 @@ struct HomeView: View {
         }
     }
     
-    // Recommendations Section
+    // MARK: - SECTION FOR RECOMENDATION
+    
     private func recommendationsSection(geometry: GeometryProxy) -> some View {
         VStack(alignment: .leading) {
             sectionHeader(title: "Recommendations", seeMoreAction: {})
@@ -712,8 +277,11 @@ struct HomeView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 20) {
                     ForEach(recommendations) { book in
-                        RecommendationCard(book: book, colorScheme: colorScheme)
-                            .frame(width: (geometry.size.width - 180))
+                        NavigationLink(destination: BookDetailView(book: book)) {
+                            RecommendationCard(book: book, colorScheme: colorScheme)
+                                .frame(width: (geometry.size.width - 180))
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
                 }
                 .padding([.top, .horizontal])
@@ -722,7 +290,7 @@ struct HomeView: View {
         }
     }
     
-    // Top Selling Section
+    // MARK: - SECTION FOR TOP SELLING
     private func topSellingSection(geometry: GeometryProxy) -> some View {
         VStack(alignment: .leading) {
             sectionHeader(title: "Top Selling", seeMoreAction: {})
@@ -730,8 +298,11 @@ struct HomeView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack {
                     ForEach(Array(topSelling.enumerated()), id: \.element.id) { index, book in
-                        TopSellingCard(index: index + 1, book: book, colorScheme: colorScheme)
-                            .frame(width: (geometry.size.width - 210))
+                        NavigationLink(destination: BookDetailView(book: book)) {
+                            TopSellingCard(index: index + 1, book: book, colorScheme: colorScheme)
+                                .frame(width: (geometry.size.width - 210))
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
                     .padding([.bottom, .top, .horizontal])
                 }
@@ -739,7 +310,8 @@ struct HomeView: View {
         }
     }
     
-    // Authors Section
+    // MARK: - SECTION FOR AUTHOR
+
     private func authorsSection(geometry: GeometryProxy) -> some View {
         VStack(alignment: .leading) {
             sectionHeader(title: "Author's", seeMoreAction: {})
@@ -756,7 +328,7 @@ struct HomeView: View {
         }
     }
     
-    // MARK: - Helper Functions
+    // MARK: - HELPER FUNCTION
     private func sectionHeader(title: String, seeMoreAction: @escaping () -> Void) -> some View {
         HStack {
             Text(title)
@@ -786,6 +358,7 @@ struct HomeView: View {
 }
 
 // MARK: - SEARCH RESULTS VIEW
+
 struct SearchResultsView: View {
     let books: [Book]
     let geometry: GeometryProxy
@@ -828,8 +401,11 @@ struct SearchResultsView: View {
                         
                         LazyVStack(spacing: 16) {
                             ForEach(books) { book in
-                                SearchResultCard(book: book, colorScheme: colorScheme)
-                                    .padding(.horizontal)
+                                NavigationLink(destination: BookDetailView(book: book)) {
+                                    SearchResultCard(book: book, colorScheme: colorScheme)
+                                        .padding(.horizontal)
+                                }
+                                .buttonStyle(PlainButtonStyle())
                             }
                         }
                         .padding(.vertical)
@@ -842,6 +418,7 @@ struct SearchResultsView: View {
 }
 
 // MARK: - SEARCH RESULT CARD
+
 struct SearchResultCard: View {
     let book: Book
     let colorScheme: ColorScheme
@@ -897,7 +474,8 @@ struct SearchResultCard: View {
     }
 }
 
-// MARK: - CARD STRUCTURES
+// MARK: - CARD STRUCTURES FOR NEW ARRIVAL CARD
+
 struct NewArrivalCard: View {
     let book: Book
     let colorScheme: ColorScheme
@@ -955,6 +533,8 @@ struct NewArrivalCard: View {
     }
 }
 
+// MARK: - CARD STRUCTURES FOR RECOMENDATION
+
 struct RecommendationCard: View {
     let book: Book
     let colorScheme: ColorScheme
@@ -1000,6 +580,8 @@ struct RecommendationCard: View {
     }
 }
 
+// MARK: - CARD STRUCTURES FOR TOP SELLING
+
 struct TopSellingCard: View {
     let index: Int
     let book: Book
@@ -1012,8 +594,9 @@ struct TopSellingCard: View {
                 .fontWeight(.bold)
                 .frame(width: 32, height: 32)
                 .background(Circle().fill(Color.primary(for: colorScheme)))
-                .foregroundColor(Color.TabbarBackground(for: colorScheme))
                 .shadow(color: Color.primary(for: colorScheme).opacity(0.3), radius: 4, x: 0, y: 2)
+                .foregroundColor(Color.TabbarBackground(for: colorScheme))
+//                .foregroundColor(Color.TabbarBackground(for: colorScheme)))
             
             Image(book.imageName)
                 .resizable()
@@ -1039,6 +622,8 @@ struct TopSellingCard: View {
         .shadow(color: Color.primary(for: colorScheme).opacity(0.1), radius: 8, x: 0, y: 4)
     }
 }
+
+// MARK: - CARD STRUCTURES FOR AUTHOR CARD
 
 struct AuthorCard: View {
     let author: Author
@@ -1108,7 +693,6 @@ struct SearchBarUser: View {
         .padding(.horizontal)
     }
 }
-
 
 // MARK: - Preview
 struct HomeView_Previews: PreviewProvider {
