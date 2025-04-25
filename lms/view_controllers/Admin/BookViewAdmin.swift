@@ -16,8 +16,10 @@ struct BookViewAdmin: View {
     @State private var showingAddBookSheet = false
     @State private var bookToEdit: BookModel?
     @State private var showAddBook = false
+    @State private var showDeleteConfirmation = false
+    @State private var bookToDelete: BookModel?
 
-        @State private var showImagePicker = false
+    @State private var showImagePicker = false
 
     @State private var bookData = BookData()
 
@@ -70,7 +72,10 @@ struct BookViewAdmin: View {
                                 bookToEdit = book
                                 showingAddBookSheet = true
                             },
-                            onDelete: deleteBook
+                            onDelete: { book in
+                                bookToDelete = book
+                                showDeleteConfirmation = true
+                            }
                         )
                     }
                     .padding(.top)
@@ -98,6 +103,16 @@ struct BookViewAdmin: View {
                         addNewBook(newBook)
                     })
                 }
+            }
+            .alert("Delete Book", isPresented: $showDeleteConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Delete", role: .destructive) {
+                    if let book = bookToDelete {
+                        deleteBook(book)
+                    }
+                }
+            } message: {
+                Text("Are you sure you want to delete this book? This action cannot be undone.")
             }
         }
     }
