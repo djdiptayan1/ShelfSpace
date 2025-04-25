@@ -42,24 +42,13 @@ struct AdminAnalyticsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Spacer()
-                Image(systemName: "magnifyingglass")
-            }
-
-            // User Analytics Grid
+            // User Analytics Grid (only Active Users and Librarian Login)
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 16) {
                 NavigationLink(destination: ActiveUsersDetailView()) {
                     MetricBox(title: "Active users", value: "240")
                 }
-                NavigationLink(destination: NewRegistrationsDetailView()) {
-                    MetricBox(title: "New Registration", value: "7")
-                }
                 NavigationLink(destination: LibrarianLoginsDetailView()) {
                     MetricBox(title: "Librarian login", value: "50")
-                }
-                NavigationLink(destination: TotalBooksDetailView()) {
-                    MetricBox(title: "Total books", value: "2000")
                 }
             }
 
@@ -194,25 +183,6 @@ struct ActiveUsersDetailView: View {
             }
         }
         .navigationTitle("Active Users")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
-struct NewRegistrationsDetailView: View {
-    var body: some View {
-        List {
-            Section(header: Text("New Registrations This Week")) {
-                Text("Students: 5")
-                Text("Faculty: 2")
-                Text("Staff: 0")
-            }
-            Section(header: Text("Registration Trend")) {
-                Text("This Week: 7")
-                Text("Last Week: 9")
-                Text("Monthly Average: 30")
-            }
-        }
-        .navigationTitle("New Registrations")
         .navigationBarTitleDisplayMode(.inline)
     }
 }
