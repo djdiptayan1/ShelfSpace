@@ -16,55 +16,31 @@ struct AdminTabbar: View {
             HomeViewAdmin()
                 .tag(0)
                 .tabItem {
-                    Image(systemName: "house")
-                    Text("Dashboard")
+                    Label("Dashboard", systemImage: "house")
                 }
+
             BookViewAdmin()
                 .tag(1)
                 .tabItem {
-                    Image(systemName: "book.closed")
-                    Text("Books")
+                    Label("Books", systemImage: "book.closed")
                 }
 
             UsersViewAdmin()
                 .tag(2)
                 .tabItem {
-                    Image(systemName: "person.2.fill")
-                    Text("Users")
+                    Label("Users", systemImage: "person.2.fill")
                 }
 
             ManagePoliciesAdmin()
                 .tag(3)
                 .tabItem {
-                    Image(systemName: "document.badge.gearshape.fill")
-                    Text("Policies")
+                    Label("Policies", systemImage: "document.badge.gearshape.fill")
                 }
         }
         .accentColor(Color.primary(for: colorScheme))
-        .onAppear {
-            let appearance = UITabBarAppearance()
-            appearance.configureWithOpaqueBackground()
-            appearance.backgroundColor = UIColor(Color.TabbarBackground(for: colorScheme))
-            
-            let itemAppearance = UITabBarItemAppearance()
-            itemAppearance.normal.iconColor = UIColor(Color.text(for: colorScheme).opacity(0.6))
-            itemAppearance.normal.titleTextAttributes = [
-                .foregroundColor: UIColor(Color.text(for: colorScheme).opacity(0.6))
-            ]
-            itemAppearance.selected.iconColor = UIColor(Color.primary(for: colorScheme))
-            itemAppearance.selected.titleTextAttributes = [
-                .foregroundColor: UIColor(Color.primary(for: colorScheme))
-            ]
-            
-            appearance.stackedLayoutAppearance = itemAppearance
-            appearance.inlineLayoutAppearance = itemAppearance
-            appearance.compactInlineLayoutAppearance = itemAppearance
-            
-            UITabBar.appearance().standardAppearance = appearance
-            if #available(iOS 15.0, *) {
-                UITabBar.appearance().scrollEdgeAppearance = appearance
-            }
-        }
+        .toolbarBackground(Color.TabbarBackground(for: colorScheme), for: .tabBar)
+        .toolbarBackground(.visible, for: .tabBar)
+        .toolbarColorScheme(colorScheme, for: .tabBar)
     }
 }
 
@@ -74,7 +50,7 @@ struct AdminTabbar_Previews: PreviewProvider {
             AdminTabbar()
                 .preferredColorScheme(.light)
                 .previewDisplayName("Light Mode")
-            
+
             AdminTabbar()
                 .preferredColorScheme(.dark)
                 .previewDisplayName("Dark Mode")
