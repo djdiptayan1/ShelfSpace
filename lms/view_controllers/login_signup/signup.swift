@@ -84,8 +84,8 @@ struct SignupView: View {
                                 iconName: "envelope.fill",
                                 isSecure: false,
                                 focusState: _focusedField,
-                                fieldType: .email,
-                                colorScheme: colorScheme
+                                colorScheme: colorScheme,
+                                fieldType: .email
                             )
                             .focused($focusedField, equals: .email)
                             
@@ -98,8 +98,8 @@ struct SignupView: View {
                                 showSecureToggle: true,
                                 secureToggleAction: { showPassword.toggle() },
                                 focusState: _focusedField,
-                                fieldType: .password,
-                                colorScheme: colorScheme
+                                colorScheme: colorScheme,
+                                fieldType: .password
                             )
                             .focused($focusedField, equals: .password)
                             
@@ -112,8 +112,8 @@ struct SignupView: View {
                                 showSecureToggle: true,
                                 secureToggleAction: { showConfirmPassword.toggle() },
                                 focusState: _focusedField,
-                                fieldType: .confirmPassword,
-                                colorScheme: colorScheme
+                                colorScheme: colorScheme,
+                                fieldType: .confirmPassword
                             )
                             .focused($focusedField, equals: .confirmPassword)
                         }
@@ -183,6 +183,9 @@ struct SignupView: View {
             }
             .sheet(isPresented: $showImagePicker) {
                 ImagePicker(image: $selectedImage)
+            }
+            .onTapGesture {
+                focusedField = nil
             }
         }
     }
