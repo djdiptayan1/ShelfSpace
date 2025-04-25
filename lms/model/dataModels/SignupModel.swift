@@ -94,7 +94,7 @@ class SignupModel: ObservableObject {
         
         LoginManager.shared.signUp(
             email: email,
-            password: password,
+            password: password
         ) { [weak self] result in
             guard let self = self else { return }
             

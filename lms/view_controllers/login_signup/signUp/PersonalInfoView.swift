@@ -44,7 +44,7 @@ struct PersonalInfoView: View {
                         iconName: "person.fill",
                         isSecure: false,
                         colorScheme: colorScheme,
-                        fieldType: .name,
+                        fieldType: .name
                     )
                     .focused($focusedField, equals: .name)
 
@@ -141,7 +141,7 @@ struct PersonalInfoView: View {
                         isSecure: false,
                         colorScheme: colorScheme,
                         keyboardType: .phonePad,
-                        fieldType: .phone,
+                        fieldType: .phone
                     )
                     .focused($focusedField, equals: .phone)
                 }
