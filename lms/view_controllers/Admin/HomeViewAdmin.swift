@@ -13,24 +13,61 @@ struct HomeViewAdmin: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var lastHostingView: UIView!
     @State private var isShowingProfile = false
+    
+    @State private var prefetchedUser: User? = nil
+    @State private var prefetchedLibrary: Library? = nil
+    @State private var isPrefetchingProfile = false
+    @State private var prefetchError: String? = nil
+    
     var body: some View {
         NavigationView {
             ZStack {
                 ReusableBackground(colorScheme: colorScheme)
-
+                
                 ScrollView {
-//                    VStack() {
-//                        headerSection
-                        AdminAnalyticsView()
-//                    }
-//                    .padding()
+                    //                    VStack() {
+                    //                        headerSection
+                    AdminAnalyticsView()
+                    //                    }
+                    //                    .padding()
                 }
                 .navigationTitle("Library Name")
                 .navigationBarLargeTitleItems(trailing: ProfileIcon(isShowingProfile: $isShowingProfile))}
+            .task {
+                await prefetchProfileData()
+            }
         }
         .sheet(isPresented: $isShowingProfile) {
-                   ProfileViewAdmin()
-               }
+            // Conditionally present ProfileView or a fallback
+            if isPrefetchingProfile {
+                // Show a loading indicator within the sheet if prefetch isn't done
+                ProgressView("Loading Profile...")
+                    .padding()
+            } else if let user = prefetchedUser {
+                // Pass the prefetched data
+                ProfileView(user: user, library: prefetchedLibrary)
+            } else {
+                // Show an error view within the sheet if prefetch failed
+                VStack(spacing: 16) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.largeTitle)
+                        .foregroundColor(.orange)
+                    Text("Could Not Load Profile")
+                        .font(.headline)
+                    if let errorMsg = prefetchError {
+                        Text(errorMsg)
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                            .multilineTextAlignment(.center)
+                    }
+                    Button("Retry") {
+                        Task { await prefetchProfileData() }
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                .padding()
+            }
+        }
     }
     
 
@@ -60,6 +97,70 @@ struct HomeViewAdmin: View {
             }
         }
     }
+    private func prefetchProfileData() async {
+            // Avoid redundant fetches if already loading or data exists
+            guard !isPrefetchingProfile else { return }
+            // If we already have the user, maybe don't refetch unless forced
+            // guard prefetchedUser == nil else { return }
+
+            isPrefetchingProfile = true
+            prefetchError = nil
+            print("Prefetching profile data...") // Debug log
+
+            do {
+                guard let currentUser = try await LoginManager.shared.getCurrentUser() else {
+                    throw NSError(domain: "HomeViewAdmin", code: 404, userInfo: [NSLocalizedDescriptionKey: "No current user session found."])
+                }
+
+                // Fetch library details (assuming fetchLibraryData is accessible or moved)
+                let libraryData = try await fetchLibraryData(libraryId: currentUser.library_id)
+
+                // Update state on the main thread
+                await MainActor.run {
+                    self.prefetchedUser = currentUser
+                    self.prefetchedLibrary = libraryData
+                    self.isPrefetchingProfile = false
+                    print("Profile data prefetched successfully.") // Debug log
+                }
+            } catch {
+                // Update state on the main thread
+                await MainActor.run {
+                    self.prefetchError = error.localizedDescription
+                    self.isPrefetchingProfile = false
+                    // Keep previous data if available? Or clear it? Clearing seems safer.
+                    self.prefetchedUser = nil
+                    self.prefetchedLibrary = nil
+                    print("Error prefetching profile data: \(error.localizedDescription)") // Debug log
+                }
+            }
+        }
+    private func fetchLibraryData(libraryId: String) async throws -> Library {
+             guard let token = try? LoginManager.shared.getCurrentToken(), // Make sure LoginManager is accessible
+                   let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/libraries/\(libraryId)") else {
+                 throw URLError(.badURL)
+             }
+
+             var request = URLRequest(url: url)
+             request.httpMethod = "GET"
+             request.setValue("application/json", forHTTPHeaderField: "Accept")
+             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+             let (data, response) = try await URLSession.shared.data(for: request)
+
+             guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                  // Improved error handling based on status code
+                  let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+                  throw NSError(domain: "APIError", code: statusCode, userInfo: [NSLocalizedDescriptionKey: "Failed to fetch library data. Status code: \(statusCode)"])
+             }
+             
+             do {
+                 return try JSONDecoder().decode(Library.self, from: data)
+             } catch {
+                print("JSON Decoding Error for Library: \(error)")
+                print("Raw data: \(String(data: data, encoding: .utf8) ?? "Invalid data")")
+                throw error // Re-throw the decoding error
+             }
+         }
 }
 struct ProfileIcon: View {
     @Binding var isShowingProfile: Bool

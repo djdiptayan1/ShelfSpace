@@ -41,6 +41,7 @@ struct LoginView: View {
     @StateObject private var state = LoginState()
     @FocusState private var focusedField: AuthFieldType?
     @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject private var appState: AppState
 
     @State private var isLandscape = UIDevice.current.orientation.isLandscape
 
@@ -165,14 +166,15 @@ struct LoginView: View {
             .transition(.opacity)
         }
     }
+
     // Add a BlurView struct if you don't have one already
     struct BlurView: UIViewRepresentable {
         var style: UIBlurEffect.Style
-        
+
         func makeUIView(context: Context) -> UIVisualEffectView {
             return UIVisualEffectView(effect: UIBlurEffect(style: style))
         }
-        
+
         func updateUIView(_ uiView: UIVisualEffectView, context: Context) {
             uiView.effect = UIBlurEffect(style: style)
         }
@@ -238,6 +240,7 @@ struct LoginView: View {
                     isSecure: false,
                     focusState: _focusedField,
                     colorScheme: colorScheme,
+                    keyboardType: .emailAddress,
                     fieldType: .email
                 )
                 .focused($focusedField, equals: .email)
@@ -317,6 +320,52 @@ struct LoginView: View {
         }
     }
 
+//    private func loginAction() {
+//        focusedField = nil
+//        state.isProcessing = true
+//        state.showError = false
+//        state.errorMessage = ""
+//
+//        // Show login animation when login button is clicked
+//        withAnimation {
+//            state.showLoginAnimation = true
+//        }
+//
+//        Task {
+//            do {
+    ////                print("Attempting login for: \(state.email)")
+//                let (user, role) = try await LoginManager.shared.login(email: state.email, password: state.password)
+//                state.currentUser = user
+//
+//                await MainActor.run {
+//                    state.isProcessing = false
+//                    switch role {
+//                    case .admin:
+//                        state.destination = .admin
+//                    case .librarian:
+//                        state.destination = .librarian
+//                    case .member:
+//                        state.destination = .member
+//                    }
+//                }
+//            } catch let loginError as LoginError {
+//                await MainActor.run {
+//                    state.isProcessing = false
+//                    state.showLoginAnimation = false // Reset animation on error
+//                    state.showError = true
+//                    state.errorMessage = loginError.userMessage
+//                }
+//            } catch {
+//                await MainActor.run {
+//                    state.isProcessing = false
+//                    state.showLoginAnimation = false // Reset animation on error
+//                    state.showError = true
+//                    state.errorMessage = "An unexpected error occurred: \(error.localizedDescription)"
+//                }
+//            }
+//        }
+//    }
+
     private func loginAction() {
         focusedField = nil
         state.isProcessing = true
@@ -330,11 +379,17 @@ struct LoginView: View {
 
         Task {
             do {
-//                print("Attempting login for: \(state.email)")
                 let (user, role) = try await LoginManager.shared.login(email: state.email, password: state.password)
                 state.currentUser = user
 
+                // Update AppState
                 await MainActor.run {
+                    if let appState = getAppState() {
+                        appState.currentUser = user
+                        appState.currentUserRole = role
+                        appState.isLoggedIn = true
+                    }
+
                     state.isProcessing = false
                     switch role {
                     case .admin:
@@ -362,6 +417,17 @@ struct LoginView: View {
             }
         }
     }
+
+    private func getAppState() -> AppState? {
+        // This hack allows us to access the EnvironmentObject in a closure
+        let mirror = Mirror(reflecting: self)
+        for child in mirror.children {
+            if let appState = child.value as? AppState {
+                return appState
+            }
+        }
+        return nil
+    }
 }
 
 // Extension for LoginError to provide user-friendly messages
@@ -378,7 +444,7 @@ extension LoginError {
             return "An unknown error occurred. Please try again later."
         case .tokenError:
             return "Token error. Please log in again."
-        case .signupError(_):
+        case .signupError:
             return "Signup error. Please try again."
         }
     }

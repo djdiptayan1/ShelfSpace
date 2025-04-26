@@ -106,21 +106,23 @@ struct BookAddViewAdmin: View {
         
         let newBook = BookModel(
             id: UUID(),
-            libraryId: UUID(), // You'll need to get the actual library ID
+            libraryId: bookData.libraryId ?? UUID(), // Replace with real libraryId if you have it
             title: bookData.bookTitle,
-           coverImageUrl: coverImageUrl,
-            coverImageData: coverImageData,
             isbn: bookData.isbn,
             description: bookData.description,
             totalCopies: bookData.totalCopies,
             availableCopies: bookData.availableCopies,
             reservedCopies: bookData.reservedCopies,
-            authorIds: authorIds,
+            authorIds: bookData.authorIds,
             authorNames: bookData.authorNames,
             genreIds: bookData.genreIds,
             publishedDate: bookData.publishedDate,
-            addedOn: Date()
+            addedOn: Date(),
+            updatedAt: Date(),
+            coverImageUrl: coverImageUrl,
+            coverImageData: coverImageData
         )
+
         
         // Call the onSave closure with the new book
         onSave(newBook)

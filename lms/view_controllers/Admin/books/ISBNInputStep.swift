@@ -8,18 +8,29 @@
 import Foundation
 import SwiftUI
 
+import UIKit
+import Foundation
+
 struct BookData {
     var isbn: String
     var bookInfo: BookInfo?
     var bookCover: UIImage?
+    
     var bookTitle: String
     var description: String
     var totalCopies: Int
     var availableCopies: Int
     var reservedCopies: Int
+    
+    var authorNames: [String] = [] // For UI input
+    var genreNames: [String] = []
+    
     var publishedDate: Date
-    var authorNames: [String]
-    var genreIds: [UUID]
+//    var authorNames: [String]
+    var authorIds: [UUID]            // ✅ Added to match DB
+    var genreIds: [UUID]             // ✅ Already present
+    var libraryId: UUID?             // ✅ Added to match DB
+    
     var publisher: String
     var pageCount: String
     var language: String
@@ -29,20 +40,26 @@ struct BookData {
         self.isbn = isbn
         self.bookInfo = nil
         self.bookCover = nil
+        
         self.bookTitle = ""
         self.description = ""
         self.totalCopies = 1
         self.availableCopies = 1
         self.reservedCopies = 0
+        
         self.publishedDate = Date()
         self.authorNames = []
+        self.authorIds = []
         self.genreIds = []
+        self.libraryId = nil
+        
         self.publisher = ""
         self.pageCount = ""
         self.language = ""
         self.categories = []
     }
 }
+
 
 struct ISBNInputStep: View {
     @Binding var bookData: BookData

@@ -50,7 +50,7 @@ struct BooksCell: View {
                     .lineLimit(2)
                     .foregroundColor(colorScheme == .dark ? .white : Color(hex: "2C3E50"))
 
-                Text(book.authorNames.joined(separator: ", "))
+                Text(book.authorNames!.joined(separator: ", "))
                     .font(.system(size: 15, weight: .medium))
                     .foregroundColor(Color(hex: "7F8C8D"))
                     .lineLimit(1)
