@@ -15,6 +15,7 @@ class SignupModel: ObservableObject {
     @Published var password = ""
     @Published var confirmPassword = ""
     @Published var selectedImage: UIImage?
+    @Published var userId: UUID?
     
     // Step 2: Personal Information
     @Published var name = ""
@@ -102,7 +103,8 @@ class SignupModel: ObservableObject {
                 self.isLoading = false
                 
                 switch result {
-                case .success:
+                case .success(let id):
+                    self.userId = id
                     completion(true)
                 case .failure(let error):
                     self.showError = true
@@ -128,7 +130,7 @@ class SignupModel: ObservableObject {
         
         // Create user data object
         let userData: [String: AnyEncodable] = [
-            "user_id": AnyEncodable(UUID().uuidString), // Generate a new UUID for the user
+            "user_id": AnyEncodable(userId),
             "library_id": AnyEncodable(libraryId),
             "name": AnyEncodable(name),
             "email": AnyEncodable(email),
