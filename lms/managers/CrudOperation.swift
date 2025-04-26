@@ -184,7 +184,7 @@ func fetchGenres(completion: @escaping (Result<[String], Error>) -> Void) {
     Task {
         do {
             let token = try KeychainManager.shared.getToken()
-            print("fetching libraries with token: \(token)")
+            print("fetching genres with token: \(token)")
 
             guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/genres") else {
                 throw URLError(.badURL)
@@ -195,21 +195,40 @@ func fetchGenres(completion: @escaping (Result<[String], Error>) -> Void) {
             request.setValue("application/json", forHTTPHeaderField: "Accept")
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
-            // Use 'supabase' instead of 'client'
-            let response = try await supabase
-                .from("genres")
-                .select("name")
-                .execute()
+            let (data, response) = try await URLSession.shared.data(for: request)
 
-            let data = response.data
-            let decoder = JSONDecoder()
-
-            struct GenreResponse: Codable {
-                let name: String
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("API Response: \(jsonString)")
             }
 
-            let genreResponse = try decoder.decode([GenreResponse].self, from: data)
-            let genres = genreResponse.map { $0.name }
+            guard let httpResponse = response as? HTTPURLResponse, 200 ..< 300 ~= httpResponse.statusCode else {
+                throw URLError(.badServerResponse)
+            }
+
+            // Define the full response structure
+            struct APIResponse: Codable {
+                let data: [Genre]
+                let pagination: Pagination
+            }
+
+            struct Genre: Codable {
+                let genre_id: String
+                let name: String
+
+            }
+
+            struct Pagination: Codable {
+                let totalItems: Int
+                let currentPage: Int
+                let itemsPerPage: Int
+                let totalPages: Int
+            }
+
+            let decoder = JSONDecoder()
+//            decoder.keyDecodingStrategy = .convertFromSnakeCase // in case you prefer camelCase models
+            let apiResponse = try decoder.decode(APIResponse.self, from: data)
+
+            let genres = apiResponse.data.map { $0.name }
 
             DispatchQueue.main.async {
                 completion(.success(genres))
@@ -221,6 +240,7 @@ func fetchGenres(completion: @escaping (Result<[String], Error>) -> Void) {
         }
     }
 }
+
 
 func fetchAuthors(completion: @escaping (Result<[String], Error>) -> Void) {
     Task {
