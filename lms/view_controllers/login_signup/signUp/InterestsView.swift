@@ -141,6 +141,7 @@ struct InterestsView: View {
             case .failure(let error):
                 errorMessage = "Failed to load genres: \(error.localizedDescription)"
                 // Use sample genres as fallback
+                
             }
         }
     }
