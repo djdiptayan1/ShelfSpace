@@ -5,7 +5,9 @@ enum KeychainError: Error {
     case duplicateEntry
     case unknown(OSStatus)
     case noToken
+    case noLibraryId
     case unexpectedTokenData
+    case unexpectedLibraryIdData
 }
 
 class KeychainManager {
@@ -14,13 +16,16 @@ class KeychainManager {
     private init() {}
     
     private let service = "com.lms.app"
-    private let account = "jwtToken"
+    private let tokenAccount = "jwtToken"
+    private let libraryIdAccount = "libraryId"
+    
+    // MARK: - Token Methods
     
     func saveToken(_ token: String) throws {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
+            kSecAttrAccount as String: tokenAccount,
             kSecValueData as String: token.data(using: .utf8)!
         ]
         
@@ -37,7 +42,7 @@ class KeychainManager {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
+            kSecAttrAccount as String: tokenAccount,
             kSecReturnData as String: true
         ]
         
@@ -57,7 +62,7 @@ class KeychainManager {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: account
+            kSecAttrAccount as String: tokenAccount
         ]
         
         let attributes: [String: Any] = [
@@ -75,7 +80,7 @@ class KeychainManager {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: account
+            kSecAttrAccount as String: tokenAccount
         ]
         
         let status = SecItemDelete(query as CFDictionary)
@@ -84,4 +89,82 @@ class KeychainManager {
             throw KeychainError.unknown(status)
         }
     }
-} 
+    
+    // MARK: - Library ID Methods
+    
+    func saveLibraryId(_ libraryId: String) throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: libraryIdAccount,
+            kSecValueData as String: libraryId.data(using: .utf8)!
+        ]
+        
+        let status = SecItemAdd(query as CFDictionary, nil)
+        
+        if status == errSecDuplicateItem {
+            try updateLibraryId(libraryId)
+        } else if status != errSecSuccess {
+            throw KeychainError.unknown(status)
+        }
+    }
+    
+    func getLibraryId() throws -> String {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: libraryIdAccount,
+            kSecReturnData as String: true
+        ]
+        
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        
+        guard status == errSecSuccess,
+              let data = result as? Data,
+              let libraryId = String(data: data, encoding: .utf8) else {
+            throw KeychainError.noLibraryId
+        }
+        
+        return libraryId
+    }
+    
+    private func updateLibraryId(_ libraryId: String) throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: libraryIdAccount
+        ]
+        
+        let attributes: [String: Any] = [
+            kSecValueData as String: libraryId.data(using: .utf8)!
+        ]
+        
+        let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+        
+        if status != errSecSuccess {
+            throw KeychainError.unknown(status)
+        }
+    }
+    
+    func deleteLibraryId() throws {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: libraryIdAccount
+        ]
+        
+        let status = SecItemDelete(query as CFDictionary)
+        
+        if status != errSecSuccess && status != errSecItemNotFound {
+            throw KeychainError.unknown(status)
+        }
+    }
+    
+    // MARK: - Combined Operations
+    
+    func clearAllKeychainData() throws {
+        try deleteToken()
+        try deleteLibraryId()
+    }
+}

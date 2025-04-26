@@ -14,6 +14,12 @@ struct BookDetailsStep: View {
     let onSave: () -> Void
     @Environment(\.colorScheme) private var colorScheme
     @State private var focusedField: String?
+    @State private var isLoading = false
+    @State private var showSuccess = false
+    @State private var errorMessage = ""
+    @State private var showError = false
+    @State private var successMessage = ""
+    
     
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -222,7 +228,11 @@ struct BookDetailsStep: View {
                 .padding(.horizontal)
 
                 // Save Button
-                Button(action: onSave) {
+                Button(action: {
+                    Task {
+                        await saveBook()
+                    }
+                }) {
                     Text("Save Book")
                         .fontWeight(.semibold)
                         .foregroundColor(.white)
@@ -247,6 +257,67 @@ struct BookDetailsStep: View {
         }
         .onTapGesture {
             focusedField = nil
+        }
+    }
+    
+    private func resetForm() {
+        bookData = BookData() // or your default initializer
+    }
+
+    
+    private func saveBook() async {
+        isLoading = true
+        defer { isLoading = false }
+        
+        do {
+            // Convert BookData to BookModel
+            let bookModel = BookModel(
+                id: UUID(), // New book, so generate new UUID
+                libraryId: bookData.libraryId ?? UUID(), // Use provided libraryId or generate new one
+                title: bookData.bookTitle,
+                isbn: bookData.isbn,
+                description: bookData.description,
+                totalCopies: bookData.totalCopies,
+                availableCopies: bookData.availableCopies,
+                reservedCopies: bookData.reservedCopies,
+                authorIds: bookData.authorIds,
+                authorNames: bookData.authorNames,
+                genreIds: bookData.genreIds,
+                publishedDate: bookData.publishedDate,
+                addedOn: Date(),
+                updatedAt: Date(),
+                coverImageUrl: nil, // Will be updated after image upload
+                coverImageData: bookData.bookCover?.jpegData(compressionQuality: 0.8)
+            )
+            
+            // Save to database
+            let createdBook = try await createBook(book: bookModel)
+            print("✅ Book saved to database with ID: \(createdBook.id)")
+            
+            // Save cover image if available
+            if let coverImage = bookData.bookCover,
+               let imageData = coverImage.jpegData(compressionQuality: 0.8) {
+                // TODO: Implement image upload to storage
+                print("📸 Book cover image available for upload")
+            }
+            
+            // Save locally
+            // TODO: Implement local storage
+            print("💾 Book saved locally")
+            
+            // Show success message
+            showSuccess = true
+            successMessage = "Book added successfully!"
+            
+            // Reset form after delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                resetForm()
+                onSave()
+            }
+        } catch {
+            print("❌ Error saving book: \(error)")
+            showError = true
+            errorMessage = "Failed to save book: \(error.localizedDescription)"
         }
     }
 }

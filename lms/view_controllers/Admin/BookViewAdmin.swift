@@ -4,24 +4,23 @@
 //
 //  Created by Diptayan Jash on 23/04/25.
 //
+import DotLottie
 import Foundation
 import SwiftUI
-
 struct BookViewAdmin: View {
     @Environment(\.colorScheme) private var colorScheme
-     @State private var books: [BookModel] = demoBooks
-//    @State private var books: [BookModel] = []
+    @State private var books: [BookModel] = []
     @State private var searchText: String = ""
     @State private var selectedCategory: BookCategory = .all
     @State private var showingAddBookSheet = false
     @State private var bookToEdit: BookModel?
     @State private var showAddBook = false
-    @State private var showDeleteConfirmation = false
-    @State private var bookToDelete: BookModel?
-
     @State private var showImagePicker = false
 
     @State private var bookData = BookData()
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+    @State private var showError = false
 
     enum BookCategory: String, CaseIterable {
         case all = "All"
@@ -43,7 +42,8 @@ struct BookViewAdmin: View {
         if !searchText.isEmpty {
             result = result.filter { book in
                 book.title.localizedCaseInsensitiveContains(searchText) ||
-                    book.authorNames.joined(separator: " ").localizedCaseInsensitiveContains(searchText) ||
+//                book.authorNames!.joined(separator: " ").localizedCaseInsensitiveContains(searchText)
+//                ||
                     (book.isbn ?? "").localizedCaseInsensitiveContains(searchText)
             }
         }
@@ -51,34 +51,119 @@ struct BookViewAdmin: View {
         return result
     }
 
+//    var body: some View {
+//        NavigationView {
+//            ZStack {
+//                ReusableBackground(colorScheme: colorScheme)
+//
+//                if isLoading {
+//                    ProgressView()
+//                        .scaleEffect(1.5)
+//                        .progressViewStyle(CircularProgressViewStyle(tint: Color.primary(for: colorScheme)))
+//                } else {
+//                    ScrollView {
+//                        VStack(spacing: 16) {
+//                            SearchBar(searchText: $searchText, colorScheme: colorScheme)
+//
+//                            CategoryFilterView(
+//                                selectedCategory: $selectedCategory,
+//                                colorScheme: colorScheme
+//                            )
+//
+//                            if books.isEmpty {
+//                                EmptyBookListView(colorScheme: colorScheme)
+//                            } else {
+//                                BookList(
+//                                    books: filteredBooks,
+//                                    colorScheme: colorScheme,
+//                                    onEdit: { book in
+//                                        bookToEdit = book
+//                                        showingAddBookSheet = true
+//                                    },
+//                                    onDelete: deleteBook
+//                                )
+//                            }
+//                        }
+//                        .padding(.top)
+//                    }
+//                    .refreshable {
+//                        await loadBooks()
+//                    }
+//                }
+//            }
+//            .navigationTitle("Books")
+//            .toolbar {
+//                ToolbarItem(placement: .navigationBarTrailing) {
+//                    Button(action: {
+//                        bookToEdit = nil
+//                        showingAddBookSheet = true
+//                    }) {
+//                        Image(systemName: "plus")
+//                            .foregroundColor(Color.primary(for: colorScheme))
+//                    }
+//                }
+//            }
+//            .sheet(isPresented: $showingAddBookSheet) {
+//                if let bookToEdit = bookToEdit {
+//                    Text("Edit Book")
+//                        .font(.headline)
+//                        .padding()
+//                } else {
+//                    BookAddViewAdmin(onSave: { newBook in
+//                        addNewBook(newBook)
+//                    })
+//                }
+//            }
+//            .alert("Error", isPresented: $showError) {
+//                Button("OK", role: .cancel) { }
+//            } message: {
+//                Text(errorMessage ?? "An unknown error occurred")
+//            }
+//            .task {
+//                await loadBooks()
+//            }
+//        }
+//    }
     var body: some View {
         NavigationView {
             ZStack {
                 ReusableBackground(colorScheme: colorScheme)
-                
+
                 ScrollView {
                     VStack(spacing: 16) {
+                        // Search bar (scrolls with content)
                         SearchBar(searchText: $searchText, colorScheme: colorScheme)
-                        
+
+                        // Category filter (scrolls with content)
                         CategoryFilterView(
                             selectedCategory: $selectedCategory,
                             colorScheme: colorScheme
                         )
-                        
-                        BookList(
-                            books: filteredBooks,
-                            colorScheme: colorScheme,
-                            onEdit: { book in
-                                bookToEdit = book
-                                showingAddBookSheet = true
-                            },
-                            onDelete: { book in
-                                bookToDelete = book
-                                showDeleteConfirmation = true
+
+                        // Loading or Book List (scrolls below search & filter)
+                        if isLoading {
+                            LoadingAnimationView(colorScheme: colorScheme)
+
+                        } else {
+                            if books.isEmpty {
+                                EmptyBookListView(colorScheme: colorScheme)
+                            } else {
+                                BookList(
+                                    books: filteredBooks,
+                                    colorScheme: colorScheme,
+                                    onEdit: { book in
+                                        bookToEdit = book
+                                        showingAddBookSheet = true
+                                    },
+                                    onDelete: deleteBook
+                                )
                             }
-                        )
+                        }
                     }
                     .padding(.top)
+                }
+                .refreshable {
+                    await loadBooks()
                 }
             }
             .navigationTitle("Books")
@@ -104,15 +189,28 @@ struct BookViewAdmin: View {
                     })
                 }
             }
-            .alert("Delete Book", isPresented: $showDeleteConfirmation) {
-                Button("Cancel", role: .cancel) { }
-                Button("Delete", role: .destructive) {
-                    if let book = bookToDelete {
-                        deleteBook(book)
-                    }
-                }
+            .alert("Error", isPresented: $showError) {
+                Button("OK", role: .cancel) { }
             } message: {
-                Text("Are you sure you want to delete this book? This action cannot be undone.")
+                Text(errorMessage ?? "An unknown error occurred")
+            }
+            .task {
+                await loadBooks()
+            }
+        }
+    }
+
+    private func loadBooks() async {
+        isLoading = true
+        fetchBooks { result in
+            defer { isLoading = false }
+
+            switch result {
+            case let .success(fetchedBooks):
+                self.books = fetchedBooks
+            case let .failure(error):
+                self.errorMessage = error.localizedDescription
+                self.showError = true
             }
         }
     }
@@ -139,13 +237,57 @@ struct BookViewAdmin: View {
         }
     }
 }
+struct LoadingAnimationView: View {
+    var colorScheme: ColorScheme
+    
+    var body: some View {
+        VStack {
+            DotLottieAnimation(
+                fileName: "policy",
+                config: AnimationConfig(
+                    autoplay: true,
+                    loop: true,
+                    mode: .bounce,
+                    speed: 1.0
+                )
+            )
+            .view()
+            .frame(height: 600)
+        }
+    }
+}
+// Empty state view for when there are no books
+struct EmptyBookListView: View {
+    var colorScheme: ColorScheme
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "book.closed")
+                .font(.system(size: 60))
+                .foregroundColor(Color.primary(for: colorScheme).opacity(0.7))
+                .padding(.bottom, 10)
+
+            Text("No books found")
+                .font(.title2)
+                .fontWeight(.medium)
+
+            Text("Add new books using the + button or pull down to refresh")
+                .font(.subheadline)
+                .foregroundColor(Color.text(for: colorScheme).opacity(0.7))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 60)
+    }
+}
 
 // MARK: - Subviews
 
 struct SearchBar: View {
     @Binding var searchText: String
     var colorScheme: ColorScheme
-    
+
     var body: some View {
         HStack {
             Image(systemName: "magnifyingglass")
@@ -177,7 +319,7 @@ struct SearchBar: View {
 struct CategoryFilterView: View {
     @Binding var selectedCategory: BookViewAdmin.BookCategory
     var colorScheme: ColorScheme
-    
+
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
@@ -198,7 +340,7 @@ struct CategoryButton: View {
     var category: BookViewAdmin.BookCategory
     @Binding var selectedCategory: BookViewAdmin.BookCategory
     var colorScheme: ColorScheme
-    
+
     var body: some View {
         Button(action: {
             withAnimation(.spring()) {
@@ -231,7 +373,7 @@ struct BookList: View {
     var colorScheme: ColorScheme
     var onEdit: (BookModel) -> Void
     var onDelete: (BookModel) -> Void
-    
+
     var body: some View {
         LazyVStack(spacing: 12) {
             ForEach(books) { book in
@@ -250,11 +392,11 @@ struct BookCell: View {
     var book: BookModel
     var onEdit: () -> Void
     var onDelete: () -> Void
-    
+
     var body: some View {
         ZStack {
             BooksCell(book: book)
-            
+
             // Invisible button covering the entire cell to handle taps
             Rectangle()
                 .foregroundColor(.clear)
@@ -267,7 +409,7 @@ struct BookCell: View {
             Button(action: onEdit) {
                 Label("Edit", systemImage: "pencil")
             }
-            
+
             Button(role: .destructive, action: onDelete) {
                 Label("Delete", systemImage: "trash")
             }

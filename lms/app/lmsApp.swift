@@ -19,7 +19,8 @@ struct lmsApp: App {
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
+//            ContentView()
+            SplashScreenView()
                 .environmentObject(themeManager)
                 .onChange(of: colorScheme) { newColorScheme in
                     themeManager.update(with: newColorScheme)
