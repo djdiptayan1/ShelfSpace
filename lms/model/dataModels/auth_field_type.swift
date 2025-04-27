@@ -10,3 +10,16 @@ enum AuthFieldType {
     case age
     case gender
 }
+
+struct PaginatedResponse<T: Decodable>: Decodable {
+    let data: T
+    let pagination: Pagination
+}
+
+/// Pagination information returned by the API
+struct Pagination: Decodable {
+    let totalItems: Int
+    let currentPage: Int
+    let itemsPerPage: Int
+    let totalPages: Int
+}

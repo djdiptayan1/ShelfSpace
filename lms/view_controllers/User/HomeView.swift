@@ -29,7 +29,13 @@ struct HomeView: View {
     @State private var searchText = ""
     @State private var showSearchResults = false
     @State private var selectedGenre: String? = nil
+    @State private var showProfileSheet = false
     @Environment(\.colorScheme) private var colorScheme
+    
+    @State private var prefetchedUser: User? = nil
+    @State private var prefetchedLibrary: Library? = nil
+    @State private var isPrefetchingProfile = false
+    @State private var prefetchError: String? = nil
     
     // Sample data
     let categories = ["Romance", "Fiction", "Thriller", "Action", "Sci-Fi", "Mystery"]
@@ -204,7 +210,7 @@ struct HomeView: View {
             
             Spacer()
             
-            Button(action: { /* Profile action */ }) {
+            Button(action: { showProfileSheet = true }) {
                 Image(systemName: "person.circle.fill")
                     .resizable()
                     .frame(width: 44, height: 44)
@@ -212,6 +218,93 @@ struct HomeView: View {
             }
         }
         .padding(.horizontal)
+        .sheet(isPresented: $showProfileSheet) {
+            NavigationView {
+                if isPrefetchingProfile {
+                    ProgressView("Loading Profile...")
+                        .padding()
+                } else if let user = prefetchedUser {
+                    ProfileView()
+                        .navigationBarItems(trailing: Button("Done") {
+                            showProfileSheet = false
+                        })
+                } else {
+                    VStack(spacing: 16) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.largeTitle)
+                            .foregroundColor(.orange)
+                        Text("Could Not Load Profile")
+                            .font(.headline)
+                        if let errorMsg = prefetchError {
+                            Text(errorMsg)
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                                .multilineTextAlignment(.center)
+                        }
+                        Button("Retry") {
+                            Task { await prefetchProfileData() }
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                    .padding()
+                }
+            }
+        }
+    }
+    
+    private func prefetchProfileData() async {
+        guard !isPrefetchingProfile else { return }
+        
+        isPrefetchingProfile = true
+        prefetchError = nil
+        
+        do {
+            guard let currentUser = try await LoginManager.shared.getCurrentUser() else {
+                throw NSError(domain: "HomeView", code: 404, userInfo: [NSLocalizedDescriptionKey: "No current user session found."])
+            }
+            
+            let libraryData = try await fetchLibraryData(libraryId: currentUser.library_id)
+            
+            await MainActor.run {
+                self.prefetchedUser = currentUser
+                self.prefetchedLibrary = libraryData
+                self.isPrefetchingProfile = false
+            }
+        } catch {
+            await MainActor.run {
+                self.prefetchError = error.localizedDescription
+                self.isPrefetchingProfile = false
+                self.prefetchedUser = nil
+                self.prefetchedLibrary = nil
+            }
+        }
+    }
+    
+    private func fetchLibraryData(libraryId: String) async throws -> Library {
+        guard let token = try? LoginManager.shared.getCurrentToken(),
+              let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/libraries/\(libraryId)") else {
+            throw URLError(.badURL)
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+            throw NSError(domain: "APIError", code: statusCode, userInfo: [NSLocalizedDescriptionKey: "Failed to fetch library data. Status code: \(statusCode)"])
+        }
+        
+        do {
+            return try JSONDecoder().decode(Library.self, from: data)
+        } catch {
+            print("JSON Decoding Error for Library: \(error)")
+            print("Raw data: \(String(data: data, encoding: .utf8) ?? "Invalid data")")
+            throw error
+        }
     }
     
     // MARK: - SECTION FOR CATEGORIES

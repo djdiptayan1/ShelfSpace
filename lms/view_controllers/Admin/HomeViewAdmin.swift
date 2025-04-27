@@ -38,34 +38,35 @@ struct HomeViewAdmin: View {
             }
         }
         .sheet(isPresented: $isShowingProfile) {
-            // Conditionally present ProfileView or a fallback
-            if isPrefetchingProfile {
-                // Show a loading indicator within the sheet if prefetch isn't done
-                ProgressView("Loading Profile...")
+            Group {
+                if isPrefetchingProfile {
+                    ProgressView("Loading Profile...")
+                        .padding()
+                } else if let user = prefetchedUser, let library = prefetchedLibrary {
+                    ProfileView(prefetchedUser: user, prefetchedLibrary: library)
+                        .navigationBarItems(trailing: Button("Done") {
+                            isShowingProfile = false
+                        })
+                } else {
+                    VStack(spacing: 16) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.largeTitle)
+                            .foregroundColor(.orange)
+                        Text("Could Not Load Profile")
+                            .font(.headline)
+                        if let errorMsg = prefetchError {
+                            Text(errorMsg)
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                                .multilineTextAlignment(.center)
+                        }
+                        Button("Retry") {
+                            Task { await prefetchProfileData() }
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
                     .padding()
-            } else if let user = prefetchedUser {
-                // Pass the prefetched data
-                ProfileView(user: user, library: prefetchedLibrary)
-            } else {
-                // Show an error view within the sheet if prefetch failed
-                VStack(spacing: 16) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.largeTitle)
-                        .foregroundColor(.orange)
-                    Text("Could Not Load Profile")
-                        .font(.headline)
-                    if let errorMsg = prefetchError {
-                        Text(errorMsg)
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                            .multilineTextAlignment(.center)
-                    }
-                    Button("Retry") {
-                        Task { await prefetchProfileData() }
-                    }
-                    .buttonStyle(.borderedProminent)
                 }
-                .padding()
             }
         }
     }
@@ -98,42 +99,53 @@ struct HomeViewAdmin: View {
         }
     }
     private func prefetchProfileData() async {
-            // Avoid redundant fetches if already loading or data exists
-            guard !isPrefetchingProfile else { return }
-            // If we already have the user, maybe don't refetch unless forced
-            // guard prefetchedUser == nil else { return }
+        // Avoid redundant fetches if already loading or data exists
+        guard !isPrefetchingProfile else { return }
+        
+        isPrefetchingProfile = true
+        prefetchError = nil
+        print("Prefetching profile data...") // Debug log
 
-            isPrefetchingProfile = true
-            prefetchError = nil
-            print("Prefetching profile data...") // Debug log
-
-            do {
-                guard let currentUser = try await LoginManager.shared.getCurrentUser() else {
-                    throw NSError(domain: "HomeViewAdmin", code: 404, userInfo: [NSLocalizedDescriptionKey: "No current user session found."])
-                }
-
-                // Fetch library details (assuming fetchLibraryData is accessible or moved)
-                let libraryData = try await fetchLibraryData(libraryId: currentUser.library_id)
-
-                // Update state on the main thread
+        do {
+            // First try to get from cache
+            if let cachedUser = UserCacheManager.shared.getCachedUser() {
+                print("Using cached user data")
+                let libraryData = try await fetchLibraryData(libraryId: cachedUser.library_id)
+                
                 await MainActor.run {
-                    self.prefetchedUser = currentUser
+                    self.prefetchedUser = cachedUser
                     self.prefetchedLibrary = libraryData
                     self.isPrefetchingProfile = false
-                    print("Profile data prefetched successfully.") // Debug log
                 }
-            } catch {
-                // Update state on the main thread
-                await MainActor.run {
-                    self.prefetchError = error.localizedDescription
-                    self.isPrefetchingProfile = false
-                    // Keep previous data if available? Or clear it? Clearing seems safer.
-                    self.prefetchedUser = nil
-                    self.prefetchedLibrary = nil
-                    print("Error prefetching profile data: \(error.localizedDescription)") // Debug log
-                }
+                return
+            }
+            
+            // If no cache, fetch from server
+            guard let currentUser = try await LoginManager.shared.getCurrentUser() else {
+                throw NSError(domain: "HomeViewAdmin", code: 404, userInfo: [NSLocalizedDescriptionKey: "No current user session found."])
+            }
+
+            // Fetch library details
+            let libraryData = try await fetchLibraryData(libraryId: currentUser.library_id)
+
+            // Update state on the main thread
+            await MainActor.run {
+                self.prefetchedUser = currentUser
+                self.prefetchedLibrary = libraryData
+                self.isPrefetchingProfile = false
+                print("Profile data prefetched successfully.") // Debug log
+            }
+        } catch {
+            // Update state on the main thread
+            await MainActor.run {
+                self.prefetchError = error.localizedDescription
+                self.isPrefetchingProfile = false
+                self.prefetchedUser = nil
+                self.prefetchedLibrary = nil
+                print("Error prefetching profile data: \(error.localizedDescription)") // Debug log
             }
         }
+    }
     private func fetchLibraryData(libraryId: String) async throws -> Library {
              guard let token = try? LoginManager.shared.getCurrentToken(), // Make sure LoginManager is accessible
                    let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/libraries/\(libraryId)") else {
