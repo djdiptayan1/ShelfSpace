@@ -39,6 +39,46 @@ struct BookCollectionuser: View {
     @State private var selectedTab: BookCollectionTab = .request
     @State private var expandedTab: Bool = true
     
+    // Sample books data
+    private let demoBooks: [BookModel] = [
+        BookModel(
+            id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
+            libraryId: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
+            title: "The Swift Programming Language",
+            isbn: "9781491949863",
+            description: "An in-depth guide to the Swift language by Apple.",
+            totalCopies: 10,
+            availableCopies: 7,
+            reservedCopies: 1,
+            authorIds: [UUID(uuidString: "aaaa1111-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!],
+            authorNames: ["Apple Inc."],
+            genreIds: [UUID(uuidString: "bbbb1111-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!],
+            publishedDate: ISO8601DateFormatter().date(from: "2019-06-04T00:00:00Z"),
+            addedOn: ISO8601DateFormatter().date(from: "2025-04-20T12:00:00Z"),
+            updatedAt: ISO8601DateFormatter().date(from: "2025-04-25T10:00:00Z"),
+            coverImageUrl: "https://images.apple.com/books/images/swift-book-cover-large.jpg",
+            coverImageData: nil
+        ),
+        BookModel(
+            id: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!,
+            libraryId: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
+            title: "SwiftUI Essentials",
+            isbn: "9781950325022",
+            description: "Learn how to build beautiful and modern UIs using SwiftUI.",
+            totalCopies: 8,
+            availableCopies: 5,
+            reservedCopies: 2,
+            authorIds: [UUID(uuidString: "aaaa2222-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!],
+            authorNames: ["Chris Eidhof"],
+            genreIds: [UUID(uuidString: "bbbb2222-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!],
+            publishedDate: ISO8601DateFormatter().date(from: "2022-10-15T00:00:00Z"),
+            addedOn: ISO8601DateFormatter().date(from: "2025-04-21T09:30:00Z"),
+            updatedAt: ISO8601DateFormatter().date(from: "2025-04-25T10:00:00Z"),
+            coverImageUrl: "https://images.apple.com/books/images/swift-book-cover-large.jpg",
+            coverImageData: nil
+        )
+    ]
+    
     // MARK: - Body
     var body: some View {
         ZStack {
@@ -57,54 +97,7 @@ struct BookCollectionuser: View {
                     .padding(.top, 16)
                 
                 // MARK: - Tab Bar (Apple Mail-style)
-                HStack(spacing: 14) {
-                    ForEach(BookCollectionTab.allCases, id: \.self) { tab in
-                        Button(action: {
-                            withAnimation(.spring()) {
-                                if selectedTab == tab {
-                                    // Toggle expansion when tapping the selected tab
-                                    expandedTab.toggle()
-                                } else {
-                                    selectedTab = tab
-                                    expandedTab = true
-                                }
-                            }
-                        }) {
-                            HStack(spacing: 10) {
-                                Image(systemName: tab.icon)
-                                    .font(.headline)
-                                
-                                if expandedTab && selectedTab == tab {
-                                    Text(tab.rawValue)
-                                        .font(.system(size: 13))
-                                        .transition(.opacity)
-                                }
-                            }
-                            .padding(.vertical, 15)
-                            .padding(.horizontal, 18)
-                            .background(
-                                ZStack {
-                                    if selectedTab == tab {
-                                        Capsule()
-                                            .fill(Color.primary(for: colorScheme).opacity(0.6))
-                                            .matchedGeometryEffect(id: "TAB", in: animation)
-                                            
-                                    }
-                                }
-                            )
-                            .foregroundColor(selectedTab == tab ? .white : Color.text(for: colorScheme).opacity(0.6))
-                        }
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 6)
-//                .background(
-//                    RoundedRectangle(cornerRadius: 10)
-//                        .fill(Color.TabbarBackground(for: colorScheme).opacity(0.7))
-//                        .shadow(color: colorScheme == .dark ? Color.white.opacity(0.05) : Color.gray.opacity(0.2),
-//                                radius: 4, x: 0, y: 2)
-//                )
-                .padding(.horizontal)
+                tabBarView
                 
                 // MARK: - Book Collection Grid
                 ScrollView {
@@ -123,6 +116,51 @@ struct BookCollectionuser: View {
         }
         .background(ReusableBackground(colorScheme: colorScheme))
         .navigationBarTitleDisplayMode(.inline)
+    }
+    
+    // MARK: - Tab Bar View
+    private var tabBarView: some View {
+        HStack(spacing: 14) {
+            ForEach(BookCollectionTab.allCases, id: \.self) { tab in
+                Button(action: {
+                    withAnimation(.spring()) {
+                        if selectedTab == tab {
+                            // Toggle expansion when tapping the selected tab
+                            expandedTab.toggle()
+                        } else {
+                            selectedTab = tab
+                            expandedTab = true
+                        }
+                    }
+                }) {
+                    HStack(spacing: 10) {
+                        Image(systemName: tab.icon)
+                            .font(.headline)
+                        
+                        if expandedTab && selectedTab == tab {
+                            Text(tab.rawValue)
+                                .font(.system(size: 13))
+                                .transition(.opacity)
+                        }
+                    }
+                    .padding(.vertical, 15)
+                    .padding(.horizontal, 18)
+                    .background(
+                        ZStack {
+                            if selectedTab == tab {
+                                Capsule()
+                                    .fill(Color.primary(for: colorScheme).opacity(0.6))
+                                    .matchedGeometryEffect(id: "TAB", in: animation)
+                            }
+                        }
+                    )
+                    .foregroundColor(selectedTab == tab ? .white : Color.text(for: colorScheme).opacity(0.6))
+                }
+            }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 6)
+        .padding(.horizontal)
     }
 }
 
@@ -170,7 +208,7 @@ struct BookCardView: View {
                 .lineLimit(1)
             
             // Author Name
-            Text(book.authorNames.first ?? "")
+            Text(book.authorNames?.first ?? "Unknown Author")
                 .font(.subheadline)
                 .foregroundColor(Color.text(for: colorScheme).opacity(0.7))
             

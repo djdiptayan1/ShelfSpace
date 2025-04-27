@@ -16,6 +16,15 @@ class AppState: ObservableObject {
     @Published var currentUser: User?
     @Published var currentLibrary: Library?
     @Published var prefetchError: String?
+    @Published var shouldShowLogin: Bool = false
+    
+    func resetState() {
+        isLoggedIn = false
+        currentUserRole = nil
+        currentUser = nil
+        currentLibrary = nil
+        shouldShowLogin = true
+    }
 }
 
 struct SplashScreenView: View {
@@ -54,33 +63,37 @@ struct SplashScreenView: View {
                 .onAppear {
                     checkLoginStatus()
                 }
-            } else {
-                // User is already logged in, show the appropriate view
-                if appState.isLoggedIn {
-                    switch appState.currentUserRole {
-                    case .admin:
-                        AdminTabbar()
-                            .environmentObject(appState)
-                    case .librarian:
-                        LibrarianTabbar()
-                            .environmentObject(appState)
-                    case .member:
-                        UserTabbar()
-                            .environmentObject(appState)
-                    case .none:
-                        LoginView()
-                    }
-                } else {
-                    // Not logged in - show login screen
+            } else if appState.shouldShowLogin {
+                // Show login screen when shouldShowLogin is true
+                LoginView()
+                    .environmentObject(appState)
+            } else if appState.isLoggedIn {
+                // Show appropriate screen based on user role
+                switch appState.currentUserRole {
+                case .admin:
+                    AdminTabbar()
+                        .environmentObject(appState)
+                case .librarian:
+                    LibrarianTabbar()
+                        .environmentObject(appState)
+                case .member:
+                    UserTabbar()
+                        .environmentObject(appState)
+                case .none:
                     LoginView()
+                        .environmentObject(appState)
                 }
+            } else {
+                // Default to login screen
+                LoginView()
+                    .environmentObject(appState)
             }
         }
     }
     
     private func checkLoginStatus() {
         // Minimum display time for splash
-        let minSplashTime = 1.5 // seconds
+        let minSplashTime = 1.0 // seconds
         let startTime = Date()
         
         Task {

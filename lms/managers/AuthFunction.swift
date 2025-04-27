@@ -71,11 +71,11 @@ class LoginManager {
                 }
 
                 // Decode the JSON into your APIUserResponse model
-                let decodedResponse = try JSONDecoder().decode(APIUserResponse.self, from: data)
+                let decodedResponse = try JSONUtility.shared.decode(APIUserResponse.self, from: data)
                 print("User data decoded successfully")
                 
                 let libraryID = decodedResponse.library_id
-                try! KeychainManager.shared.saveLibraryId(libraryID)
+                try KeychainManager.shared.saveLibraryId(libraryID)
 
                 // Construct User object
                 let user = User(
@@ -105,11 +105,9 @@ class LoginManager {
                 // Wait for 1 second before retrying
                 try await Task.sleep(nanoseconds: 1_000_000_000)
                 continue
-            } catch let error as DecodingError {
-                print("Decoding error: \(error)")
-                throw LoginError.unknownError
             } catch {
-                print("Login error: \(error)")
+                print("Login error:")
+                error.logDetails()
                 if let postgrestError = error as? PostgrestError {
                     if postgrestError.code == "42P17" {
                         throw LoginError.roleNotFound
@@ -200,8 +198,10 @@ class LoginManager {
         }
         
         do {
-            let accessToken = try getCurrentToken()
+            // If not in cache, try to get token from keychain
+            let accessToken = try KeychainManager.shared.getToken()
             let supabaseUser = try await supabase.auth.user()
+            
             guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/users/\(supabaseUser.id)") else {
                 throw URLError(.badURL)
             }
@@ -214,7 +214,7 @@ class LoginManager {
             let (data, _) = try await URLSession.shared.data(for: request)
 
             // Decode the JSON into your APIUserResponse model
-            let decodedResponse = try JSONDecoder().decode(APIUserResponse.self, from: data)
+            let decodedResponse = try JSONUtility.shared.decode(APIUserResponse.self, from: data)
 
             // Construct User object
             let appUser = User(
@@ -231,13 +231,20 @@ class LoginManager {
             
             return appUser
         } catch {
-            print("Error getting current user: \(error)")
+            print("Error getting current user:")
+            error.logDetails()
             return nil
         }
     }
     
     func checkSession() async -> Bool {
         do {
+            // First check if we have a valid cached user
+            if UserCacheManager.shared.isUserCached() {
+                print("Valid user found in cache")
+                return true
+            }
+            
             // Try to get the token from keychain
             let token = try KeychainManager.shared.getToken()
             
@@ -267,7 +274,8 @@ class LoginManager {
                 return false
             }
         } catch {
-            print("Session check error: \(error)")
+            print("Session check error:")
+            error.logDetails()
             return false
         }
     }

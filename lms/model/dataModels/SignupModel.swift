@@ -136,11 +136,14 @@ class SignupModel: ObservableObject {
             "email": AnyEncodable(email),
             "role": AnyEncodable("member"),
             "is_active": AnyEncodable(true),
-            "gender": AnyEncodable(gender),
+            "gender": AnyEncodable(gender.lowercased()),
             "age": AnyEncodable(Int(age) ?? 0),
             "phone_number": AnyEncodable(phoneNumber),
             "interests": AnyEncodable(Array(selectedGenres))
         ]
+        
+        // Debug print the user data
+        print("Sending user data to database: \(userData)")
         
         // Save to Supabase users table
         insertUser(userData: userData) { [weak self] success in

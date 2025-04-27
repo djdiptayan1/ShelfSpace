@@ -40,12 +40,13 @@ struct HomeViewAdmin: View {
         .sheet(isPresented: $isShowingProfile) {
             // Conditionally present ProfileView or a fallback
             if isPrefetchingProfile {
-                // Show a loading indicator within the sheet if prefetch isn't done
                 ProgressView("Loading Profile...")
                     .padding()
             } else if let user = prefetchedUser {
-                // Pass the prefetched data
-                ProfileView(user: user, library: prefetchedLibrary)
+                ProfileView()
+                    .navigationBarItems(trailing: Button("Done") {
+                        isShowingProfile = false
+                    })
             } else {
                 // Show an error view within the sheet if prefetch failed
                 VStack(spacing: 16) {

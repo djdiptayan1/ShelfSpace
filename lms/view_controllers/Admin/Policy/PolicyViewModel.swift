@@ -25,15 +25,19 @@ class PolicyViewModel: ObservableObject {
     
     func loadPolicy() {
         print("🔄 Loading policy data...")
+        isLoading = true
         fetchPolicy(libraryId: libraryId) { [weak self] policy in
             guard let self = self else { return }
             DispatchQueue.main.async {
-                self.currentPolicy = policy
-                if policy == nil {
-                    print("❌ Failed to load policy data")
-                    self.errorMessage = "Failed to load policy data"
-                } else {
+                self.isLoading = false
+                if let policy = policy {
+                    self.currentPolicy = policy
+                    self.errorMessage = nil
                     print("✅ Policy data loaded successfully")
+                } else {
+                    print("⚠️ No existing policy found - will create new one when saved")
+                    // Don't set error message here as it's not really an error
+                    // Just means we need to create a new policy
                 }
             }
         }
@@ -41,6 +45,7 @@ class PolicyViewModel: ObservableObject {
     
     func savePolicy(policy: Policy, completion: @escaping (Bool) -> Void) {
         print("💾 Saving policy data...")
+        isLoading = true
         showAnimation = true
         
         if let policyId = policy.policy_id {
@@ -48,10 +53,12 @@ class PolicyViewModel: ObservableObject {
             updatePolicy(policyId: policyId, policyData: policy) { [weak self] success in
                 guard let self = self else { return }
                 DispatchQueue.main.async {
+                    self.isLoading = false
                     self.saveSuccess = success
                     if success {
                         print("✅ Policy updated successfully")
                         self.currentPolicy = policy
+                        self.errorMessage = nil
                     } else {
                         print("❌ Failed to update policy")
                         self.errorMessage = "Failed to update policy"
@@ -65,12 +72,14 @@ class PolicyViewModel: ObservableObject {
             insertPolicy(policyData: policy) { [weak self] success, policyId in
                 guard let self = self else { return }
                 DispatchQueue.main.async {
+                    self.isLoading = false
                     self.saveSuccess = success
                     if success && policyId != nil {
                         print("✅ New policy created successfully")
                         var savedPolicy = policy
                         savedPolicy.policy_id = policyId
                         self.currentPolicy = savedPolicy
+                        self.errorMessage = nil
                     } else {
                         print("❌ Failed to create policy")
                         self.errorMessage = "Failed to create policy"
