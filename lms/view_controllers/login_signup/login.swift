@@ -35,6 +35,17 @@ class LoginState: ObservableObject {
             }
         }
     }
+
+    func setError(_ error: Error) {
+        if let loginError = error as? LoginError {
+            errorMessage = loginError.userMessage
+        } else if let urlError = error as? URLError {
+            errorMessage = "Network error: \(urlError.localizedDescription)"
+        } else {
+            errorMessage = "An unexpected error occurred: \(error.localizedDescription)"
+        }
+        showError = true
+    }
 }
 
 struct LoginView: View {
@@ -97,9 +108,14 @@ struct LoginView: View {
                 }
             }
             .alert("Login Error", isPresented: $state.showError) {
-                Button("OK", role: .cancel) { }
+                Button("OK", role: .cancel) { 
+                    state.showError = false
+                    state.errorMessage = ""
+                }
             } message: {
                 Text(state.errorMessage)
+                    .font(.system(size: 14, weight: .regular, design: .rounded))
+                    .foregroundColor(Color.text(for: colorScheme))
             }
             // More efficient orientation change handling
             .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
@@ -320,52 +336,6 @@ struct LoginView: View {
         }
     }
 
-//    private func loginAction() {
-//        focusedField = nil
-//        state.isProcessing = true
-//        state.showError = false
-//        state.errorMessage = ""
-//
-//        // Show login animation when login button is clicked
-//        withAnimation {
-//            state.showLoginAnimation = true
-//        }
-//
-//        Task {
-//            do {
-    ////                print("Attempting login for: \(state.email)")
-//                let (user, role) = try await LoginManager.shared.login(email: state.email, password: state.password)
-//                state.currentUser = user
-//
-//                await MainActor.run {
-//                    state.isProcessing = false
-//                    switch role {
-//                    case .admin:
-//                        state.destination = .admin
-//                    case .librarian:
-//                        state.destination = .librarian
-//                    case .member:
-//                        state.destination = .member
-//                    }
-//                }
-//            } catch let loginError as LoginError {
-//                await MainActor.run {
-//                    state.isProcessing = false
-//                    state.showLoginAnimation = false // Reset animation on error
-//                    state.showError = true
-//                    state.errorMessage = loginError.userMessage
-//                }
-//            } catch {
-//                await MainActor.run {
-//                    state.isProcessing = false
-//                    state.showLoginAnimation = false // Reset animation on error
-//                    state.showError = true
-//                    state.errorMessage = "An unexpected error occurred: \(error.localizedDescription)"
-//                }
-//            }
-//        }
-//    }
-
     private func loginAction() {
         focusedField = nil
         state.isProcessing = true
@@ -391,6 +361,7 @@ struct LoginView: View {
                     }
 
                     state.isProcessing = false
+                    state.showLoginAnimation = false
                     switch role {
                     case .admin:
                         state.destination = .admin
@@ -400,19 +371,29 @@ struct LoginView: View {
                         state.destination = .member
                     }
                 }
-            } catch let loginError as LoginError {
+            } catch let error as LoginError {
                 await MainActor.run {
                     state.isProcessing = false
-                    state.showLoginAnimation = false // Reset animation on error
+                    state.showLoginAnimation = false
                     state.showError = true
-                    state.errorMessage = loginError.userMessage
+                    state.errorMessage = error.userMessage
+                    print("Login Error: \(error.userMessage)")
+                }
+            } catch let error as URLError {
+                await MainActor.run {
+                    state.isProcessing = false
+                    state.showLoginAnimation = false
+                    state.showError = true
+                    state.errorMessage = "Network error: \(error.localizedDescription)"
+                    print("Network Error: \(error.localizedDescription)")
                 }
             } catch {
                 await MainActor.run {
                     state.isProcessing = false
-                    state.showLoginAnimation = false // Reset animation on error
+                    state.showLoginAnimation = false
                     state.showError = true
                     state.errorMessage = "An unexpected error occurred: \(error.localizedDescription)"
+                    print("Unexpected Error: \(error.localizedDescription)")
                 }
             }
         }
@@ -446,6 +427,8 @@ extension LoginError {
             return "Token error. Please log in again."
         case .signupError:
             return "Signup error. Please try again."
+        case .userInactive:
+            return "Your account has been deactivated. Please contact your administrator."
         }
     }
 }

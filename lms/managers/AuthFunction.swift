@@ -15,6 +15,7 @@ enum LoginError: Error {
     case roleNotFound
     case tokenError
     case signupError(String)
+    case userInactive
 }
 
 struct APIUserResponse: Codable {
@@ -51,7 +52,7 @@ class LoginManager {
                 print("User ID: \(response.user.id)")
                 guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/users/\(response.user.id)") else {
                     print("Invalid URL constructed")
-                    throw URLError(.badURL)
+                    throw LoginError.unknownError
                 }
 
                 var request = URLRequest(url: url)
@@ -63,19 +64,49 @@ class LoginManager {
                 print("Making API request to fetch user data")
                 let (data, httpResponse) = try await URLSession.shared.data(for: request)
 
-                if let httpResponseObject = httpResponse as? HTTPURLResponse {
-                    print("API Response Status: \(httpResponseObject.statusCode)")
-                    if let responseString = String(data: data, encoding: .utf8) {
-                        print("API Response: \(responseString)")
-                    }
+                guard let httpResponse = httpResponse as? HTTPURLResponse else {
+                    print("Invalid HTTP response")
+                    throw LoginError.unknownError
+                }
+
+                print("API Response Status: \(httpResponse.statusCode)")
+                if let responseString = String(data: data, encoding: .utf8) {
+                    print("API Response: \(responseString)")
+                }
+
+                // Handle different HTTP status codes
+                switch httpResponse.statusCode {
+                case 200:
+                    // Success, continue with processing
+                    break
+                case 401:
+                    // Unauthorized - token error
+                    try KeychainManager.shared.deleteToken()
+                    throw LoginError.tokenError
+                case 404:
+                    // User not found
+                    throw LoginError.roleNotFound
+                case 500...599:
+                    // Server error
+                    throw LoginError.unknownError
+                default:
+                    throw LoginError.unknownError
                 }
 
                 // Decode the JSON into your APIUserResponse model
-                let decodedResponse = try JSONDecoder().decode(APIUserResponse.self, from: data)
+                let decodedResponse = try JSONUtility.shared.decode(APIUserResponse.self, from: data)
                 print("User data decoded successfully")
                 
+                // Check if user is active
+                if !decodedResponse.is_active {
+                    // Clear the token since we won't allow login
+                    try KeychainManager.shared.deleteToken()
+                    print("User is inactive")
+                    throw LoginError.userInactive
+                }
+                
                 let libraryID = decodedResponse.library_id
-                try! KeychainManager.shared.saveLibraryId(libraryID)
+                try KeychainManager.shared.saveLibraryId(libraryID)
 
                 // Construct User object
                 let user = User(
@@ -95,6 +126,8 @@ class LoginManager {
                 print("Library data prefetched successfully")
 
                 return (user, decodedResponse.role)
+            } catch let error as LoginError {
+                throw error
             } catch let error as URLError where error.code == .networkConnectionLost {
                 print("Network connection lost, retrying... (attempt \(currentRetry + 1)/\(maxRetries))")
                 currentRetry += 1
@@ -102,20 +135,20 @@ class LoginManager {
                     print("Max retries reached, throwing network error")
                     throw LoginError.networkError
                 }
-                // Wait for 1 second before retrying
                 try await Task.sleep(nanoseconds: 1_000_000_000)
                 continue
-            } catch let error as DecodingError {
-                print("Decoding error: \(error)")
-                throw LoginError.unknownError
-            } catch {
-                print("Login error: \(error)")
-                if let postgrestError = error as? PostgrestError {
-                    if postgrestError.code == "42P17" {
-                        throw LoginError.roleNotFound
-                    }
+            } catch let error as PostgrestError {
+                print("Postgrest Error: \(error)")
+                if error.code == "42P17" {
+                    throw LoginError.roleNotFound
                 }
                 throw LoginError.invalidCredentials
+            } catch let error as AuthError {
+                print("Auth Error: \(error)")
+                throw LoginError.invalidCredentials
+            } catch {
+                print("Unexpected Error: \(error)")
+                throw LoginError.unknownError
             }
         }
         throw LoginError.networkError
@@ -200,8 +233,10 @@ class LoginManager {
         }
         
         do {
-            let accessToken = try getCurrentToken()
+            // If not in cache, try to get token from keychain
+            let accessToken = try KeychainManager.shared.getToken()
             let supabaseUser = try await supabase.auth.user()
+            
             guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/users/\(supabaseUser.id)") else {
                 throw URLError(.badURL)
             }
@@ -214,7 +249,7 @@ class LoginManager {
             let (data, _) = try await URLSession.shared.data(for: request)
 
             // Decode the JSON into your APIUserResponse model
-            let decodedResponse = try JSONDecoder().decode(APIUserResponse.self, from: data)
+            let decodedResponse = try JSONUtility.shared.decode(APIUserResponse.self, from: data)
 
             // Construct User object
             let appUser = User(
@@ -231,13 +266,20 @@ class LoginManager {
             
             return appUser
         } catch {
-            print("Error getting current user: \(error)")
+            print("Error getting current user:")
+            error.logDetails()
             return nil
         }
     }
     
     func checkSession() async -> Bool {
         do {
+            // First check if we have a valid cached user
+            if UserCacheManager.shared.isUserCached() {
+                print("Valid user found in cache")
+                return true
+            }
+            
             // Try to get the token from keychain
             let token = try KeychainManager.shared.getToken()
             
@@ -267,7 +309,8 @@ class LoginManager {
                 return false
             }
         } catch {
-            print("Session check error: \(error)")
+            print("Session check error:")
+            error.logDetails()
             return false
         }
     }
