@@ -7,9 +7,7 @@
 
 import Foundation
 import SwiftUI
-
 import UIKit
-import Foundation
 
 struct BookData {
     var isbn: String
@@ -26,7 +24,6 @@ struct BookData {
     var genreNames: [String] = []
     
     var publishedDate: Date
-//    var authorNames: [String]
     var authorIds: [UUID]            // ✅ Added to match DB
     var genreIds: [UUID]             // ✅ Already present
     var libraryId: UUID?             // ✅ Added to match DB
@@ -60,11 +57,11 @@ struct BookData {
     }
 }
 
-
 struct ISBNInputStep: View {
     @Binding var bookData: BookData
     @Binding var showBarcodeScanner: Bool
     let onContinue: () -> Void
+    let onScanComplete: () -> Void
     @Environment(\.colorScheme) private var colorScheme
     @FocusState private var isISBNFocused: Bool
     @State private var isLoading = false
@@ -232,6 +229,14 @@ struct ISBNInputStep: View {
         } message: {
             Text(errorMessage)
         }
+        .sheet(isPresented: $showBarcodeScanner) {
+            BarcodeScannerView(scannedCode: $bookData.isbn, onScanComplete: { code in
+                Task {
+                    await fetchBookInfo()
+                    onScanComplete()
+                }
+            })
+        }
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 isISBNFocused = true
@@ -336,7 +341,8 @@ struct ISBNInputStep: View {
             ISBNInputStep(
                 bookData: $bookData,
                 showBarcodeScanner: $showBarcodeScanner,
-                onContinue: {}
+                onContinue: {},
+                onScanComplete: {}
             )
         }
     }

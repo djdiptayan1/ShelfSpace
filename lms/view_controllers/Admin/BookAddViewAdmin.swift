@@ -45,6 +45,11 @@ struct BookAddViewAdmin: View {
                             withAnimation(.easeInOut) {
                                 currentStep = .details
                             }
+                        },
+                        onScanComplete: {
+                            withAnimation(.easeInOut) {
+                                currentStep = .details
+                            }
                         }
                     )
                 case .details:
@@ -85,7 +90,11 @@ struct BookAddViewAdmin: View {
                 ImagePicker(image: $bookData.bookCover)
             }
             .sheet(isPresented: $showBarcodeScanner) {
-                BarcodeScannerView(scannedCode: $bookData.isbn)
+                BarcodeScannerView(scannedCode: $bookData.isbn) { _ in
+                    // This will be handled by the ISBNInputStep's onScanComplete
+                    // We don't need to do anything here because the ISBNInputStep
+                    // will automatically trigger the navigation when it receives the scanned code
+                }
             }
             .onTapGesture {
                 focusedField = nil
@@ -113,7 +122,7 @@ struct BookAddViewAdmin: View {
             totalCopies: bookData.totalCopies,
             availableCopies: bookData.availableCopies,
             reservedCopies: bookData.reservedCopies,
-            authorIds: bookData.authorIds,
+            authorIds: authorIds,
             authorNames: bookData.authorNames,
             genreIds: bookData.genreIds,
             publishedDate: bookData.publishedDate,
@@ -123,7 +132,6 @@ struct BookAddViewAdmin: View {
             coverImageData: coverImageData
         )
 
-        
         // Call the onSave closure with the new book
         onSave(newBook)
     }
