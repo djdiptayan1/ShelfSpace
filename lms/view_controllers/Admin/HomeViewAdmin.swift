@@ -73,31 +73,31 @@ struct HomeViewAdmin: View {
     
 
     // MARK: - Header
-    private var headerSection: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Welcome Navdeep!")
-                    .font(.title2)
-                    .foregroundColor(Color.text(for: colorScheme))
-
-                Text("Library Name")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .foregroundColor(Color.text(for: colorScheme))
-            }
-
-            Spacer()
-
-            Button(action: {
-                // Profile action
-            }) {
-                Image(systemName: "person.circle.fill")
-                    .resizable()
-                    .frame(width: 44, height: 44)
-                    .foregroundColor(Color.primary(for: colorScheme).opacity(0.9))
-            }
-        }
-    }
+//    private var headerSection: some View {
+//        HStack {
+//            VStack(alignment: .leading, spacing: 4) {
+//                Text("Welcome Navdeep!")
+//                    .font(.title2)
+//                    .foregroundColor(Color.text(for: colorScheme))
+//
+//                Text("Library Name")
+//                    .font(.largeTitle)
+//                    .fontWeight(.bold)
+//                    .foregroundColor(Color.text(for: colorScheme))
+//            }
+//
+//            Spacer()
+//
+//            Button(action: {
+//                // Profile action
+//            }) {
+//                Image(systemName: "person.circle.fill")
+//                    .resizable()
+//                    .frame(width: 44, height: 44)
+//                    .foregroundColor(Color.primary(for: colorScheme).opacity(0.9))
+//            }
+//        }
+//    }
     private func prefetchProfileData() async {
         // Avoid redundant fetches if already loading or data exists
         guard !isPrefetchingProfile else { return }
