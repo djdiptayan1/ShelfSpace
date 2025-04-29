@@ -13,11 +13,15 @@ struct BarcodeScannerView: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var scannedCode: String
     @State private var isTorchOn = false
+    let onScanComplete: (String) async -> Void
     
     var body: some View {
         ZStack {
-            BarcodeScannerRepresentable(scannedCode: $scannedCode, isTorchOn: $isTorchOn, didScan: {
-                dismiss()
+            BarcodeScannerRepresentable(scannedCode: $scannedCode, isTorchOn: $isTorchOn, didScan: { code in
+                Task {
+                    await onScanComplete(code)
+                    dismiss()
+                }
             })
             .ignoresSafeArea()
             
@@ -95,7 +99,7 @@ struct BarcodeScannerView: View {
 struct BarcodeScannerRepresentable: UIViewControllerRepresentable {
     @Binding var scannedCode: String
     @Binding var isTorchOn: Bool
-    var didScan: () -> Void
+    var didScan: (String) -> Void
     
     func makeUIViewController(context: Context) -> UIViewController {
         let viewController = BarcodeScannerViewController()
@@ -122,7 +126,7 @@ struct BarcodeScannerRepresentable: UIViewControllerRepresentable {
         
         func didScanBarcode(code: String) {
             parent.scannedCode = code
-            parent.didScan()
+            parent.didScan(code)
         }
     }
 }
@@ -211,6 +215,7 @@ class BarcodeScannerViewController: UIViewController, AVCaptureMetadataOutputObj
             
             // Check if the code is a valid ISBN (EAN-13)
             if stringValue.count == 13 && (stringValue.hasPrefix("978") || stringValue.hasPrefix("979")) {
+                captureSession.stopRunning()
                 delegate?.didScanBarcode(code: stringValue)
             }
         }

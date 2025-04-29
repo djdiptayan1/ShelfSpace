@@ -45,6 +45,10 @@ struct BookAddViewAdmin: View {
                             withAnimation(.easeInOut) {
                                 currentStep = .details
                             }
+                        }, onScanComplete: {
+                            withAnimation(.easeInOut) {
+                                currentStep = .details
+                            }
                         }
                     )
                 case .details:
@@ -85,7 +89,8 @@ struct BookAddViewAdmin: View {
                 ImagePicker(image: $bookData.bookCover)
             }
             .sheet(isPresented: $showBarcodeScanner) {
-                BarcodeScannerView(scannedCode: $bookData.isbn)
+                BarcodeScannerView(scannedCode: $bookData.isbn){_ in
+                }
             }
             .onTapGesture {
                 focusedField = nil

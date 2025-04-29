@@ -338,4 +338,77 @@ class LoginManager {
     func getCurrentToken() throws -> String {
         return try KeychainManager.shared.getToken()
     }
+
+    func generateOTP(email: String) async throws -> Bool {
+        print("🔑 Starting OTP generation for email: \(email)")
+        guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/otp/generate") else {
+            print("❌ Invalid URL")
+            throw URLError(.badURL)
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        let payload = ["email": email]
+        print("📤 Request payload: \(payload)")
+        
+        let jsonData = try JSONUtility.shared.encodeFromDictionary(payload)
+        request.httpBody = jsonData
+
+        print("🌐 Making API request to: \(url)")
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        if let httpResponse = response as? HTTPURLResponse {
+            print("📥 Response status code: \(httpResponse.statusCode)")
+        }
+
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("📥 Response data: \(responseString)")
+        }
+
+        guard let httpResponse = response as? HTTPURLResponse, 200 ..< 300 ~= httpResponse.statusCode else {
+            print("❌ Invalid response status code")
+            throw LoginError.unknownError
+        }
+
+        struct OTPResponse: Codable {
+            let success: Bool
+            let message: String
+        }
+
+        let otpResponse = try JSONUtility.shared.decode(OTPResponse.self, from: data)
+        print("✅ OTP generation response: \(otpResponse)")
+        return otpResponse.success
+    }
+
+    func verifyOTP(email: String, otp: String) async throws -> Bool {
+        guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/otp/verify") else {
+            throw URLError(.badURL)
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        let payload = ["email": email, "otp": otp]
+        let jsonData = try JSONUtility.shared.encodeFromDictionary(payload)
+        request.httpBody = jsonData
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse, 200 ..< 300 ~= httpResponse.statusCode else {
+            throw LoginError.unknownError
+        }
+
+        struct OTPResponse: Codable {
+            let success: Bool
+            let message: String
+        }
+
+        let otpResponse = try JSONUtility.shared.decode(OTPResponse.self, from: data)
+        return otpResponse.success
+    }
 }

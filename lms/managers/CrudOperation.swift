@@ -8,45 +8,49 @@ import Foundation
 import Supabase
 import SwiftUI
 
-func insertUser(userData: [String: AnyEncodable], completion: @escaping (Bool) -> Void) {
+func insertUser(userData: [String: Any], completion: @escaping (Bool) -> Void) {
     Task {
         do {
             let token = try KeychainManager.shared.getToken()
-            print("Sending user data to API with token: \(token)")
-
+            print("Creating user with token: \(token)")
+            
             guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/users") else {
                 throw URLError(.badURL)
             }
-
+            
             var request = URLRequest(url: url)
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.setValue("application/json", forHTTPHeaderField: "Accept")
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-
-            // Ensure gender is included and properly formatted
-            var updatedUserData = userData
-            if let gender = userData["gender"]?.wrappedValue as? String {
-                updatedUserData["gender"] = AnyEncodable(gender.lowercased())
-                print("Gender value being sent: \(gender.lowercased())")
+            
+            // Ensure all UUIDs are converted to strings before serialization
+            var processedUserData = userData
+            if let userId = userData["user_id"] as? UUID {
+                processedUserData["user_id"] = userId.uuidString
             }
-
-            // Use JSONUtility for encoding
-            let jsonData = try JSONUtility.shared.encodeFromDictionary(updatedUserData)
+            if let borrowedIds = userData["borrowed_book_ids"] as? [UUID] {
+                processedUserData["borrowed_book_ids"] = borrowedIds.map { $0.uuidString }
+            }
+            if let reservedIds = userData["reserved_book_ids"] as? [UUID] {
+                processedUserData["reserved_book_ids"] = reservedIds.map { $0.uuidString }
+            }
+            if let wishlistIds = userData["wishlist_book_ids"] as? [UUID] {
+                processedUserData["wishlist_book_ids"] = wishlistIds.map { $0.uuidString }
+            }
+            
+            // Convert the processed userData dictionary to JSON data
+            let jsonData = try JSONSerialization.data(withJSONObject: processedUserData, options: [])
             request.httpBody = jsonData
-
-            // Debug print the request data
-            if let jsonString = String(data: jsonData, encoding: .utf8) {
-                print("API Request Data: \(jsonString)")
-            }
-
+            
+            print("Sending user data: \(String(data: jsonData, encoding: .utf8) ?? "")")
+            
             let (data, response) = try await URLSession.shared.data(for: request)
-
-            // Debug print the response data
+            
             if let jsonString = String(data: data, encoding: .utf8) {
                 print("API Response: \(jsonString)")
             }
-
+            
             guard let httpResponse = response as? HTTPURLResponse, 200 ..< 300 ~= httpResponse.statusCode else {
                 let errorMsg = String(data: data, encoding: .utf8) ?? "Unknown error"
                 print("API Error: \(errorMsg)")
@@ -55,14 +59,13 @@ func insertUser(userData: [String: AnyEncodable], completion: @escaping (Bool) -
                 }
                 return
             }
-
-            print("User inserted successfully")
+            
+            print("User created successfully")
             DispatchQueue.main.async {
                 completion(true)
             }
         } catch {
-            print("Error saving user data via API:")
-            error.logDetails()
+            print("Error creating user: \(error)")
             DispatchQueue.main.async {
                 completion(false)
             }
@@ -322,7 +325,7 @@ func fetchAuthors(completion: @escaping (Result<[String], Error>) -> Void) {
     }
 }
 
-func createBook(book: BookModel) async throws -> BookModel { // FULLY WORKING
+func createBook(book: BookModel) async throws -> BookModel {
     print("Add BOOK API CALL HERE ...")
         
         struct CreateBookRequest: Encodable {
@@ -368,12 +371,12 @@ func createBook(book: BookModel) async throws -> BookModel { // FULLY WORKING
         // Format date consistently
         let publishedDateString = book.publishedDate?.ISO8601Format() ?? Date().ISO8601Format()
         
-        // Prepare payload
+    // Prepare payload with proper escaping
         let payload = CreateBookRequest(
             library_id: libraryId,
-            title: book.title,
+        title: book.title.replacingOccurrences(of: "'", with: "\\'"), // Escape single quotes
             isbn: book.isbn ?? "",
-            description: book.description ?? "",
+        description: book.description?.replacingOccurrences(of: "'", with: "\\'") ?? "", // Escape single quotes
             total_copies: book.totalCopies,
             available_copies: book.availableCopies,
             reserved_copies: book.reservedCopies,
@@ -384,9 +387,13 @@ func createBook(book: BookModel) async throws -> BookModel { // FULLY WORKING
         
         // Encode request using the utility
         let jsonData = try JSONUtility.shared.encode(payload)
+    
+    // Debug print the request data
+    if let jsonString = String(data: jsonData, encoding: .utf8) {
+        print("📤 Creating book with data: \(jsonString)")
+    }
+    
         request.httpBody = jsonData
-        
-        print("📤 Creating book with data: \(String(data: jsonData, encoding: .utf8) ?? "")")
         
         // Send request
         let (data, response) = try await URLSession.shared.data(for: request)

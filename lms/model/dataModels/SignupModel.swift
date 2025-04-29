@@ -64,7 +64,7 @@ class SignupModel: ObservableObject {
         selectedLibraryId != nil
     }
     
-    @Published var destination: LoginState.LoginDestination?
+    @Published var destination: LoginDestination?
     
     func nextStep() {
         if currentStep < 4 {
@@ -120,26 +120,31 @@ class SignupModel: ObservableObject {
         errorMessage = ""
         
         // Ensure library ID is provided
-        guard let libraryId = selectedLibraryId else {
+        guard let libraryId = selectedLibraryId, let userId = userId else {
             isLoading = false
             showError = true
-            errorMessage = "No library selected"
+            errorMessage = "Missing required information"
             completion(false)
             return
         }
         
-        // Create user data object
-        let userData: [String: AnyEncodable] = [
-            "user_id": AnyEncodable(userId),
-            "library_id": AnyEncodable(libraryId),
-            "name": AnyEncodable(name),
-            "email": AnyEncodable(email),
-            "role": AnyEncodable("member"),
-            "is_active": AnyEncodable(true),
-            "gender": AnyEncodable(gender.lowercased()),
-            "age": AnyEncodable(Int(age) ?? 0),
-            "phone_number": AnyEncodable(phoneNumber),
-            "interests": AnyEncodable(Array(selectedGenres))
+        // Create user data object that matches our User model structure
+        let userData: [String: Any] = [
+            "user_id": userId.uuidString,
+            "library_id": libraryId,
+            "name": name,
+            "email": email,
+            "role": "member",
+            "is_active": true,
+            "gender": gender.lowercased(),
+            "age": Int(age) ?? 0,
+            "phone_number": phoneNumber,
+            "interests": Array(selectedGenres),
+            "borrowed_book_ids": [],
+            "reserved_book_ids": [],
+            "wishlist_book_ids": [],
+            "created_at": ISO8601DateFormatter().string(from: Date()),
+            "updated_at": ISO8601DateFormatter().string(from: Date())
         ]
         
         // Debug print the user data
@@ -152,21 +157,8 @@ class SignupModel: ObservableObject {
             DispatchQueue.main.async {
                 self.isLoading = false
                 if success {
-                    // Set the destination based on the role from userData
-                    if let roleString = userData["role"]?.wrappedValue as? String {
-                        switch roleString.lowercased() {
-                        case "admin":
-                            self.destination = .admin
-                        case "librarian":
-                            self.destination = .librarian
-                        case "member":
-                            self.destination = .member
-                        default:
-                            self.destination = .member
-                        }
-                    } else {
-                        self.destination = .member
-                    }
+                    // Set the destination based on the role
+                    self.destination = .member
                 } else {
                     self.showError = true
                     self.errorMessage = "Failed to save user data"
