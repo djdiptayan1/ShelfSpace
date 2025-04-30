@@ -4,4 +4,12 @@
 //
 //  Created by admin60 on 29/04/25.
 //
- // helo rakshit 123
+import SwiftUI
+
+struct BookAddViewLibrarian: View {
+    @Environment(\.colorScheme) private var colorScheme
+    var body: some View {
+        ReusableBackground(colorScheme: colorScheme)
+            
+        }
+    }

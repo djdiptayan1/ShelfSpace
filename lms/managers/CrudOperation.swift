@@ -449,67 +449,67 @@ func createBook(book: BookModel) async throws -> BookModel {
 
 func fetchBooks(completion: @escaping (Result<[BookModel], Error>) -> Void) { // FULLY WORKING
     Task {
-        do {
-            // Get authentication token and library ID
-            guard let token = try? KeychainManager.shared.getToken() else {
-                throw BookFetchError.tokenMissing
-            }
-
-            let libraryIdString = try KeychainManager.shared.getLibraryId()
-            print("Using library ID from keychain: \(libraryIdString)")
-
-            // Create URL request
-            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/books") else {
-                throw BookFetchError.invalidURL
-            }
-
-            var request = URLRequest(url: url)
-            request.httpMethod = "GET"
-            request.addValue("application/json", forHTTPHeaderField: "accept")
-            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-
-            // Make the network request
-            let (data, response) = try await URLSession.shared.data(for: request)
-
-            // Check response status
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw BookFetchError.unknown
-            }
-
-            guard (200 ... 299).contains(httpResponse.statusCode) else {
-                throw BookFetchError.serverError(httpResponse.statusCode)
-            }
-
-            // Use the JSON utility to decode the response
-            let booksResponse = try JSONUtility.shared.decode(BooksResponse.self, from: data)
-
-            // Process books if needed
-            var processedBooks = booksResponse.data.map { book in
-                var mutableBook = book
-                if mutableBook.authorNames == nil {
-                    mutableBook.authorNames = []
+            do {
+                // Get authentication token and library ID
+                guard let token = try? KeychainManager.shared.getToken() else {
+                    throw BookFetchError.tokenMissing
                 }
-                return mutableBook
-            }
-
-            // Return results via completion handler
-            DispatchQueue.main.async {
-                completion(.success(processedBooks))
-                print("Successfully fetched \(processedBooks.count) books")
-            }
-        } catch let error as BookFetchError {
-            DispatchQueue.main.async {
-                completion(.failure(error))
-            }
-        } catch {
-            // Log detailed error information
-            error.logDetails()
-
-            DispatchQueue.main.async {
-                completion(.failure(BookFetchError.networkError(error)))
+                
+                let libraryIdString = try KeychainManager.shared.getLibraryId()
+                print("Using library ID from keychain: \(libraryIdString)")
+                
+                // Create URL request
+                guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/books?libraryId=\(libraryIdString)") else {
+                    throw BookFetchError.invalidURL
+                }
+                
+                var request = URLRequest(url: url)
+                request.httpMethod = "GET"
+                request.addValue("application/json", forHTTPHeaderField: "accept")
+                request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+                
+                // Make the network request
+                let (data, response) = try await URLSession.shared.data(for: request)
+                
+                // Check response status
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    throw BookFetchError.unknown
+                }
+                
+                guard (200 ... 299).contains(httpResponse.statusCode) else {
+                    throw BookFetchError.serverError(httpResponse.statusCode)
+                }
+                
+                // Use the JSON utility to decode the response
+                let booksResponse = try JSONUtility.shared.decode(BooksResponse.self, from: data)
+                
+                // Process books if needed
+                var processedBooks = booksResponse.data.map { book in
+                    var mutableBook = book
+                    if mutableBook.authorNames == nil {
+                        mutableBook.authorNames = []
+                    }
+                    return mutableBook
+                }
+                
+                // Return results via completion handler
+                DispatchQueue.main.async {
+                    completion(.success(processedBooks))
+                    print("Successfully fetched \(processedBooks.count) books")
+                }
+            } catch let error as BookFetchError {
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+            } catch {
+                // Log detailed error information
+                error.logDetails()
+                
+                DispatchQueue.main.async {
+                    completion(.failure(BookFetchError.networkError(error)))
+                }
             }
         }
-    }
 }
 
 func insertPolicy(policyData: Policy, completion: @escaping (Bool, UUID?) -> Void) {
