@@ -13,17 +13,17 @@ func insertUser(userData: [String: Any], completion: @escaping (Bool) -> Void) {
         do {
             let token = try KeychainManager.shared.getToken()
             print("Creating user with token: \(token)")
-            
+
             guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/users") else {
                 throw URLError(.badURL)
             }
-            
+
             var request = URLRequest(url: url)
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.setValue("application/json", forHTTPHeaderField: "Accept")
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            
+
             // Ensure all UUIDs are converted to strings before serialization
             var processedUserData = userData
             if let userId = userData["user_id"] as? UUID {
@@ -38,19 +38,19 @@ func insertUser(userData: [String: Any], completion: @escaping (Bool) -> Void) {
             if let wishlistIds = userData["wishlist_book_ids"] as? [UUID] {
                 processedUserData["wishlist_book_ids"] = wishlistIds.map { $0.uuidString }
             }
-            
+
             // Convert the processed userData dictionary to JSON data
             let jsonData = try JSONSerialization.data(withJSONObject: processedUserData, options: [])
             request.httpBody = jsonData
-            
+
             print("Sending user data: \(String(data: jsonData, encoding: .utf8) ?? "")")
-            
+
             let (data, response) = try await URLSession.shared.data(for: request)
-            
+
             if let jsonString = String(data: data, encoding: .utf8) {
                 print("API Response: \(jsonString)")
             }
-            
+
             guard let httpResponse = response as? HTTPURLResponse, 200 ..< 300 ~= httpResponse.statusCode else {
                 let errorMsg = String(data: data, encoding: .utf8) ?? "Unknown error"
                 print("API Error: \(errorMsg)")
@@ -59,7 +59,7 @@ func insertUser(userData: [String: Any], completion: @escaping (Bool) -> Void) {
                 }
                 return
             }
-            
+
             print("User created successfully")
             DispatchQueue.main.async {
                 completion(true)
@@ -105,10 +105,10 @@ func fetchUsers(completion: @escaping (Result<[User], Error>) -> Void) {
 
             // Decode the wrapper response first
             let responseWrapper = try JSONUtility.shared.decode(PaginatedResponse<[User]>.self, from: data)
-            
+
             // Now we can access the users array
             let users = responseWrapper.data
-            
+
             DispatchQueue.main.async {
                 completion(.success(users))
             }
@@ -327,115 +327,124 @@ func fetchAuthors(completion: @escaping (Result<[String], Error>) -> Void) {
 
 func createBook(book: BookModel) async throws -> BookModel {
     print("Add BOOK API CALL HERE ...")
-        
-        struct CreateBookRequest: Encodable {
-            let library_id: UUID
-            let title: String
-            let isbn: String
-            let description: String
-            let total_copies: Int
-            let available_copies: Int
-            let reserved_copies: Int
-            let published_date: String
-            let author_ids: [UUID]?
-            let genre_ids: [UUID]?
+
+    struct CreateBookRequest: Encodable {
+        let library_id: UUID
+        let title: String
+        let isbn: String
+        let description: String
+        let total_copies: Int
+        let available_copies: Int
+        let reserved_copies: Int
+        let published_date: String
+        let author_ids: [UUID]?
+//        let author_names: [String]? // <- ADD this
+        let genre_ids: [UUID]?
+        let genre_names: [String]? // <- ADD this
+//        let added_on: String? // <- ADD this
+//        let updated_at: String? // <- ADD this
+        let cover_image_url: String? // <- ADD this
+    }
+
+    struct ErrorResponse: Decodable {
+        let message: String?
+        let error: String?
+
+        var errorMessage: String {
+            return message ?? error ?? "Unknown error occurred"
         }
-        
-        struct ErrorResponse: Decodable {
-            let message: String?
-            let error: String?
-            
-            var errorMessage: String {
-                return message ?? error ?? "Unknown error occurred"
-            }
-        }
-        
-        // Get auth token and library ID
-        guard let token = try? KeychainManager.shared.getToken() else {
-            throw URLError(.userAuthenticationRequired)
-        }
-        
-        let libraryIdString = try KeychainManager.shared.getLibraryId()
-        guard let libraryId = UUID(uuidString: libraryIdString),
-              let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/books") else {
-            throw URLError(.badURL)
-        }
-        
-        // Create request
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        
-        // Format date consistently
-        let publishedDateString = book.publishedDate?.ISO8601Format() ?? Date().ISO8601Format()
-        
+    }
+
+    // Get auth token and library ID
+    guard let token = try? KeychainManager.shared.getToken() else {
+        throw URLError(.userAuthenticationRequired)
+    }
+
+    let libraryIdString = try KeychainManager.shared.getLibraryId()
+    guard let libraryId = UUID(uuidString: libraryIdString),
+          let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/books") else {
+        throw URLError(.badURL)
+    }
+
+    // Create request
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.setValue("application/json", forHTTPHeaderField: "Accept")
+    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+    // Format date consistently
+    let publishedDateString = book.publishedDate?.ISO8601Format() ?? Date().ISO8601Format()
+    let cleanCoverUrl = book.coverImageUrl?.replacingOccurrences(of: "\\/", with: "/")
+
     // Prepare payload with proper escaping
-        let payload = CreateBookRequest(
-            library_id: libraryId,
+    let payload = CreateBookRequest(
+        library_id: libraryId,
         title: book.title.replacingOccurrences(of: "'", with: "\\'"), // Escape single quotes
-            isbn: book.isbn ?? "",
+        isbn: book.isbn ?? "",
         description: book.description?.replacingOccurrences(of: "'", with: "\\'") ?? "", // Escape single quotes
-            total_copies: book.totalCopies,
-            available_copies: book.availableCopies,
-            reserved_copies: book.reservedCopies,
-            published_date: publishedDateString,
-            author_ids: book.authorIds.isEmpty ? nil : book.authorIds,
-            genre_ids: book.genreIds.isEmpty ? nil : book.genreIds
-        )
-        
-        // Encode request using the utility
-        let jsonData = try JSONUtility.shared.encode(payload)
-    
+        total_copies: book.totalCopies,
+        available_copies: book.availableCopies,
+        reserved_copies: book.reservedCopies,
+        published_date: publishedDateString,
+        author_ids: book.authorIds.isEmpty ? nil : book.authorIds,
+        genre_ids: book.genreIds.isEmpty ? nil : book.genreIds,
+//        author_names: book.authorNames?.isEmpty == true ? nil : book.authorNames,
+        genre_names: book.genreNames?.isEmpty == true ? nil : book.genreNames,
+        cover_image_url: cleanCoverUrl
+    )
+
+    // Encode request using the utility
+    let jsonData = try JSONUtility.shared.encode(payload)
+
     // Debug print the request data
     if let jsonString = String(data: jsonData, encoding: .utf8) {
         print("📤 Creating book with data: \(jsonString)")
     }
-    
-        request.httpBody = jsonData
-        
-        // Send request
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw URLError(.badServerResponse)
+
+    request.httpBody = jsonData
+
+    // Send request
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse else {
+        throw URLError(.badServerResponse)
+    }
+
+    print("📥 Server response status code: \(httpResponse.statusCode)")
+
+    if let responseString = String(data: data, encoding: .utf8) {
+        print("📥 Server response body: \(responseString)")
+    }
+
+    // Handle successful response
+    if httpResponse.statusCode == 201 {
+        // Use the JSON utility to decode the response
+        do {
+            let createdBook = try JSONUtility.shared.decode(BookModel.self, from: data)
+            print("✅ Book created successfully with ID: \(createdBook.id)")
+            return createdBook
+        } catch {
+            print("❌ Error decoding successful response:")
+            error.logDetails()
+            throw error
         }
-        
-        print("📥 Server response status code: \(httpResponse.statusCode)")
-        
-        if let responseString = String(data: data, encoding: .utf8) {
-            print("📥 Server response body: \(responseString)")
+    } else {
+        // Handle error response
+        do {
+            let errorResponse = try JSONUtility.shared.decode(ErrorResponse.self, from: data)
+            print("❌ Error creating book: \(errorResponse.errorMessage)")
+            throw NSError(domain: "BookCreationError", code: httpResponse.statusCode,
+                          userInfo: [NSLocalizedDescriptionKey: errorResponse.errorMessage])
+        } catch {
+            let rawErrorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+            print("❌ Error creating book (raw): \(rawErrorMessage)")
+            print("Underlying decoding error (if any):")
+            error.logDetails()
+            throw NSError(domain: "BookCreationError", code: httpResponse.statusCode,
+                          userInfo: [NSLocalizedDescriptionKey: rawErrorMessage])
         }
-        
-        // Handle successful response
-        if httpResponse.statusCode == 201 {
-            // Use the JSON utility to decode the response
-            do {
-                let createdBook = try JSONUtility.shared.decode(BookModel.self, from: data)
-                print("✅ Book created successfully with ID: \(createdBook.id)")
-                return createdBook
-            } catch {
-                print("❌ Error decoding successful response:")
-                error.logDetails()
-                throw error
-            }
-        } else {
-            // Handle error response
-            do {
-                let errorResponse = try JSONUtility.shared.decode(ErrorResponse.self, from: data)
-                print("❌ Error creating book: \(errorResponse.errorMessage)")
-                throw NSError(domain: "BookCreationError", code: httpResponse.statusCode,
-                              userInfo: [NSLocalizedDescriptionKey: errorResponse.errorMessage])
-            } catch {
-                let rawErrorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-                print("❌ Error creating book (raw): \(rawErrorMessage)")
-                print("Underlying decoding error (if any):")
-                error.logDetails()
-                throw NSError(domain: "BookCreationError", code: httpResponse.statusCode,
-                              userInfo: [NSLocalizedDescriptionKey: rawErrorMessage])
-            }
-        }
+    }
 }
 
 func fetchBooks(completion: @escaping (Result<[BookModel], Error>) -> Void) { // FULLY WORKING
@@ -681,7 +690,7 @@ func createUserWithAuth(email: String, password: String, name: String, role: Str
                 email: email,
                 password: password
             )
-            
+
             let userId = authResponse.user.id
             let token = try KeychainManager.shared.getToken()
             let libraryIdString = try KeychainManager.shared.getLibraryId()
@@ -693,7 +702,7 @@ func createUserWithAuth(email: String, password: String, name: String, role: Str
                 "name": name,
                 "email": email,
                 "role": role,
-                "is_active": true
+                "is_active": true,
             ]
 
             // Insert user data into database

@@ -20,6 +20,8 @@ struct BookDetailsStep: View {
     @State private var showError = false
     @State private var successMessage = ""
     
+    @State private var selectedGenres: Set<BookGenre> = []
+    
     
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -151,28 +153,61 @@ struct BookDetailsStep: View {
                             
                             FormTextField(title: "Publisher", placeholder: "Enter publisher", text: $bookData.publisher)
                             
-                            FormTextField(title: "Language", placeholder: "Enter language", text: $bookData.language)
+//                            FormTextField(title: "Language", placeholder: "Enter language", text: $bookData.language)
                             
                             // Categories Section
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("Categories")
+                                Text("Genres")
                                     .font(.subheadline)
                                     .foregroundColor(Color.text(for: colorScheme))
                                 
+                                // Fiction section
+                                Text("Fiction")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.gray)
+                                    .padding(.top, 4)
+                                    .padding(.leading, 4)
+                                
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 8) {
-                                        ForEach(bookData.categories, id: \.self) { category in
-                                            Text(category)
-                                                .font(.caption)
-                                                .padding(.horizontal, 12)
-                                                .padding(.vertical, 6)
-                                                .background(Color.blue.opacity(0.1))
-                                                .foregroundColor(.blue)
-                                                .cornerRadius(12)
+                                        ForEach(BookGenre.fictionGenres, id: \.self) { genre in
+                                            GenreChip(
+                                                genre: genre,
+                                                isSelected: selectedGenres.contains(genre),
+                                                onToggle: {
+                                                    toggleGenre(genre)
+                                                }
+                                            )
                                         }
                                     }
+                                    .padding(.horizontal, 4)
+                                }
+                                
+                                // Non-fiction section
+                                Text("Non-Fiction")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.gray)
+                                    .padding(.top, 8)
+                                    .padding(.leading, 4)
+                                
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 8) {
+                                        ForEach(BookGenre.nonFictionGenres, id: \.self) { genre in
+                                            GenreChip(
+                                                genre: genre,
+                                                isSelected: selectedGenres.contains(genre),
+                                                onToggle: {
+                                                    toggleGenre(genre)
+                                                }
+                                            )
+                                        }
+                                    }
+                                    .padding(.horizontal, 4)
                                 }
                             }
+                            .padding(.vertical, 4)
                         }
                     }
 
@@ -259,6 +294,18 @@ struct BookDetailsStep: View {
             focusedField = nil
         }
     }
+    private func toggleGenre(_ genre: BookGenre) {
+        if selectedGenres.contains(genre) {
+            selectedGenres.remove(genre)
+        } else {
+            selectedGenres.insert(genre)
+        }
+        // Update bookData.genreIds with the selected genres
+        bookData.genreNames = Array(selectedGenres).map { $0.rawValue }
+        
+        // Also update categories for display purposes
+        bookData.categories = Array(selectedGenres).map { $0.displayName }
+    }
     
     private func resetForm() {
         bookData = BookData() // or your default initializer
@@ -283,10 +330,11 @@ struct BookDetailsStep: View {
                 authorIds: bookData.authorIds,
                 authorNames: bookData.authorNames,
                 genreIds: bookData.genreIds,
+                genreNames: bookData.genreNames,
                 publishedDate: bookData.publishedDate,
                 addedOn: Date(),
                 updatedAt: Date(),
-                coverImageUrl: nil, // Will be updated after image upload
+                coverImageUrl: bookData.bookCoverUrl, // Will be updated after image upload
                 coverImageData: bookData.bookCover?.jpegData(compressionQuality: 0.8)
             )
             
@@ -319,6 +367,36 @@ struct BookDetailsStep: View {
             showError = true
             errorMessage = "Failed to save book: \(error.localizedDescription)"
         }
+    }
+}
+
+struct GenreChip: View {
+    let genre: BookGenre
+    let isSelected: Bool
+    let onToggle: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
+    
+    var body: some View {
+        Button(action: onToggle) {
+            HStack(spacing: 6) {
+                Image(systemName: genre.iconName)
+                    .font(.system(size: 10))
+                
+                Text(genre.displayName)
+                    .font(.caption)
+                    .fontWeight(isSelected ? .semibold : .regular)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(isSelected ? genre.themeColor.opacity(0.2) : Color.gray.opacity(0.1))
+            .foregroundColor(isSelected ? genre.themeColor : Color.gray)
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? genre.themeColor.opacity(0.3) : Color.clear, lineWidth: 1)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 

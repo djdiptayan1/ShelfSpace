@@ -12,6 +12,8 @@ struct BooksCell: View {
     @Environment(\.colorScheme) private var colorScheme
     let book: BookModel
     @State private var loadedImage: UIImage? = nil
+    @State private var isLoading: Bool = false
+    @State private var loadError: Bool = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
@@ -110,27 +112,73 @@ struct BooksCell: View {
     }
 
     private func loadCoverImage() {
-        // First try to load from local data
-        if let imageData = book.coverImageData {
-            loadedImage = UIImage(data: imageData)
-            return
-        }
-        
-        // If no local data, try to load from URL
-        guard let urlString = book.coverImageUrl,
-              let url = URL(string: urlString) else {
-            return
-        }
-        
-        URLSession.shared.dataTask(with: url) { data, response, error in
-            guard let data = data, error == nil,
-                  let image = UIImage(data: data) else {
+            // Set loading state
+            isLoading = true
+            
+            // First try to load from local data
+            if let imageData = book.coverImageData {
+                loadedImage = UIImage(data: imageData)
+                isLoading = false
                 return
             }
             
-            DispatchQueue.main.async {
-                loadedImage = image
+            // If no local data, try to load from URL
+            guard let urlString = book.coverImageUrl, !urlString.isEmpty,
+                  let url = URL(string: urlString) else {
+                // No valid URL, reset loading state
+                isLoading = false
+                return
             }
-        }.resume()
+            
+            print("Loading image from URL: \(urlString)")
+            
+            URLSession.shared.dataTask(with: url) { data, response, error in
+                // Always reset loading state when completed
+                DispatchQueue.main.async {
+                    isLoading = false
+                }
+                
+                // Check for errors
+                if let error = error {
+                    print("Error loading image: \(error.localizedDescription)")
+                    DispatchQueue.main.async {
+                        loadError = true
+                    }
+                    return
+                }
+                
+                // Check for valid HTTP response
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    print("Invalid response")
+                    DispatchQueue.main.async {
+                        loadError = true
+                    }
+                    return
+                }
+                
+                // Check for success status code
+                guard (200...299).contains(httpResponse.statusCode) else {
+                    print("HTTP Error: \(httpResponse.statusCode)")
+                    DispatchQueue.main.async {
+                        loadError = true
+                    }
+                    return
+                }
+                
+                // Check for valid image data
+                guard let data = data, let image = UIImage(data: data) else {
+                    print("Invalid image data")
+                    DispatchQueue.main.async {
+                        loadError = true
+                    }
+                    return
+                }
+                
+                // Update UI with loaded image
+                DispatchQueue.main.async {
+                    print("Image loaded successfully")
+                    loadedImage = image
+                }
+            }.resume()
+        }
     }
-}
