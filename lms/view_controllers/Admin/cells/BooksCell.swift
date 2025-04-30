@@ -123,12 +123,17 @@ struct BooksCell: View {
             }
             
             // If no local data, try to load from URL
-            guard let urlString = book.coverImageUrl, !urlString.isEmpty,
-                  let url = URL(string: urlString) else {
-                // No valid URL, reset loading state
-                isLoading = false
-                return
-            }
+            guard var urlString = book.coverImageUrl, !urlString.isEmpty else {
+    isLoading = false
+    return
+}
+if urlString.hasPrefix("http://") {
+    urlString = urlString.replacingOccurrences(of: "http://", with: "https://")
+}
+guard let url = URL(string: urlString) else {
+    isLoading = false
+    return
+}
             
             print("Loading image from URL: \(urlString)")
             
