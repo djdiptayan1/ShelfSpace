@@ -23,6 +23,7 @@ struct BookModel: Identifiable, Codable {
     var authorIds: [UUID]         // author_ids
     var authorNames: [String]?    // For UI only; not in DB
     var genreIds: [UUID]          // genre_ids
+    var genreNames: [String]?     // For UI only; not in DB
 
     var publishedDate: Date?      // published_date
     var addedOn: Date?            // added_on
@@ -43,8 +44,9 @@ struct BookModel: Identifiable, Codable {
         case availableCopies = "available_copies"
         case reservedCopies = "reserved_copies"
         case authorIds = "author_ids"
-        case authorNames // not from DB, UI only
+        case authorNames = "author_names"
         case genreIds = "genre_ids"
+        case genreNames = "genre_names"
         case publishedDate = "published_date"
         case addedOn = "added_on"
         case updatedAt = "updated_at"
@@ -65,6 +67,7 @@ struct BookModel: Identifiable, Codable {
         authorIds: [UUID],
         authorNames: [String]? = nil,
         genreIds: [UUID],
+        genreNames: [String]? = nil,
         publishedDate: Date? = nil,
         addedOn: Date? = nil,
         updatedAt: Date? = nil,
@@ -82,6 +85,7 @@ struct BookModel: Identifiable, Codable {
         self.authorIds = authorIds
         self.authorNames = authorNames
         self.genreIds = genreIds
+        self.genreNames = genreNames
         self.publishedDate = publishedDate
         self.addedOn = addedOn
         self.updatedAt = updatedAt
@@ -101,6 +105,7 @@ struct BooksResponse: Codable {
         let totalPages: Int
     }
 }
+
 
 enum BookFetchError: Error {
     case tokenMissing

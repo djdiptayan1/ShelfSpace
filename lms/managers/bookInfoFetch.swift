@@ -82,7 +82,7 @@ class BookInfoService {
 }
 
     
-    func loadCoverFromOpenLibrary(isbn: String) async throws -> UIImage? {
+    func loadCoverFromOpenLibrary(isbn: String) async throws -> (image: UIImage, url: String)? {
         let urlString = "https://covers.openlibrary.org/b/isbn/\(isbn)-L.jpg"
         guard let url = URL(string: urlString) else { return nil }
         
@@ -92,7 +92,7 @@ class BookInfoService {
             if let httpResponse = response as? HTTPURLResponse,
                httpResponse.statusCode == 200,
                let image = UIImage(data: data) {
-                return image
+                return (image, urlString)  // Return both as a tuple
             }
             return nil
         } catch {

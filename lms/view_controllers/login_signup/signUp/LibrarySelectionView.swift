@@ -86,6 +86,8 @@ struct LibrarySelectionView: View {
                 libraryListView
             }
         }
+        .padding(.horizontal, 24)
+        
     }
     
     private var loadingView: some View {
@@ -121,23 +123,26 @@ struct LibrarySelectionView: View {
     }
     
     private var libraryListView: some View {
-        ScrollView {
-            LazyVStack(spacing: 12) {
+            LazyVStack(spacing: 16) {
                 ForEach(filteredLibraries) { library in
                     LibraryCard(
                         library: library,
                         isSelected: viewModel.selectedLibraryId == library.id,
                         onSelect: {
-                            viewModel.selectedLibraryId = library.id
-                            viewModel.selectedLibraryName = library.name
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                viewModel.selectedLibraryId = library.id
+                                viewModel.selectedLibraryName = library.name
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            }
                         },
                         colorScheme: colorScheme
                     )
+                    .transition(.scale.combined(with: .opacity))
                 }
             }
+            .padding(.top, 8)
+            .padding(.bottom, 16)
         }
-        .frame(maxHeight: 300)
-    }
     
     private var errorSection: some View {
         Group {
@@ -161,6 +166,7 @@ struct LibrarySelectionView: View {
                 } else {
                     viewModel.errorMessage = "Please select a library."
                     viewModel.showError = true
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 }
             }
         } label: {

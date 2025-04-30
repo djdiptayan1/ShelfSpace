@@ -12,6 +12,7 @@ struct BookData {
     var isbn: String
     var bookInfo: BookInfo?
     var bookCover: UIImage?
+    var bookCoverUrl: String?
     
     var bookTitle: String
     var description: String
@@ -260,6 +261,7 @@ struct ISBNInputStep: View {
                 print("Page Count: \(info.pageCount.map { String($0) } ?? "N/A")")
                 print("Language: \(info.language ?? "N/A")")
                 print("Categories: \(info.categories?.joined(separator: ", ") ?? "N/A")")
+                print("book cover URL: \(info.imageLinks?.thumbnail ?? "N/A")")
                 if let identifiers = info.industryIdentifiers {
                     print("ISBNs:")
                     for identifier in identifiers {
@@ -275,6 +277,7 @@ struct ISBNInputStep: View {
                 bookData.publisher = info.publisher ?? ""
                 bookData.pageCount = info.pageCount.map { String($0) } ?? ""
                 bookData.language = info.language ?? ""
+                bookData.bookCoverUrl = info.imageLinks?.thumbnail
                 bookData.categories = info.categories ?? []
                 
                 if let dateString = info.publishedDate {
@@ -288,6 +291,7 @@ struct ISBNInputStep: View {
                 // Try to load book cover from Google Books first
                 if let thumbnailURL = info.imageLinks?.thumbnail {
                     print("\n📸 Loading book cover from Google Books: \(thumbnailURL)")
+                    bookData.bookCoverUrl = thumbnailURL
                     bookData.bookCover = try await bookInfoService.loadImage(from: thumbnailURL)
                     print("✅ Book cover loaded successfully from Google Books")
                 }
@@ -300,9 +304,10 @@ struct ISBNInputStep: View {
                         for identifier in identifiers {
                             if identifier.type == "ISBN_10" || identifier.type == "ISBN_13" {
                                 if let cover = try await bookInfoService.loadCoverFromOpenLibrary(isbn: identifier.identifier) {
-                                    bookData.bookCover = cover
-                                    print("✅ Book cover loaded successfully from OpenLibrary")
-                                    break
+                                        bookData.bookCoverUrl = cover.url
+                                       bookData.bookCover = cover.image
+                                        print("✅ Book cover loaded successfully from OpenLibrary")
+                                        break
                                 }
                             }
                         }
