@@ -450,7 +450,7 @@ func fetchBooks(completion: @escaping (Result<[BookModel], Error>) -> Void) { //
                 print("Using library ID from keychain: \(libraryIdString)")
                 
                 // Create URL request
-                guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/books") else {
+                guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/books?libraryId=\(libraryIdString)") else {
                     throw BookFetchError.invalidURL
                 }
                 
