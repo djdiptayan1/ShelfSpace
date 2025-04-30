@@ -77,8 +77,9 @@ struct HomeViewlib: View {
         NavigationView {
             ZStack{
                 ReusableBackground(colorScheme: colorScheme)
-                Text("Home Screen librarian")
-                    .navigationTitle("Home")
+//                Text("Home Screen librarian")
+//                    .navigationTitle("Home")
+                bookViewLibrarian()
             }
             .navigationBarLargeTitleItems(trailing: ProfileIcon(isShowingProfile: $isShowingProfile))
             .task {

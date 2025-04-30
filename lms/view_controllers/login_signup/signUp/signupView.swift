@@ -70,7 +70,7 @@ struct signupView: View {
                                 focusState: _focusedField,
                                 colorScheme: colorScheme,
                                 keyboardType: .emailAddress,
-                                fieldType: .email,
+                                fieldType: .email
                             )
                             .focused($focusedField, equals: .email)
 
