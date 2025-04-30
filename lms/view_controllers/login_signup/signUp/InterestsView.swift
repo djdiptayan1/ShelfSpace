@@ -4,41 +4,59 @@
 //
 //  Created by Diptayan Jash on 24/04/25.
 //
-
 import Foundation
 import SwiftUI
 
 struct InterestsView: View {
     @ObservedObject var viewModel: SignupModel
     @Environment(\.colorScheme) private var colorScheme
-    @State private var genres: [String] = []
     @State private var isLoading = false
     @State private var errorMessage = ""
     
-    // Example genres - will be replaced with data from API
-    private let sampleGenres = [
-        "Fiction", "Non-Fiction", "Sci-Fi", "Fantasy",
-        "Romance", "Mystery", "Thriller", "Horror",
-        "Biography", "History", "Science", "Self-Help",
-        "Philosophy", "Poetry", "Drama", "Adventure"
-    ]
-    
     var body: some View {
         ScrollView {
-            VStack(spacing: 30) {
-                Text("Select Interests")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                    .foregroundColor(Color.text(for: colorScheme))
+            VStack(spacing: 24) {
+                // Header
+                VStack(spacing: 8) {
+                    Text("Select Your Interests")
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .foregroundColor(Color.text(for: colorScheme))
+                    
+                    Text("Choose up to 5 genres that interest you")
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .foregroundColor(Color.text(for: colorScheme).opacity(0.7))
+                }
+                .padding(.top, 30)
+                .padding(.bottom, 16)
                 
-                Text("Choose up to 5 genres that interest you")
-                    .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundColor(Color.text(for: colorScheme).opacity(0.7))
-                    .padding(.bottom, 10)
-                
-                if viewModel.selectedGenres.count > 0 {
-                    Text("\(viewModel.selectedGenres.count)/5 selected")
-                        .font(.system(size: 14, weight: .medium, design: .rounded))
-                        .foregroundColor(Color.secondary(for: colorScheme))
+                // Selection counter with progress bar
+                if !viewModel.selectedGenres.isEmpty {
+                    VStack(spacing: 6) {
+                        HStack {
+                            Text("\(viewModel.selectedGenres.count)/5 selected")
+                                .font(.system(size: 14, weight: .medium, design: .rounded))
+                                .foregroundColor(Color.secondary(for: colorScheme))
+                            
+                            Spacer()
+                        }
+                        
+                        // Custom progress bar
+                        GeometryReader { geometry in
+                            ZStack(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color.background(for: colorScheme))
+                                    .frame(height: 10)
+                                
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color.secondary(for: colorScheme))
+                                    .frame(width: geometry.size.width * CGFloat(viewModel.selectedGenres.count) / 5, height: 10)
+                                    .animation(.spring(), value: viewModel.selectedGenres.count)
+                            }
+                        }
+                        .frame(height: 10)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 8)
                 }
                 
                 if isLoading {
@@ -52,12 +70,14 @@ struct InterestsView: View {
                         .font(.system(size: 16))
                         .padding()
                 } else {
-                    // Genre selection grid
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 100, maximum: 150))], spacing: 15) {
-                        ForEach(displayedGenres, id: \.self) { genre in
+                    // Genre selection grid with improved layout
+                    LazyVGrid(columns: [
+                        GridItem(.adaptive(minimum: 150, maximum: 180), spacing: 16)
+                    ], spacing: 16) {
+                        ForEach(BookGenre.allCases) { genre in
                             GenreButton(
-                                title: genre,
-                                isSelected: viewModel.selectedGenres.contains(genre),
+                                genre: genre,
+                                isSelected: viewModel.selectedGenres.contains(genre.rawValue),
                                 action: {
                                     toggleGenre(genre)
                                 },
@@ -70,11 +90,15 @@ struct InterestsView: View {
                 
                 if viewModel.showError {
                     Text(viewModel.errorMessage)
-                        .font(.system(size: 14, design: .rounded))
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
                         .foregroundColor(.red)
                         .padding(.horizontal, 24)
+                        .padding(.top, 4)
                 }
                 
+                Spacer(minLength: 36)
+                
+                // Continue button with improved visual style
                 Button {
                     withAnimation {
                         if viewModel.isStep3Valid {
@@ -86,8 +110,9 @@ struct InterestsView: View {
                     }
                 } label: {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: 16)
                             .fill(Color.secondary(for: colorScheme))
+                            .shadow(color: Color.secondary(for: colorScheme).opacity(0.4), radius: 8, x: 0, y: 4)
                         
                         if viewModel.isLoading {
                             ProgressView()
@@ -95,77 +120,47 @@ struct InterestsView: View {
                                 .scaleEffect(1.2)
                         } else {
                             Text("Continue")
-                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                .font(.system(size: 18, weight: .bold, design: .rounded))
                                 .foregroundColor(.white)
                         }
                     }
-                    .frame(height: 54)
+                    .frame(height: 60)
                     .padding(.horizontal, 24)
                 }
                 .disabled(viewModel.isLoading || !viewModel.isStep3Valid)
                 .opacity(viewModel.isStep3Valid ? 1 : 0.7)
-                
-                Spacer()
+                .padding(.bottom, 24)
             }
-            .padding(.top, 20)
             .padding(.bottom, 24)
         }
-        .onAppear {
-            loadGenres()
-        }
     }
     
-    private var displayedGenres: [String] {
-        // Show loaded genres or sample genres if API call fails
-        return genres.isEmpty ? sampleGenres : genres
-    }
-    
-    private func toggleGenre(_ genre: String) {
-        if viewModel.selectedGenres.contains(genre) {
-            viewModel.selectedGenres.remove(genre)
-        } else if viewModel.selectedGenres.count < 5 {
-            viewModel.selectedGenres.insert(genre)
-        }
-    }
-    
-    private func loadGenres() {
-        isLoading = true
-        errorMessage = ""
-        
-        fetchGenres { result in
-            isLoading = false
-            
-            switch result {
-            case .success(let loadedGenres):
-                self.genres = loadedGenres
-            case .failure(let error):
-                errorMessage = "Failed to load genres: \(error.localizedDescription)"
-                // Use sample genres as fallback
-                
+    private func toggleGenre(_ genre: BookGenre) {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            if viewModel.selectedGenres.contains(genre.rawValue) {
+                viewModel.selectedGenres.remove(genre.rawValue)
+            } else if viewModel.selectedGenres.count < 5 {
+                viewModel.selectedGenres.insert(genre.rawValue)
+                hapticFeedback()
             }
         }
+    }
+    
+    private func hapticFeedback() {
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
     }
 }
 
 struct GenreButton: View {
-    let title: String
+    let genre: BookGenre
     let isSelected: Bool
     let action: () -> Void
     let colorScheme: ColorScheme
     
     var body: some View {
         Button(action: action) {
-            Text(title)
-                .font(.system(size: 14, weight: .medium, design: .rounded))
-                .foregroundColor(isSelected ? .white : Color.text(for: colorScheme))
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
-                .frame(maxWidth: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(isSelected ? Color.secondary(for: colorScheme) : Color.background(for: colorScheme))
-                        .shadow(color: Color.primary(for: colorScheme).opacity(0.08), radius: 4, x: 0, y: 2)
-                )
+            genre.buttonStyle(isSelected: isSelected, colorScheme: colorScheme)
         }
     }
 }

@@ -11,7 +11,7 @@ struct BookViewAdmin: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var books: [BookModel] = []
     @State private var searchText: String = ""
-    @State private var selectedCategory: BookCategory = .all
+    @State private var selectedCategory: BookGenre = .all
     @State private var showingAddBookSheet = false
     @State private var bookToEdit: BookModel?
     @State private var showAddBook = false
@@ -22,22 +22,14 @@ struct BookViewAdmin: View {
     @State private var errorMessage: String?
     @State private var showError = false
 
-    enum BookCategory: String, CaseIterable {
-        case all = "All"
-        case comedy = "Comedy"
-        case thriller = "Thriller"
-        case romantic = "Romantic"
-        case horror = "Horror"
-    }
-
     var filteredBooks: [BookModel] {
         var result = books
 
         if selectedCategory != .all {
-            result = result.filter { _ in
-                true // Replace with actual genre filtering
-            }
+            result = result.filter { $0.genreNames?.contains(selectedCategory.rawValue) == true }
+
         }
+
 
         if !searchText.isEmpty {
             result = result.filter { book in
@@ -199,20 +191,50 @@ struct BookViewAdmin: View {
             }
         }
     }
-
+    
     private func loadBooks() async {
-        isLoading = true
-        fetchBooks { result in
-            defer { isLoading = false }
+            isLoading = true
+            fetchBooks { result in
+                defer { isLoading = false }
 
-            switch result {
-            case let .success(fetchedBooks):
-                self.books = fetchedBooks
-            case let .failure(error):
-                self.errorMessage = error.localizedDescription
-                self.showError = true
+                switch result {
+                case let .success(fetchedBooks):
+                    self.books = fetchedBooks
+                    for book in fetchedBooks where book.coverImageUrl != nil {
+                        self.preloadBookCover(for: book)
+                    }
+                case let .failure(error):
+                    self.errorMessage = error.localizedDescription
+                    self.showError = true
+                }
             }
         }
+    private func preloadBookCover(for book: BookModel) {
+        guard let urlString = book.coverImageUrl,
+              let url = URL(string: urlString) else {
+            return
+        }
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            // Log for debugging
+            if let error = error {
+                print("Error preloading image for \(book.title): \(error.localizedDescription)")
+                return
+            }
+            
+            if let httpResponse = response as? HTTPURLResponse,
+               !(200...299).contains(httpResponse.statusCode) {
+                print("HTTP Error \(httpResponse.statusCode) preloading image for \(book.title)")
+                return
+            }
+            
+            if let data = data, UIImage(data: data) != nil {
+                print("Successfully preloaded image for \(book.title)")
+                // In a real application, you might want to store this in a cache
+            } else {
+                print("Invalid image data for \(book.title)")
+            }
+        }.resume()
     }
 
     private func deleteBook(_ book: BookModel) {
@@ -317,13 +339,13 @@ struct SearchBar: View {
 }
 
 struct CategoryFilterView: View {
-    @Binding var selectedCategory: BookViewAdmin.BookCategory
+    @Binding var selectedCategory: BookGenre
     var colorScheme: ColorScheme
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
-                ForEach(BookViewAdmin.BookCategory.allCases, id: \.self) { category in
+                ForEach(BookGenre.allCases, id: \.self) { category in
                     CategoryButton(
                         category: category,
                         selectedCategory: $selectedCategory,
@@ -337,8 +359,8 @@ struct CategoryFilterView: View {
 }
 
 struct CategoryButton: View {
-    var category: BookViewAdmin.BookCategory
-    @Binding var selectedCategory: BookViewAdmin.BookCategory
+    var category: BookGenre
+    @Binding var selectedCategory: BookGenre
     var colorScheme: ColorScheme
 
     var body: some View {
