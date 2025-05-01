@@ -7,6 +7,7 @@
 import DotLottie
 import Foundation
 import SwiftUI
+
 struct BookViewAdmin: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var books: [BookModel] = []
@@ -21,21 +22,19 @@ struct BookViewAdmin: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var showError = false
+    @State private var isEditingBook = false
+    @State private var editingBookId: UUID? = nil
 
     var filteredBooks: [BookModel] {
         var result = books
 
         if selectedCategory != .all {
             result = result.filter { $0.genreNames?.contains(selectedCategory.rawValue) == true }
-
         }
-
 
         if !searchText.isEmpty {
             result = result.filter { book in
                 book.title.localizedCaseInsensitiveContains(searchText) ||
-//                book.authorNames!.joined(separator: " ").localizedCaseInsensitiveContains(searchText)
-//                ||
                     (book.isbn ?? "").localizedCaseInsensitiveContains(searchText)
             }
         }
@@ -70,12 +69,12 @@ struct BookViewAdmin: View {
                                     books: filteredBooks,
                                     colorScheme: colorScheme,
                                     onEdit: { book in
-                                        bookToEdit = book
-                                        showingAddBookSheet = true
+                                        bookData = BookAddViewAdmin.bookData(from: book)
+                                        editingBookId = book.id
+                                        isEditingBook = true
                                     },
                                     onDelete: deleteBook
-                                )
-                            }
+                                )                            }
                         }
                     }
                     .padding(.top)
@@ -97,15 +96,50 @@ struct BookViewAdmin: View {
                 }
             }
             .sheet(isPresented: $showingAddBookSheet) {
-                if let bookToEdit = bookToEdit {
-                    Text("Edit Book")
-                        .font(.headline)
-                        .padding()
-                } else {
-                    BookAddViewAdmin(onSave: { newBook in
-                        addNewBook(newBook)
-                    })
-                }
+                BookAddViewAdmin(onSave: { newBook in
+                    addNewBook(newBook)
+                })
+            }
+            .sheet(isPresented: $isEditingBook) {
+                BookDetailsStep(
+                    bookData: $bookData,
+                    showImagePicker: $showImagePicker,
+                    isLoading: $isLoading,
+                    onSave: {
+                        Task {
+                            isLoading = true
+                            defer { isLoading = false }
+                            
+                            let updatedBook = BookModel(
+                                id: editingBookId ?? UUID(),
+                                libraryId: bookData.libraryId ?? UUID(),
+                                title: bookData.bookTitle,
+                                isbn: bookData.isbn,
+                                description: bookData.description,
+                                totalCopies: bookData.totalCopies,
+                                availableCopies: bookData.availableCopies,
+                                reservedCopies: bookData.reservedCopies,
+                                authorIds: bookData.authorIds,
+                                authorNames: bookData.authorNames,
+                                genreIds: bookData.genreIds,
+                                genreNames: bookData.genreNames,
+                                publishedDate: bookData.publishedDate,
+                                coverImageUrl: bookData.bookCoverUrl,
+                                coverImageData: bookData.bookCover?.jpegData(compressionQuality: 0.8)
+                            )
+                            
+                            do {
+                                let apiBook = try await updateBookAPI(book: updatedBook)
+                                updateBook(apiBook)
+                                isEditingBook = false
+                                editingBookId = nil
+                            } catch {
+                                errorMessage = error.localizedDescription
+                                showError = true
+                            }
+                        }
+                    }
+                )
             }
             .alert("Error", isPresented: $showError) {
                 Button("OK", role: .cancel) { }
@@ -164,9 +198,17 @@ struct BookViewAdmin: View {
     }
 
     private func deleteBook(_ book: BookModel) {
-        if let index = books.firstIndex(where: { $0.id == book.id }) {
-            withAnimation {
-                books.remove(at: index)
+        Task {
+            do {
+                try await deleteBookAPI(bookId: book.id)
+                if let index = books.firstIndex(where: { $0.id == book.id }) {
+                    withAnimation {
+                        books.remove(at: index)
+                    }
+                }
+            } catch {
+                errorMessage = error.localizedDescription
+                showError = true
             }
         }
     }
