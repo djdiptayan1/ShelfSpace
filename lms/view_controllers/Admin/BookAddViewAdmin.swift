@@ -15,6 +15,8 @@ struct BookAddViewAdmin: View {
     @State private var showBarcodeScanner = false
     @State private var bookData = BookData()
     @State private var focusedField: BookFieldType?
+    @State private var isLoading = false
+    var bookToEdit: BookModel? = nil
     var onSave: (BookModel) -> Void
     
     enum BookAddStep {
@@ -36,6 +38,20 @@ struct BookAddViewAdmin: View {
             ZStack {
                 ReusableBackground(colorScheme: colorScheme)
                 
+                // Prefill bookData if editing
+                Color.clear.onAppear {
+                    if let book = bookToEdit {
+                        bookData = BookAddViewAdmin.bookData(from: book)
+                        if currentStep != .details {
+                            currentStep = .details // Always jump to details step for editing
+                        }
+                    } else {
+                        if currentStep != .isbn {
+                            currentStep = .isbn // Always start at ISBN for adding
+                        }
+                    }
+                }
+                
                 switch currentStep {
                 case .isbn:
                     ISBNInputStep(
@@ -55,9 +71,39 @@ struct BookAddViewAdmin: View {
                     BookDetailsStep(
                         bookData: $bookData,
                         showImagePicker: $showImagePicker,
+                        isLoading: $isLoading,
                         onSave: {
-                            saveBook()
-                            dismiss()
+                            Task {
+                                isLoading = true
+                                defer { isLoading = false }
+                                do {
+                                    let bookModel = BookModel(
+                                        id: UUID(),
+                                        libraryId: bookData.libraryId ?? UUID(),
+                                        title: bookData.bookTitle,
+                                        isbn: bookData.isbn,
+                                        description: bookData.description,
+                                        totalCopies: bookData.totalCopies,
+                                        availableCopies: bookData.availableCopies,
+                                        reservedCopies: bookData.reservedCopies,
+                                        authorIds: bookData.authorIds,
+                                        authorNames: bookData.authorNames,
+                                        genreIds: bookData.genreIds,
+                                        publishedDate: bookData.publishedDate,
+                                        addedOn: Date(),
+                                        updatedAt: Date(),
+                                        coverImageUrl: bookData.bookCoverUrl,
+                                        coverImageData: bookData.bookCover?.jpegData(compressionQuality: 0.8)
+                                    )
+                                    let createdBook = try await createBook(book: bookModel)
+                                    print("✅ Book saved to database with ID: \(createdBook.id)")
+                                    onSave(createdBook)
+                                    dismiss()
+                                } catch {
+                                    print("❌ Error saving book: \(error)")
+                                    // Optionally show error UI
+                                }
+                            }
                         }
                     )
                 }
@@ -131,6 +177,31 @@ struct BookAddViewAdmin: View {
         
         // Call the onSave closure with the new book
         onSave(newBook)
+    }
+    
+    // Helper to convert BookModel to BookData
+    static func bookData(from model: BookModel) -> BookData {
+        var data = BookData()
+        data.id = model.id
+        data.libraryId = model.libraryId
+        data.isbn = model.isbn ?? ""
+        data.bookTitle = model.title
+        data.description = model.description ?? ""
+        data.totalCopies = model.totalCopies
+        data.availableCopies = model.availableCopies
+        data.reservedCopies = model.reservedCopies
+        data.authorNames = model.authorNames ?? []
+        data.authorIds = model.authorIds
+        data.genreNames = model.genreNames ?? []
+        data.genreIds = model.genreIds
+        data.publishedDate = model.publishedDate ?? Date()
+        data.libraryId = model.libraryId
+        data.bookCoverUrl = model.coverImageUrl
+        data.categories = model.genreNames ?? []
+        if let coverData = model.coverImageData {
+            data.bookCover = UIImage(data: coverData)
+        }
+        return data
     }
 }
 
