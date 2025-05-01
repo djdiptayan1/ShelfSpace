@@ -9,6 +9,7 @@ struct BookAddViewLibrarian: View {
     @State private var showBarcodeScanner = false
     @State private var bookData = BookData()
     @State private var focusedField: BookFieldType?
+    @State private var isLoading = false
     var onSave: (BookModel) -> Void
     
     enum BookAddStep {
@@ -49,9 +50,39 @@ struct BookAddViewLibrarian: View {
                     BookDetailsStep(
                         bookData: $bookData,
                         showImagePicker: $showImagePicker,
+                        isLoading: $isLoading,
                         onSave: {
-                            saveBook()
-                            dismiss()
+                            Task {
+                                isLoading = true
+                                defer { isLoading = false }
+                                do {
+                                    let bookModel = BookModel(
+                                        id: UUID(),
+                                        libraryId: bookData.libraryId ?? UUID(),
+                                        title: bookData.bookTitle,
+                                        isbn: bookData.isbn,
+                                        description: bookData.description,
+                                        totalCopies: bookData.totalCopies,
+                                        availableCopies: bookData.availableCopies,
+                                        reservedCopies: bookData.reservedCopies,
+                                        authorIds: bookData.authorIds,
+                                        authorNames: bookData.authorNames,
+                                        genreIds: bookData.genreIds,
+                                        publishedDate: bookData.publishedDate,
+                                        addedOn: Date(),
+                                        updatedAt: Date(),
+                                        coverImageUrl: bookData.bookCoverUrl,
+                                        coverImageData: bookData.bookCover?.jpegData(compressionQuality: 0.8)
+                                    )
+                                    let createdBook = try await createBook(book: bookModel)
+                                    print("✅ Book saved to database with ID: \(createdBook.id)")
+                                    onSave(createdBook)
+                                    dismiss()
+                                } catch {
+                                    print("❌ Error saving book: \(error)")
+                                    // Optionally show error UI
+                                }
+                            }
                         }
                     )
                 }
