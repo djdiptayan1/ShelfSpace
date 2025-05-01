@@ -380,9 +380,9 @@ func createBook(book: BookModel) async throws -> BookModel {
     // Prepare payload with proper escaping
     let payload = CreateBookRequest(
         library_id: libraryId,
-        title: book.title.replacingOccurrences(of: "'", with: "\\'"), // Escape single quotes
+        title: book.title.replacingOccurrences(of: "'", with: ""), // Escape single quotes
         isbn: book.isbn ?? "",
-        description: book.description?.replacingOccurrences(of: "'", with: "\\'") ?? "", // Escape single quotes
+        description: book.description?.replacingOccurrences(of: "'", with: "") ?? "", // Escape single quotes
         total_copies: book.totalCopies,
         available_copies: book.availableCopies,
         reserved_copies: book.reservedCopies,
@@ -746,5 +746,140 @@ func createUserWithAuth(email: String, password: String, name: String, role: Str
                 completion(.failure(error))
             }
         }
+    }
+}
+
+func updateBookAPI(book: BookModel) async throws -> BookModel {
+    print("EDIT BOOK API CALL HERE ...")
+
+    struct UpdateBookRequest: Encodable {
+        let library_id: UUID
+        let title: String
+        let isbn: String
+        let description: String
+        let total_copies: Int
+        let available_copies: Int
+        let reserved_copies: Int
+        let published_date: String
+        let genre_names: [String]?
+        let cover_image_url: String?
+    }
+
+    // Updated error response structure to match the actual API response
+    struct ErrorResponse: Decodable {
+        let success: Bool
+        let error: ErrorDetail
+        
+        struct ErrorDetail: Decodable {
+            let message: String
+        }
+        
+        var errorMessage: String {
+            return error.message
+        }
+    }
+
+    // Get auth token and library ID
+    guard let token = try? KeychainManager.shared.getToken() else {
+        throw URLError(.userAuthenticationRequired)
+    }
+
+    let libraryIdString = try KeychainManager.shared.getLibraryId()
+    guard let libraryId = UUID(uuidString: libraryIdString),
+          let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/books/\(book.id.uuidString)") else {
+        throw URLError(.badURL)
+    }
+
+    // Create request
+    var request = URLRequest(url: url)
+    request.httpMethod = "PUT"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.setValue("application/json", forHTTPHeaderField: "Accept")
+    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+    // Format date consistently
+    let publishedDateString = book.publishedDate?.ISO8601Format() ?? Date().ISO8601Format()
+    let cleanCoverUrl = book.coverImageUrl?.replacingOccurrences(of: "\\/", with: "/")
+
+    // Prepare payload
+    let payload = UpdateBookRequest(
+        library_id: libraryId,
+        title: book.title,
+        isbn: book.isbn ?? "",
+        description: book.description ?? "",
+        total_copies: book.totalCopies,
+        available_copies: book.availableCopies,
+        reserved_copies: book.reservedCopies,
+        published_date: publishedDateString,
+        genre_names: book.genreNames?.isEmpty == true ? nil : book.genreNames,
+        cover_image_url: cleanCoverUrl
+    )
+
+    let jsonData = try JSONUtility.shared.encode(payload)
+    if let jsonString = String(data: jsonData, encoding: .utf8) {
+        print("\u{1F4E4} Updating book with data: \(jsonString)")
+    }
+    request.httpBody = jsonData
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse else {
+        throw URLError(.badServerResponse)
+    }
+
+    print("\u{1F4E5} Server response status code: \(httpResponse.statusCode)")
+    if let responseString = String(data: data, encoding: .utf8) {
+        print("\u{1F4E5} Server response body: \(responseString)")
+    }
+
+    if (200...299).contains(httpResponse.statusCode) {
+        do {
+            let updatedBook = try JSONUtility.shared.decode(BookModel.self, from: data)
+            print("✅ Book updated successfully with ID: \(updatedBook.id)")
+            return updatedBook
+        } catch {
+            print("❌ Error decoding successful response:")
+            error.logDetails()
+            throw error
+        }
+    } else {
+        do {
+            let errorResponse = try JSONUtility.shared.decode(ErrorResponse.self, from: data)
+            print("❌ Error updating book: \(errorResponse.errorMessage)")
+            throw NSError(domain: "BookUpdateError", code: httpResponse.statusCode,
+                          userInfo: [NSLocalizedDescriptionKey: errorResponse.errorMessage])
+        } catch {
+            let rawErrorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+            print("❌ Error updating book (raw): \(rawErrorMessage)")
+            print("Underlying decoding error (if any):")
+            error.logDetails()
+            throw NSError(domain: "BookUpdateError", code: httpResponse.statusCode,
+                          userInfo: [NSLocalizedDescriptionKey: rawErrorMessage])
+        }
+    }
+}
+
+func deleteBookAPI(bookId: UUID) async throws {
+    guard let token = try? KeychainManager.shared.getToken() else {
+        throw URLError(.userAuthenticationRequired)
+    }
+    guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/books/\(bookId.uuidString)") else {
+        throw URLError(.badURL)
+    }
+    var request = URLRequest(url: url)
+    request.httpMethod = "DELETE"
+    request.setValue("*/*", forHTTPHeaderField: "accept")
+    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+    guard let httpResponse = response as? HTTPURLResponse else {
+        throw URLError(.badServerResponse)
+    }
+    print("\u{1F5D1} DELETE book status code: \(httpResponse.statusCode)")
+    if let responseString = String(data: data, encoding: .utf8) {
+        print("\u{1F5D1} DELETE book response body: \(responseString)")
+    }
+    if !(200...299).contains(httpResponse.statusCode) {
+        throw NSError(domain: "BookDeleteError", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Failed to delete book"])
     }
 }

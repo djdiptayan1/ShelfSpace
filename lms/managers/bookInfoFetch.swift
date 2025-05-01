@@ -71,15 +71,15 @@ class BookInfoService {
     }
     
     func loadImage(from urlString: String) async throws -> UIImage? {
-    var secureURLString = urlString
-    if secureURLString.hasPrefix("http://") {
-        secureURLString = secureURLString.replacingOccurrences(of: "http://", with: "https://")
-    }
+        var secureURLString = urlString
+        if secureURLString.hasPrefix("http://") {
+            secureURLString = secureURLString.replacingOccurrences(of: "http://", with: "https://")
+        }
 
-    guard let url = URL(string: secureURLString) else { return nil }
-    let (data, _) = try await URLSession.shared.data(from: url)
-    return UIImage(data: data)
-}
+        guard let url = URL(string: secureURLString) else { return nil }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return UIImage(data: data)
+    }
 
     
     func loadCoverFromOpenLibrary(isbn: String) async throws -> (image: UIImage, url: String)? {

@@ -52,7 +52,7 @@ struct BooksCell: View {
                     .lineLimit(2)
                     .foregroundColor(colorScheme == .dark ? .white : Color(hex: "2C3E50"))
 
-                Text(book.authorNames!.joined(separator: ", "))
+                Text(book.authorNames?.joined(separator: ", ") ?? "Unknown Author")
                     .font(.system(size: 15, weight: .medium))
                     .foregroundColor(Color(hex: "7F8C8D"))
                     .lineLimit(1)
@@ -123,12 +123,17 @@ struct BooksCell: View {
             }
             
             // If no local data, try to load from URL
-            guard let urlString = book.coverImageUrl, !urlString.isEmpty,
-                  let url = URL(string: urlString) else {
-                // No valid URL, reset loading state
-                isLoading = false
-                return
-            }
+            guard var urlString = book.coverImageUrl, !urlString.isEmpty else {
+    isLoading = false
+    return
+}
+if urlString.hasPrefix("http://") {
+    urlString = urlString.replacingOccurrences(of: "http://", with: "https://")
+}
+guard let url = URL(string: urlString) else {
+    isLoading = false
+    return
+}
             
             print("Loading image from URL: \(urlString)")
             
