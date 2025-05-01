@@ -9,6 +9,7 @@ import SwiftUI
 import UIKit
 
 struct BookData {
+    var id: UUID? = nil
     var isbn: String
     var bookInfo: BookInfo?
     var bookCover: UIImage?
