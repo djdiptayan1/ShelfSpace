@@ -685,24 +685,18 @@ private func formatDate(_ date: Date) -> String {
 func createUserWithAuth(email: String, password: String, name: String, role: String, completion: @escaping (Result<Bool, Error>) -> Void) {
     Task {
         do {
-            // First create auth account
-            let authResponse = try await supabase.auth.signUp(
-                email: email,
-                password: password
-            )
-
-            let userId = authResponse.user.id
             let token = try KeychainManager.shared.getToken()
             let libraryIdString = try KeychainManager.shared.getLibraryId()
 
             // Prepare user data with proper types
             let userData: [String: Any] = [
-                "user_id": userId.uuidString,
+                "user_id": UUID().uuidString,
                 "library_id": libraryIdString,
                 "name": name,
                 "email": email,
                 "role": role,
                 "is_active": true,
+                "password":password
             ]
 
             // Insert user data into database
