@@ -226,6 +226,10 @@ class LoginManager {
     }
 
     func getCurrentUser() async throws -> User? {
+        let otpVerified = UserCacheManager.shared.getCachedOtp() != nil
+        if !otpVerified {
+            return nil
+        }
         // First try to get from cache
         if let cachedUser = UserCacheManager.shared.getCachedUser() {
             print("Returning cached user data")
@@ -409,6 +413,8 @@ class LoginManager {
         }
 
         let otpResponse = try JSONUtility.shared.decode(OTPResponse.self, from: data)
+        //store otp verification in device
+        UserCacheManager.shared.cacheOtp()
         return otpResponse.success
     }
 }
