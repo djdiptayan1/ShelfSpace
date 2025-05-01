@@ -11,10 +11,10 @@ import SwiftUI
 struct BookDetailsStep: View {
     @Binding var bookData: BookData
     @Binding var showImagePicker: Bool
+    @Binding var isLoading: Bool
     let onSave: () -> Void
     @Environment(\.colorScheme) private var colorScheme
     @State private var focusedField: String?
-    @State private var isLoading = false
     @State private var showSuccess = false
     @State private var errorMessage = ""
     @State private var showError = false
@@ -264,29 +264,27 @@ struct BookDetailsStep: View {
 
                 // Save Button
                 Button(action: {
-                    Task {
-                        await saveBook()
-                    }
+                    onSave()
                 }) {
-                    Text("Save Book")
+                    Text(isLoading ? "Saving Book..." : "Save Book")
                         .fontWeight(.semibold)
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(
-                            LinearGradient(
-                                gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.8)]),
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .cornerRadius(16)
-                        .shadow(color: Color.blue.opacity(0.3), radius: 5, x: 0, y: 3)
                 }
+                .background(
+                    LinearGradient(
+                        gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.8)]),
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .cornerRadius(16)
+                .shadow(color: Color.blue.opacity(0.3), radius: 5, x: 0, y: 3)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 20)
-                .disabled(bookData.bookTitle.isEmpty)
-                .opacity(bookData.bookTitle.isEmpty ? 0.6 : 1.0)
+                .disabled(bookData.bookTitle.isEmpty || isLoading)
+                .opacity(bookData.bookTitle.isEmpty || isLoading ? 0.6 : 1.0)
             }
             .padding(.bottom, 32)
         }
@@ -309,64 +307,6 @@ struct BookDetailsStep: View {
     
     private func resetForm() {
         bookData = BookData() // or your default initializer
-    }
-
-    
-    private func saveBook() async {
-        isLoading = true
-        defer { isLoading = false }
-        
-        do {
-            // Convert BookData to BookModel
-            let bookModel = BookModel(
-                id: UUID(), // New book, so generate new UUID
-                libraryId: bookData.libraryId ?? UUID(), // Use provided libraryId or generate new one
-                title: bookData.bookTitle,
-                isbn: bookData.isbn,
-                description: bookData.description,
-                totalCopies: bookData.totalCopies,
-                availableCopies: bookData.availableCopies,
-                reservedCopies: bookData.reservedCopies,
-                authorIds: bookData.authorIds,
-                authorNames: bookData.authorNames,
-                genreIds: bookData.genreIds,
-                genreNames: bookData.genreNames,
-                publishedDate: bookData.publishedDate,
-                addedOn: Date(),
-                updatedAt: Date(),
-                coverImageUrl: bookData.bookCoverUrl, // Will be updated after image upload
-                coverImageData: bookData.bookCover?.jpegData(compressionQuality: 0.8)
-            )
-            
-            // Save to database
-            let createdBook = try await createBook(book: bookModel)
-            print("✅ Book saved to database with ID: \(createdBook.id)")
-            
-            // Save cover image if available
-            if let coverImage = bookData.bookCover,
-               let imageData = coverImage.jpegData(compressionQuality: 0.8) {
-                // TODO: Implement image upload to storage
-                print("📸 Book cover image available for upload")
-            }
-            
-            // Save locally
-            // TODO: Implement local storage
-            print("💾 Book saved locally")
-            
-            // Show success message
-            showSuccess = true
-            successMessage = "Book added successfully!"
-            
-            // Reset form after delay
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                resetForm()
-                onSave()
-            }
-        } catch {
-            print("❌ Error saving book: \(error)")
-            showError = true
-            errorMessage = "Failed to save book: \(error.localizedDescription)"
-        }
     }
 }
 
@@ -589,6 +529,7 @@ struct BookDetailsStep_Previews: PreviewProvider {
         BookDetailsStep(
             bookData: .constant(BookData()),
             showImagePicker: .constant(false),
+            isLoading: .constant(false),
             onSave: {}
         )
     }
