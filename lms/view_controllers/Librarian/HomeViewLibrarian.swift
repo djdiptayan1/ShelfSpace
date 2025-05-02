@@ -6,9 +6,12 @@ struct HomeViewLibrarian: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var isShowingProfile = false
     @State private var prefetchedUser: User? = nil
-    @State private var prefetchedLibrary: Library? = nil
+    @State private var prefetchedLibrary: Library?
     @State private var isPrefetchingProfile = false
     @State private var prefetchError: String? = nil
+    
+    @State private var library: Library?
+    @State private var libraryName: String = "Library Loading..."
     
     @State private var books: [BookModel] = []
     @State private var searchText: String = ""
@@ -19,6 +22,17 @@ struct HomeViewLibrarian: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var showError = false
+    
+    init(prefetchedUser: User? = nil, prefetchedLibrary: Library? = nil) {
+        self.prefetchedUser = prefetchedUser
+        self.prefetchedLibrary = prefetchedLibrary
+        self.library = prefetchedLibrary
+        
+        // Try to get library name from keychain
+        if let name = try? KeychainManager.shared.getLibraryName() {
+            _libraryName = State(initialValue: name)
+        }
+    }
 
     var filteredBooks: [BookModel] {
         var result = books
@@ -69,7 +83,7 @@ struct HomeViewLibrarian: View {
                     await loadBooks()
                 }
             }
-            .navigationTitle("My Library")
+            .navigationTitle(libraryName)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack {
