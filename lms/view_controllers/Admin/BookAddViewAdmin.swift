@@ -89,6 +89,7 @@ struct BookAddViewAdmin: View {
                                         authorIds: bookData.authorIds,
                                         authorNames: bookData.authorNames,
                                         genreIds: bookData.genreIds,
+                                        genreNames: bookData.genreNames,
                                         publishedDate: bookData.publishedDate,
                                         addedOn: Date(),
                                         updatedAt: Date(),
