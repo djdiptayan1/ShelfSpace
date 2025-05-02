@@ -325,6 +325,50 @@ func fetchAuthors(completion: @escaping (Result<[String], Error>) -> Void) {
     }
 }
 
+struct AuthorListResponse: Decodable {
+    let data: [AuthorModel]
+}
+
+func getOrCreateAuthorId(authorName: String, bookId: UUID) async throws -> UUID {
+    let token = try KeychainManager.shared.getToken()
+    // 1. Check if author exists
+    guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/authors?search=\(authorName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? authorName)") else {
+        throw URLError(.badURL)
+    }
+    var request = URLRequest(url: url)
+    request.httpMethod = "GET"
+    request.setValue("application/json", forHTTPHeaderField: "Accept")
+    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    let (data, response) = try await URLSession.shared.data(for: request)
+    if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+        let authorList = try JSONDecoder().decode(AuthorListResponse.self, from: data)
+        if let existing = authorList.data.first(where: { $0.name.lowercased() == authorName.lowercased() }) {
+            return existing.id
+        }
+    }
+    // 2. If not found, create author
+    guard let postUrl = URL(string: "https://lms-temp-be.vercel.app/api/v1/authors") else {
+        throw URLError(.badURL)
+    }
+    var postRequest = URLRequest(url: postUrl)
+    postRequest.httpMethod = "POST"
+    postRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    postRequest.setValue("application/json", forHTTPHeaderField: "Accept")
+    postRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    let payload: [String: Any] = [
+        "name": authorName,
+        "bio": authorName,
+        "book_ids": [bookId.uuidString]
+    ]
+    postRequest.httpBody = try JSONSerialization.data(withJSONObject: payload)
+    let (postData, postResponse) = try await URLSession.shared.data(for: postRequest)
+    guard let postHttpResponse = postResponse as? HTTPURLResponse, (200...299).contains(postHttpResponse.statusCode) else {
+        throw URLError(.badServerResponse)
+    }
+    let createdAuthor = try JSONDecoder().decode(AuthorModel.self, from: postData)
+    return createdAuthor.id
+}
+
 func createBook(book: BookModel) async throws -> BookModel {
     print("Add BOOK API CALL HERE ...")
 
@@ -337,12 +381,9 @@ func createBook(book: BookModel) async throws -> BookModel {
         let available_copies: Int
         let reserved_copies: Int
         let published_date: String
-        let author_ids: [UUID]?
-//        let author_names: [String]? // <- ADD this
+        let author_ids: [String]?
         let genre_ids: [UUID]?
         let genre_names: [String]? // <- ADD this
-//        let added_on: String? // <- ADD this
-//        let updated_at: String? // <- ADD this
         let cover_image_url: String? // <- ADD this
     }
 
@@ -387,9 +428,8 @@ func createBook(book: BookModel) async throws -> BookModel {
         available_copies: book.availableCopies,
         reserved_copies: book.reservedCopies,
         published_date: publishedDateString,
-        author_ids: book.authorIds.isEmpty ? nil : book.authorIds,
+        author_ids: book.authorIds.map { $0.uuidString.lowercased() },
         genre_ids: book.genreIds.isEmpty ? nil : book.genreIds,
-//        author_names: book.authorNames?.isEmpty == true ? nil : book.authorNames,
         genre_names: book.genreNames?.isEmpty == true ? nil : book.genreNames,
         cover_image_url: cleanCoverUrl
     )
