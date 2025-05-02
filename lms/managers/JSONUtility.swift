@@ -23,7 +23,7 @@ class JSONUtility {
         // Setup encoder with standard configuration
         encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         
         // Setup decoder with standard configuration
         decoder = JSONDecoder()

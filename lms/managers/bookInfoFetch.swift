@@ -71,18 +71,18 @@ class BookInfoService {
     }
     
     func loadImage(from urlString: String) async throws -> UIImage? {
-    var secureURLString = urlString
-    if secureURLString.hasPrefix("http://") {
-        secureURLString = secureURLString.replacingOccurrences(of: "http://", with: "https://")
+        var secureURLString = urlString
+        if secureURLString.hasPrefix("http://") {
+            secureURLString = secureURLString.replacingOccurrences(of: "http://", with: "https://")
+        }
+
+        guard let url = URL(string: secureURLString) else { return nil }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return UIImage(data: data)
     }
 
-    guard let url = URL(string: secureURLString) else { return nil }
-    let (data, _) = try await URLSession.shared.data(from: url)
-    return UIImage(data: data)
-}
-
     
-    func loadCoverFromOpenLibrary(isbn: String) async throws -> UIImage? {
+    func loadCoverFromOpenLibrary(isbn: String) async throws -> (image: UIImage, url: String)? {
         let urlString = "https://covers.openlibrary.org/b/isbn/\(isbn)-L.jpg"
         guard let url = URL(string: urlString) else { return nil }
         
@@ -92,7 +92,7 @@ class BookInfoService {
             if let httpResponse = response as? HTTPURLResponse,
                httpResponse.statusCode == 200,
                let image = UIImage(data: data) {
-                return image
+                return (image, urlString)  // Return both as a tuple
             }
             return nil
         } catch {

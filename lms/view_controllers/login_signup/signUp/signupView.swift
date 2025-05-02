@@ -16,7 +16,6 @@ struct signupView: View {
 
                 ScrollView {
                     VStack(spacing: 30) {
-                        // Profile Image Section
                         VStack(spacing: 12) {
                             ZStack {
                                 Circle()
@@ -70,6 +69,7 @@ struct signupView: View {
                                 isSecure: false,
                                 focusState: _focusedField,
                                 colorScheme: colorScheme,
+                                keyboardType: .emailAddress,
                                 fieldType: .email
                             )
                             .focused($focusedField, equals: .email)

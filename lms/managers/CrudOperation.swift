@@ -8,11 +8,11 @@ import Foundation
 import Supabase
 import SwiftUI
 
-func insertUser(userData: [String: AnyEncodable], completion: @escaping (Bool) -> Void) {
+func insertUser(userData: [String: Any], completion: @escaping (Bool) -> Void) {
     Task {
         do {
             let token = try KeychainManager.shared.getToken()
-            print("Sending user data to API with token: \(token)")
+            print("Creating user with token: \(token)")
 
             guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/users") else {
                 throw URLError(.badURL)
@@ -24,25 +24,29 @@ func insertUser(userData: [String: AnyEncodable], completion: @escaping (Bool) -
             request.setValue("application/json", forHTTPHeaderField: "Accept")
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
-            // Ensure gender is included and properly formatted
-            var updatedUserData = userData
-            if let gender = userData["gender"]?.wrappedValue as? String {
-                updatedUserData["gender"] = AnyEncodable(gender.lowercased())
-                print("Gender value being sent: \(gender.lowercased())")
+            // Ensure all UUIDs are converted to strings before serialization
+            var processedUserData = userData
+            if let userId = userData["user_id"] as? UUID {
+                processedUserData["user_id"] = userId.uuidString
+            }
+            if let borrowedIds = userData["borrowed_book_ids"] as? [UUID] {
+                processedUserData["borrowed_book_ids"] = borrowedIds.map { $0.uuidString }
+            }
+            if let reservedIds = userData["reserved_book_ids"] as? [UUID] {
+                processedUserData["reserved_book_ids"] = reservedIds.map { $0.uuidString }
+            }
+            if let wishlistIds = userData["wishlist_book_ids"] as? [UUID] {
+                processedUserData["wishlist_book_ids"] = wishlistIds.map { $0.uuidString }
             }
 
-            // Use JSONUtility for encoding
-            let jsonData = try JSONUtility.shared.encodeFromDictionary(updatedUserData)
+            // Convert the processed userData dictionary to JSON data
+            let jsonData = try JSONSerialization.data(withJSONObject: processedUserData, options: [])
             request.httpBody = jsonData
 
-            // Debug print the request data
-            if let jsonString = String(data: jsonData, encoding: .utf8) {
-                print("API Request Data: \(jsonString)")
-            }
+            print("Sending user data: \(String(data: jsonData, encoding: .utf8) ?? "")")
 
             let (data, response) = try await URLSession.shared.data(for: request)
 
-            // Debug print the response data
             if let jsonString = String(data: data, encoding: .utf8) {
                 print("API Response: \(jsonString)")
             }
@@ -56,13 +60,12 @@ func insertUser(userData: [String: AnyEncodable], completion: @escaping (Bool) -
                 return
             }
 
-            print("User inserted successfully")
+            print("User created successfully")
             DispatchQueue.main.async {
                 completion(true)
             }
         } catch {
-            print("Error saving user data via API:")
-            error.logDetails()
+            print("Error creating user: \(error)")
             DispatchQueue.main.async {
                 completion(false)
             }
@@ -102,10 +105,10 @@ func fetchUsers(completion: @escaping (Result<[User], Error>) -> Void) {
 
             // Decode the wrapper response first
             let responseWrapper = try JSONUtility.shared.decode(PaginatedResponse<[User]>.self, from: data)
-            
+
             // Now we can access the users array
             let users = responseWrapper.data
-            
+
             DispatchQueue.main.async {
                 completion(.success(users))
             }
@@ -322,113 +325,126 @@ func fetchAuthors(completion: @escaping (Result<[String], Error>) -> Void) {
     }
 }
 
-func createBook(book: BookModel) async throws -> BookModel { // FULLY WORKING
+func createBook(book: BookModel) async throws -> BookModel {
     print("Add BOOK API CALL HERE ...")
-        
-        struct CreateBookRequest: Encodable {
-            let library_id: UUID
-            let title: String
-            let isbn: String
-            let description: String
-            let total_copies: Int
-            let available_copies: Int
-            let reserved_copies: Int
-            let published_date: String
-            let author_ids: [UUID]?
-            let genre_ids: [UUID]?
+
+    struct CreateBookRequest: Encodable {
+        let library_id: UUID
+        let title: String
+        let isbn: String
+        let description: String
+        let total_copies: Int
+        let available_copies: Int
+        let reserved_copies: Int
+        let published_date: String
+        let author_ids: [UUID]?
+//        let author_names: [String]? // <- ADD this
+        let genre_ids: [UUID]?
+        let genre_names: [String]? // <- ADD this
+//        let added_on: String? // <- ADD this
+//        let updated_at: String? // <- ADD this
+        let cover_image_url: String? // <- ADD this
+    }
+
+    struct ErrorResponse: Decodable {
+        let message: String?
+        let error: String?
+
+        var errorMessage: String {
+            return message ?? error ?? "Unknown error occurred"
         }
-        
-        struct ErrorResponse: Decodable {
-            let message: String?
-            let error: String?
-            
-            var errorMessage: String {
-                return message ?? error ?? "Unknown error occurred"
-            }
+    }
+
+    // Get auth token and library ID
+    guard let token = try? KeychainManager.shared.getToken() else {
+        throw URLError(.userAuthenticationRequired)
+    }
+
+    let libraryIdString = try KeychainManager.shared.getLibraryId()
+    guard let libraryId = UUID(uuidString: libraryIdString),
+          let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/books") else {
+        throw URLError(.badURL)
+    }
+
+    // Create request
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.setValue("application/json", forHTTPHeaderField: "Accept")
+    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+    // Format date consistently
+    let publishedDateString = book.publishedDate?.ISO8601Format() ?? Date().ISO8601Format()
+    let cleanCoverUrl = book.coverImageUrl?.replacingOccurrences(of: "\\/", with: "/")
+
+    // Prepare payload with proper escaping
+    let payload = CreateBookRequest(
+        library_id: libraryId,
+        title: book.title.replacingOccurrences(of: "'", with: ""), // Escape single quotes
+        isbn: book.isbn ?? "",
+        description: book.description?.replacingOccurrences(of: "'", with: "") ?? "", // Escape single quotes
+        total_copies: book.totalCopies,
+        available_copies: book.availableCopies,
+        reserved_copies: book.reservedCopies,
+        published_date: publishedDateString,
+        author_ids: book.authorIds.isEmpty ? nil : book.authorIds,
+        genre_ids: book.genreIds.isEmpty ? nil : book.genreIds,
+//        author_names: book.authorNames?.isEmpty == true ? nil : book.authorNames,
+        genre_names: book.genreNames?.isEmpty == true ? nil : book.genreNames,
+        cover_image_url: cleanCoverUrl
+    )
+
+    // Encode request using the utility
+    let jsonData = try JSONUtility.shared.encode(payload)
+
+    // Debug print the request data
+    if let jsonString = String(data: jsonData, encoding: .utf8) {
+        print("📤 Creating book with data: \(jsonString)")
+    }
+
+    request.httpBody = jsonData
+
+    // Send request
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse else {
+        throw URLError(.badServerResponse)
+    }
+
+    print("📥 Server response status code: \(httpResponse.statusCode)")
+
+    if let responseString = String(data: data, encoding: .utf8) {
+        print("📥 Server response body: \(responseString)")
+    }
+
+    // Handle successful response
+    if httpResponse.statusCode == 201 {
+        // Use the JSON utility to decode the response
+        do {
+            let createdBook = try JSONUtility.shared.decode(BookModel.self, from: data)
+            print("✅ Book created successfully with ID: \(createdBook.id)")
+            return createdBook
+        } catch {
+            print("❌ Error decoding successful response:")
+            error.logDetails()
+            throw error
         }
-        
-        // Get auth token and library ID
-        guard let token = try? KeychainManager.shared.getToken() else {
-            throw URLError(.userAuthenticationRequired)
+    } else {
+        // Handle error response
+        do {
+            let errorResponse = try JSONUtility.shared.decode(ErrorResponse.self, from: data)
+            print("❌ Error creating book: \(errorResponse.errorMessage)")
+            throw NSError(domain: "BookCreationError", code: httpResponse.statusCode,
+                          userInfo: [NSLocalizedDescriptionKey: errorResponse.errorMessage])
+        } catch {
+            let rawErrorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+            print("❌ Error creating book (raw): \(rawErrorMessage)")
+            print("Underlying decoding error (if any):")
+            error.logDetails()
+            throw NSError(domain: "BookCreationError", code: httpResponse.statusCode,
+                          userInfo: [NSLocalizedDescriptionKey: rawErrorMessage])
         }
-        
-        let libraryIdString = try KeychainManager.shared.getLibraryId()
-        guard let libraryId = UUID(uuidString: libraryIdString),
-              let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/books") else {
-            throw URLError(.badURL)
-        }
-        
-        // Create request
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        
-        // Format date consistently
-        let publishedDateString = book.publishedDate?.ISO8601Format() ?? Date().ISO8601Format()
-        
-        // Prepare payload
-        let payload = CreateBookRequest(
-            library_id: libraryId,
-            title: book.title,
-            isbn: book.isbn ?? "",
-            description: book.description ?? "",
-            total_copies: book.totalCopies,
-            available_copies: book.availableCopies,
-            reserved_copies: book.reservedCopies,
-            published_date: publishedDateString,
-            author_ids: book.authorIds.isEmpty ? nil : book.authorIds,
-            genre_ids: book.genreIds.isEmpty ? nil : book.genreIds
-        )
-        
-        // Encode request using the utility
-        let jsonData = try JSONUtility.shared.encode(payload)
-        request.httpBody = jsonData
-        
-        print("📤 Creating book with data: \(String(data: jsonData, encoding: .utf8) ?? "")")
-        
-        // Send request
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw URLError(.badServerResponse)
-        }
-        
-        print("📥 Server response status code: \(httpResponse.statusCode)")
-        
-        if let responseString = String(data: data, encoding: .utf8) {
-            print("📥 Server response body: \(responseString)")
-        }
-        
-        // Handle successful response
-        if httpResponse.statusCode == 201 {
-            // Use the JSON utility to decode the response
-            do {
-                let createdBook = try JSONUtility.shared.decode(BookModel.self, from: data)
-                print("✅ Book created successfully with ID: \(createdBook.id)")
-                return createdBook
-            } catch {
-                print("❌ Error decoding successful response:")
-                error.logDetails()
-                throw error
-            }
-        } else {
-            // Handle error response
-            do {
-                let errorResponse = try JSONUtility.shared.decode(ErrorResponse.self, from: data)
-                print("❌ Error creating book: \(errorResponse.errorMessage)")
-                throw NSError(domain: "BookCreationError", code: httpResponse.statusCode,
-                              userInfo: [NSLocalizedDescriptionKey: errorResponse.errorMessage])
-            } catch {
-                let rawErrorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-                print("❌ Error creating book (raw): \(rawErrorMessage)")
-                print("Underlying decoding error (if any):")
-                error.logDetails()
-                throw NSError(domain: "BookCreationError", code: httpResponse.statusCode,
-                              userInfo: [NSLocalizedDescriptionKey: rawErrorMessage])
-            }
-        }
+    }
 }
 
 func fetchBooks(completion: @escaping (Result<[BookModel], Error>) -> Void) { // FULLY WORKING
@@ -443,7 +459,7 @@ func fetchBooks(completion: @escaping (Result<[BookModel], Error>) -> Void) { //
                 print("Using library ID from keychain: \(libraryIdString)")
                 
                 // Create URL request
-                guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/books") else {
+                guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/books?libraryId=\(libraryIdString)") else {
                     throw BookFetchError.invalidURL
                 }
                 
@@ -669,24 +685,18 @@ private func formatDate(_ date: Date) -> String {
 func createUserWithAuth(email: String, password: String, name: String, role: String, completion: @escaping (Result<Bool, Error>) -> Void) {
     Task {
         do {
-            // First create auth account
-            let authResponse = try await supabase.auth.signUp(
-                email: email,
-                password: password
-            )
-            
-            let userId = authResponse.user.id
             let token = try KeychainManager.shared.getToken()
             let libraryIdString = try KeychainManager.shared.getLibraryId()
 
             // Prepare user data with proper types
             let userData: [String: Any] = [
-                "user_id": userId.uuidString,
+                "user_id": UUID().uuidString,
                 "library_id": libraryIdString,
                 "name": name,
                 "email": email,
                 "role": role,
-                "is_active": true
+                "is_active": true,
+                "password":password
             ]
 
             // Insert user data into database
@@ -736,5 +746,140 @@ func createUserWithAuth(email: String, password: String, name: String, role: Str
                 completion(.failure(error))
             }
         }
+    }
+}
+
+func updateBookAPI(book: BookModel) async throws -> BookModel {
+    print("EDIT BOOK API CALL HERE ...")
+
+    struct UpdateBookRequest: Encodable {
+        let library_id: UUID
+        let title: String
+        let isbn: String
+        let description: String
+        let total_copies: Int
+        let available_copies: Int
+        let reserved_copies: Int
+        let published_date: String
+        let genre_names: [String]?
+        let cover_image_url: String?
+    }
+
+    // Updated error response structure to match the actual API response
+    struct ErrorResponse: Decodable {
+        let success: Bool
+        let error: ErrorDetail
+        
+        struct ErrorDetail: Decodable {
+            let message: String
+        }
+        
+        var errorMessage: String {
+            return error.message
+        }
+    }
+
+    // Get auth token and library ID
+    guard let token = try? KeychainManager.shared.getToken() else {
+        throw URLError(.userAuthenticationRequired)
+    }
+
+    let libraryIdString = try KeychainManager.shared.getLibraryId()
+    guard let libraryId = UUID(uuidString: libraryIdString),
+          let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/books/\(book.id.uuidString)") else {
+        throw URLError(.badURL)
+    }
+
+    // Create request
+    var request = URLRequest(url: url)
+    request.httpMethod = "PUT"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.setValue("application/json", forHTTPHeaderField: "Accept")
+    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+    // Format date consistently
+    let publishedDateString = book.publishedDate?.ISO8601Format() ?? Date().ISO8601Format()
+    let cleanCoverUrl = book.coverImageUrl?.replacingOccurrences(of: "\\/", with: "/")
+
+    // Prepare payload
+    let payload = UpdateBookRequest(
+        library_id: libraryId,
+        title: book.title,
+        isbn: book.isbn ?? "",
+        description: book.description ?? "",
+        total_copies: book.totalCopies,
+        available_copies: book.availableCopies,
+        reserved_copies: book.reservedCopies,
+        published_date: publishedDateString,
+        genre_names: book.genreNames?.isEmpty == true ? nil : book.genreNames,
+        cover_image_url: cleanCoverUrl
+    )
+
+    let jsonData = try JSONUtility.shared.encode(payload)
+    if let jsonString = String(data: jsonData, encoding: .utf8) {
+        print("\u{1F4E4} Updating book with data: \(jsonString)")
+    }
+    request.httpBody = jsonData
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse else {
+        throw URLError(.badServerResponse)
+    }
+
+    print("\u{1F4E5} Server response status code: \(httpResponse.statusCode)")
+    if let responseString = String(data: data, encoding: .utf8) {
+        print("\u{1F4E5} Server response body: \(responseString)")
+    }
+
+    if (200...299).contains(httpResponse.statusCode) {
+        do {
+            let updatedBook = try JSONUtility.shared.decode(BookModel.self, from: data)
+            print("✅ Book updated successfully with ID: \(updatedBook.id)")
+            return updatedBook
+        } catch {
+            print("❌ Error decoding successful response:")
+            error.logDetails()
+            throw error
+        }
+    } else {
+        do {
+            let errorResponse = try JSONUtility.shared.decode(ErrorResponse.self, from: data)
+            print("❌ Error updating book: \(errorResponse.errorMessage)")
+            throw NSError(domain: "BookUpdateError", code: httpResponse.statusCode,
+                          userInfo: [NSLocalizedDescriptionKey: errorResponse.errorMessage])
+        } catch {
+            let rawErrorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+            print("❌ Error updating book (raw): \(rawErrorMessage)")
+            print("Underlying decoding error (if any):")
+            error.logDetails()
+            throw NSError(domain: "BookUpdateError", code: httpResponse.statusCode,
+                          userInfo: [NSLocalizedDescriptionKey: rawErrorMessage])
+        }
+    }
+}
+
+func deleteBookAPI(bookId: UUID) async throws {
+    guard let token = try? KeychainManager.shared.getToken() else {
+        throw URLError(.userAuthenticationRequired)
+    }
+    guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/books/\(bookId.uuidString)") else {
+        throw URLError(.badURL)
+    }
+    var request = URLRequest(url: url)
+    request.httpMethod = "DELETE"
+    request.setValue("*/*", forHTTPHeaderField: "accept")
+    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+    let (data, response) = try await URLSession.shared.data(for: request)
+    guard let httpResponse = response as? HTTPURLResponse else {
+        throw URLError(.badServerResponse)
+    }
+    print("\u{1F5D1} DELETE book status code: \(httpResponse.statusCode)")
+    if let responseString = String(data: data, encoding: .utf8) {
+        print("\u{1F5D1} DELETE book response body: \(responseString)")
+    }
+    if !(200...299).contains(httpResponse.statusCode) {
+        throw NSError(domain: "BookDeleteError", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "Failed to delete book"])
     }
 }

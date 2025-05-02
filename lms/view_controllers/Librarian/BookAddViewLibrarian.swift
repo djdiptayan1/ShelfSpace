@@ -1,14 +1,171 @@
-//
-//  BookViewAdmin.swift
-//  lms
-//
-//  Created by Diptayan Jash on 23/04/25.
-//
-import DotLottie
-import Foundation
 import SwiftUI
+import DotLottie
 
-struct BookViewAdmin: View {
+struct BookAddViewLibrarian: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var currentStep: BookAddStep = .isbn
+    @State private var showImagePicker = false
+    @State private var showBarcodeScanner = false
+    @State private var bookData = BookData()
+    @State private var focusedField: BookFieldType?
+    @State private var isLoading = false
+    var onSave: (BookModel) -> Void
+    
+    enum BookAddStep {
+        case isbn
+        case details
+    }
+    
+    enum BookFieldType {
+        case isbn
+        case title
+        case description
+        case publisher
+        case language
+        case author
+    }
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                ReusableBackground(colorScheme: colorScheme)
+                
+                switch currentStep {
+                case .isbn:
+                    ISBNInputStep(
+                        bookData: $bookData,
+                        showBarcodeScanner: $showBarcodeScanner,
+                        onContinue: {
+                            withAnimation(.easeInOut) {
+                                currentStep = .details
+                            }
+                        }, onScanComplete: {
+                            withAnimation(.easeInOut) {
+                                currentStep = .details
+                            }
+                        }
+                    )
+                case .details:
+                    BookDetailsStep(
+                        bookData: $bookData,
+                        showImagePicker: $showImagePicker,
+                        isLoading: $isLoading,
+                        onSave: {
+                            Task {
+                                isLoading = true
+                                defer { isLoading = false }
+                                do {
+                                    let bookModel = BookModel(
+                                        id: UUID(),
+                                        libraryId: bookData.libraryId ?? UUID(),
+                                        title: bookData.bookTitle,
+                                        isbn: bookData.isbn,
+                                        description: bookData.description,
+                                        totalCopies: bookData.totalCopies,
+                                        availableCopies: bookData.availableCopies,
+                                        reservedCopies: bookData.reservedCopies,
+                                        authorIds: bookData.authorIds,
+                                        authorNames: bookData.authorNames,
+                                        genreIds: bookData.genreIds,
+                                        publishedDate: bookData.publishedDate,
+                                        addedOn: Date(),
+                                        updatedAt: Date(),
+                                        coverImageUrl: bookData.bookCoverUrl,
+                                        coverImageData: bookData.bookCover?.jpegData(compressionQuality: 0.8)
+                                    )
+                                    let createdBook = try await createBook(book: bookModel)
+                                    print("✅ Book saved to database with ID: \(createdBook.id)")
+                                    onSave(createdBook)
+                                    dismiss()
+                                } catch {
+                                    print("❌ Error saving book: \(error)")
+                                    // Optionally show error UI
+                                }
+                            }
+                        }
+                    )
+                }
+            }
+            .navigationBarTitle(currentStep == .isbn ? "Add Book" : "Book Details", displayMode: .inline)
+            .navigationBarItems(
+                leading: Button(action: {
+                    if currentStep == .details {
+                        withAnimation(.easeInOut) {
+                            currentStep = .isbn
+                        }
+                    } else {
+                        dismiss()
+                    }
+                }) {
+                    Text(currentStep == .details ? "Back" : "Cancel")
+                        .foregroundColor(currentStep == .details ? .blue : .red)
+                },
+                trailing: currentStep == .details ?
+                    Button(action: {
+                        saveBook()
+                        dismiss()
+                    }) {
+                        Text("Save")
+                            .fontWeight(.medium)
+                    } : nil
+            )
+            .sheet(isPresented: $showImagePicker) {
+                ImagePicker(image: $bookData.bookCover)
+            }
+            .sheet(isPresented: $showBarcodeScanner) {
+                BarcodeScannerView(scannedCode: $bookData.isbn){_ in
+                }
+            }
+            .onTapGesture {
+                focusedField = nil
+            }
+        }
+    }
+    
+    private func saveBook() {
+        // Generate UUIDs for authors
+        let authorIds = bookData.authorNames.map { _ in UUID() }
+        
+        // Convert UIImage to Data if available
+        let coverImageData = bookData.bookCover?.jpegData(compressionQuality: 0.8)
+        
+        // TODO: In a real app, you would upload the image to cloud storage here
+        // and get back the URL. For now, we'll just use a placeholder URL if we have an image
+        let coverImageUrl = coverImageData != nil ? "https://placeholder-url.com/book-cover.jpg" : nil
+        
+        let newBook = BookModel(
+            id: UUID(),
+            libraryId: bookData.libraryId ?? UUID(), // Replace with real libraryId if you have it
+            title: bookData.bookTitle,
+            isbn: bookData.isbn,
+            description: bookData.description,
+            totalCopies: bookData.totalCopies,
+            availableCopies: bookData.availableCopies,
+            reservedCopies: bookData.reservedCopies,
+            authorIds: bookData.authorIds,
+            authorNames: bookData.authorNames,
+            genreIds: bookData.genreIds,
+            publishedDate: bookData.publishedDate,
+            addedOn: Date(),
+            updatedAt: Date(),
+            coverImageUrl: coverImageUrl,
+            coverImageData: coverImageData
+        )
+
+        
+        // Call the onSave closure with the new book
+        onSave(newBook)
+    }
+}
+
+#Preview {
+    BookAddViewLibrarian(onSave: { _ in })
+}
+
+
+
+struct bookViewLibrarian: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var books: [BookModel] = []
     @State private var searchText: String = ""
@@ -22,19 +179,21 @@ struct BookViewAdmin: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var showError = false
-    @State private var isEditingBook = false
-    @State private var editingBookId: UUID? = nil
 
     var filteredBooks: [BookModel] {
         var result = books
 
         if selectedCategory != .all {
             result = result.filter { $0.genreNames?.contains(selectedCategory.rawValue) == true }
+
         }
+
 
         if !searchText.isEmpty {
             result = result.filter { book in
                 book.title.localizedCaseInsensitiveContains(searchText) ||
+//                book.authorNames!.joined(separator: " ").localizedCaseInsensitiveContains(searchText)
+//                ||
                     (book.isbn ?? "").localizedCaseInsensitiveContains(searchText)
             }
         }
@@ -69,12 +228,12 @@ struct BookViewAdmin: View {
                                     books: filteredBooks,
                                     colorScheme: colorScheme,
                                     onEdit: { book in
-                                        bookData = BookAddViewAdmin.bookData(from: book)
-                                        editingBookId = book.id
-                                        isEditingBook = true
+                                        bookToEdit = book
+                                        showingAddBookSheet = true
                                     },
                                     onDelete: deleteBook
-                                )                            }
+                                )
+                            }
                         }
                     }
                     .padding(.top)
@@ -96,50 +255,15 @@ struct BookViewAdmin: View {
                 }
             }
             .sheet(isPresented: $showingAddBookSheet) {
-                BookAddViewAdmin(onSave: { newBook in
-                    addNewBook(newBook)
-                })
-            }
-            .sheet(isPresented: $isEditingBook) {
-                BookDetailsStep(
-                    bookData: $bookData,
-                    showImagePicker: $showImagePicker,
-                    isLoading: $isLoading,
-                    onSave: {
-                        Task {
-                            isLoading = true
-                            defer { isLoading = false }
-                            
-                            let updatedBook = BookModel(
-                                id: editingBookId ?? UUID(),
-                                libraryId: bookData.libraryId ?? UUID(),
-                                title: bookData.bookTitle,
-                                isbn: bookData.isbn,
-                                description: bookData.description,
-                                totalCopies: bookData.totalCopies,
-                                availableCopies: bookData.availableCopies,
-                                reservedCopies: bookData.reservedCopies,
-                                authorIds: bookData.authorIds,
-                                authorNames: bookData.authorNames,
-                                genreIds: bookData.genreIds,
-                                genreNames: bookData.genreNames,
-                                publishedDate: bookData.publishedDate,
-                                coverImageUrl: bookData.bookCoverUrl,
-                                coverImageData: bookData.bookCover?.jpegData(compressionQuality: 0.8)
-                            )
-                            
-                            do {
-                                let apiBook = try await updateBookAPI(book: updatedBook)
-                                updateBook(apiBook)
-                                isEditingBook = false
-                                editingBookId = nil
-                            } catch {
-                                errorMessage = error.localizedDescription
-                                showError = true
-                            }
-                        }
-                    }
-                )
+                if let bookToEdit = bookToEdit {
+                    Text("Edit Book")
+                        .font(.headline)
+                        .padding()
+                } else {
+                    BookAddViewLibrarian(onSave: { newBook in
+                        addNewBook(newBook)
+                    })
+                }
             }
             .alert("Error", isPresented: $showError) {
                 Button("OK", role: .cancel) { }
@@ -198,17 +322,9 @@ struct BookViewAdmin: View {
     }
 
     private func deleteBook(_ book: BookModel) {
-        Task {
-            do {
-                try await deleteBookAPI(bookId: book.id)
-                if let index = books.firstIndex(where: { $0.id == book.id }) {
-                    withAnimation {
-                        books.remove(at: index)
-                    }
-                }
-            } catch {
-                errorMessage = error.localizedDescription
-                showError = true
+        if let index = books.firstIndex(where: { $0.id == book.id }) {
+            withAnimation {
+                books.remove(at: index)
             }
         }
     }
@@ -227,7 +343,7 @@ struct BookViewAdmin: View {
         }
     }
 }
-struct LoadingAnimationView: View {
+struct loadingAnimationView: View {
     var colorScheme: ColorScheme
     
     var body: some View {
@@ -247,7 +363,7 @@ struct LoadingAnimationView: View {
     }
 }
 // Empty state view for when there are no books
-struct EmptyBookListView: View {
+struct emptyBookListView: View {
     var colorScheme: ColorScheme
 
     var body: some View {
@@ -274,7 +390,7 @@ struct EmptyBookListView: View {
 
 // MARK: - Subviews
 
-struct SearchBar: View {
+struct searchBar: View {
     @Binding var searchText: String
     var colorScheme: ColorScheme
 
@@ -306,7 +422,7 @@ struct SearchBar: View {
     }
 }
 
-struct CategoryFilterView: View {
+struct categoryFilterView: View {
     @Binding var selectedCategory: BookGenre
     var colorScheme: ColorScheme
 
@@ -326,7 +442,7 @@ struct CategoryFilterView: View {
     }
 }
 
-struct CategoryButton: View {
+struct categoryButton: View {
     var category: BookGenre
     @Binding var selectedCategory: BookGenre
     var colorScheme: ColorScheme
@@ -358,7 +474,7 @@ struct CategoryButton: View {
     }
 }
 
-struct BookList: View {
+struct bookList: View {
     var books: [BookModel]
     var colorScheme: ColorScheme
     var onEdit: (BookModel) -> Void
@@ -378,7 +494,7 @@ struct BookList: View {
     }
 }
 
-struct BookCell: View {
+struct bookCell: View {
     var book: BookModel
     var onEdit: () -> Void
     var onDelete: () -> Void
@@ -408,19 +524,19 @@ struct BookCell: View {
 }
 
 // Scroll offset preference key to track scrolling
-struct ScrollOffsetPreferenceKey: PreferenceKey {
+struct scrollOffsetPreferenceKey: PreferenceKey {
     static var defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = nextValue()
     }
 }
 
-struct BookViewAdmin_Previews: PreviewProvider {
-    static var previews: some View {
-        BookViewAdmin()
-            .preferredColorScheme(.light)
-
-        BookViewAdmin()
-            .preferredColorScheme(.dark)
-    }
-}
+//struct BookAddViewLibrarian_Previews: PreviewProvider {
+//    static var previews: some View {
+//        BookAddViewLibrarian()
+//            .preferredColorScheme(.light)
+//
+//        BookAddViewLibrarian()
+//            .preferredColorScheme(.dark)
+//    }
+//}

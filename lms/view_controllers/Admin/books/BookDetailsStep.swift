@@ -11,14 +11,16 @@ import SwiftUI
 struct BookDetailsStep: View {
     @Binding var bookData: BookData
     @Binding var showImagePicker: Bool
+    @Binding var isLoading: Bool
     let onSave: () -> Void
     @Environment(\.colorScheme) private var colorScheme
     @State private var focusedField: String?
-    @State private var isLoading = false
     @State private var showSuccess = false
     @State private var errorMessage = ""
     @State private var showError = false
     @State private var successMessage = ""
+    
+    @State private var selectedGenres: Set<BookGenre> = []
     
     
     var body: some View {
@@ -151,28 +153,61 @@ struct BookDetailsStep: View {
                             
                             FormTextField(title: "Publisher", placeholder: "Enter publisher", text: $bookData.publisher)
                             
-                            FormTextField(title: "Language", placeholder: "Enter language", text: $bookData.language)
+//                            FormTextField(title: "Language", placeholder: "Enter language", text: $bookData.language)
                             
                             // Categories Section
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("Categories")
+                                Text("Genres")
                                     .font(.subheadline)
                                     .foregroundColor(Color.text(for: colorScheme))
                                 
+                                // Fiction section
+                                Text("Fiction")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.gray)
+                                    .padding(.top, 4)
+                                    .padding(.leading, 4)
+                                
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 8) {
-                                        ForEach(bookData.categories, id: \.self) { category in
-                                            Text(category)
-                                                .font(.caption)
-                                                .padding(.horizontal, 12)
-                                                .padding(.vertical, 6)
-                                                .background(Color.blue.opacity(0.1))
-                                                .foregroundColor(.blue)
-                                                .cornerRadius(12)
+                                        ForEach(BookGenre.fictionGenres, id: \.self) { genre in
+                                            GenreChip(
+                                                genre: genre,
+                                                isSelected: selectedGenres.contains(genre),
+                                                onToggle: {
+                                                    toggleGenre(genre)
+                                                }
+                                            )
                                         }
                                     }
+                                    .padding(.horizontal, 4)
+                                }
+                                
+                                // Non-fiction section
+                                Text("Non-Fiction")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.gray)
+                                    .padding(.top, 8)
+                                    .padding(.leading, 4)
+                                
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 8) {
+                                        ForEach(BookGenre.nonFictionGenres, id: \.self) { genre in
+                                            GenreChip(
+                                                genre: genre,
+                                                isSelected: selectedGenres.contains(genre),
+                                                onToggle: {
+                                                    toggleGenre(genre)
+                                                }
+                                            )
+                                        }
+                                    }
+                                    .padding(.horizontal, 4)
                                 }
                             }
+                            .padding(.vertical, 4)
                         }
                     }
 
@@ -229,29 +264,27 @@ struct BookDetailsStep: View {
 
                 // Save Button
                 Button(action: {
-                    Task {
-                        await saveBook()
-                    }
+                    onSave()
                 }) {
-                    Text("Save Book")
+                    Text(isLoading ? "Saving Book..." : "Save Book")
                         .fontWeight(.semibold)
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(
-                            LinearGradient(
-                                gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.8)]),
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .cornerRadius(16)
-                        .shadow(color: Color.blue.opacity(0.3), radius: 5, x: 0, y: 3)
                 }
+                .background(
+                    LinearGradient(
+                        gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.8)]),
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .cornerRadius(16)
+                .shadow(color: Color.blue.opacity(0.3), radius: 5, x: 0, y: 3)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 20)
-                .disabled(bookData.bookTitle.isEmpty)
-                .opacity(bookData.bookTitle.isEmpty ? 0.6 : 1.0)
+                .disabled(bookData.bookTitle.isEmpty || isLoading)
+                .opacity(bookData.bookTitle.isEmpty || isLoading ? 0.6 : 1.0)
             }
             .padding(.bottom, 32)
         }
@@ -259,66 +292,51 @@ struct BookDetailsStep: View {
             focusedField = nil
         }
     }
+    private func toggleGenre(_ genre: BookGenre) {
+        if selectedGenres.contains(genre) {
+            selectedGenres.remove(genre)
+        } else {
+            selectedGenres.insert(genre)
+        }
+        // Update bookData.genreIds with the selected genres
+        bookData.genreNames = Array(selectedGenres).map { $0.rawValue }
+        
+        // Also update categories for display purposes
+        bookData.categories = Array(selectedGenres).map { $0.displayName }
+    }
     
     private func resetForm() {
         bookData = BookData() // or your default initializer
     }
+}
 
+struct GenreChip: View {
+    let genre: BookGenre
+    let isSelected: Bool
+    let onToggle: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
     
-    private func saveBook() async {
-        isLoading = true
-        defer { isLoading = false }
-        
-        do {
-            // Convert BookData to BookModel
-            let bookModel = BookModel(
-                id: UUID(), // New book, so generate new UUID
-                libraryId: bookData.libraryId ?? UUID(), // Use provided libraryId or generate new one
-                title: bookData.bookTitle,
-                isbn: bookData.isbn,
-                description: bookData.description,
-                totalCopies: bookData.totalCopies,
-                availableCopies: bookData.availableCopies,
-                reservedCopies: bookData.reservedCopies,
-                authorIds: bookData.authorIds,
-                authorNames: bookData.authorNames,
-                genreIds: bookData.genreIds,
-                publishedDate: bookData.publishedDate,
-                addedOn: Date(),
-                updatedAt: Date(),
-                coverImageUrl: nil, // Will be updated after image upload
-                coverImageData: bookData.bookCover?.jpegData(compressionQuality: 0.8)
+    var body: some View {
+        Button(action: onToggle) {
+            HStack(spacing: 6) {
+                Image(systemName: genre.iconName)
+                    .font(.system(size: 10))
+                
+                Text(genre.displayName)
+                    .font(.caption)
+                    .fontWeight(isSelected ? .semibold : .regular)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(isSelected ? genre.themeColor.opacity(0.2) : Color.gray.opacity(0.1))
+            .foregroundColor(isSelected ? genre.themeColor : Color.gray)
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? genre.themeColor.opacity(0.3) : Color.clear, lineWidth: 1)
             )
-            
-            // Save to database
-            let createdBook = try await createBook(book: bookModel)
-            print("✅ Book saved to database with ID: \(createdBook.id)")
-            
-            // Save cover image if available
-            if let coverImage = bookData.bookCover,
-               let imageData = coverImage.jpegData(compressionQuality: 0.8) {
-                // TODO: Implement image upload to storage
-                print("📸 Book cover image available for upload")
-            }
-            
-            // Save locally
-            // TODO: Implement local storage
-            print("💾 Book saved locally")
-            
-            // Show success message
-            showSuccess = true
-            successMessage = "Book added successfully!"
-            
-            // Reset form after delay
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                resetForm()
-                onSave()
-            }
-        } catch {
-            print("❌ Error saving book: \(error)")
-            showError = true
-            errorMessage = "Failed to save book: \(error.localizedDescription)"
         }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
@@ -511,6 +529,7 @@ struct BookDetailsStep_Previews: PreviewProvider {
         BookDetailsStep(
             bookData: .constant(BookData()),
             showImagePicker: .constant(false),
+            isLoading: .constant(false),
             onSave: {}
         )
     }

@@ -21,7 +21,7 @@ struct PersonalInfoView: View {
         case phone
     }
 
-    private let genderOptions = ["Male", "Female", "Non-binary", "Prefer not to say"]
+    private let genderOptions = ["Male", "Female", "Prefer not to say"]
 
     var body: some View {
         ScrollView {

@@ -8,6 +8,22 @@
 import Foundation
 import SwiftUI
 
+struct ActivityIndicator: UIViewRepresentable {
+    @Binding var isAnimating: Bool
+    let style: UIActivityIndicatorView.Style
+
+    func makeUIView(context: Context) -> UIActivityIndicatorView {
+        let indicator = UIActivityIndicatorView(style: style)
+        indicator.hidesWhenStopped = true
+        return indicator
+    }
+
+    func updateUIView(_ uiView: UIActivityIndicatorView, context: Context) {
+        isAnimating ? uiView.startAnimating() : uiView.stopAnimating()
+    }
+}
+
+
 struct AddUserView: View {
     @ObservedObject var viewModel: UsersViewModel
     @Environment(\.dismiss) private var dismiss
@@ -16,6 +32,8 @@ struct AddUserView: View {
 
     @State private var showingImagePicker = false
     @State private var password: String = ""
+    @State private var isLoading = false
+
 
     // Determine title and colors based on the role being added
     private var navigationTitle: String {
@@ -28,8 +46,7 @@ struct AddUserView: View {
     // Check if form is valid for enabling Save button
     private var isFormValid: Bool {
         !viewModel.newUserInputName.isEmpty &&
-        viewModel.isValidEmail(viewModel.newUserInputEmail) &&
-        !password.isEmpty
+        viewModel.isValidEmail(viewModel.newUserInputEmail)
     }
 
     var body: some View {
@@ -44,6 +61,21 @@ struct AddUserView: View {
                     }
                     .padding(.bottom, 50)
                 }
+                if isLoading {
+                    Color.black.opacity(0.4)
+                        .ignoresSafeArea()
+                    VStack {
+                        ActivityIndicator(isAnimating: $isLoading, style: .large)
+                        Text("Creating User...")
+                            .foregroundColor(.white)
+                            .font(.headline)
+                            .padding(.top, 8)
+                    }
+                    .padding(24)
+                    .background(Color.black.opacity(0.75))
+                    .cornerRadius(12)
+                }
+
             }
             .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.inline)
@@ -77,7 +109,6 @@ struct AddUserView: View {
         VStack(spacing: 16) {
             nameField
             emailField
-            passwordField
         }
         .padding(.horizontal, 20)
     }
@@ -107,19 +138,6 @@ struct AddUserView: View {
         )
     }
     
-    private var passwordField: some View {
-        CustomTextField(
-            text: $password,
-            placeholder: "Enter password",
-            iconName: "lock.fill",
-            isSecure: true,
-            showSecureToggle: true,
-            secureToggleAction: {},
-//            focusState: $focusField,
-            colorScheme: colorScheme,
-            fieldType: .password
-        )
-    }
     
     private var photoSelectorButton: some View {
         Button {
@@ -169,6 +187,11 @@ struct AddUserView: View {
     private var saveButton: some View {
         Button("Save") {
             let role = viewModel.roleToAdd == .librarian ? "librarian" : "member"
+            password = randomPassword(length: 8)
+            //loading
+            isLoading = true
+            
+            
             
             createUserWithAuth(
                 email: viewModel.newUserInputEmail,
@@ -177,6 +200,7 @@ struct AddUserView: View {
                 role: role
             ) { result in
                 DispatchQueue.main.async {
+                    isLoading = false
                     switch result {
                     case .success:
                         viewModel.showAlert(
@@ -205,6 +229,21 @@ struct AddUserView: View {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
+func randomPassword(length: Int) -> String {
+    let characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}|;:,.<>?/"
+    var password = ""
+
+    for _ in 0..<length {
+        if let randomChar = characters.randomElement() {
+            password.append(randomChar)
+        }
+    }
+
+    return password
+}
+
+
+
 
 #Preview {
     AddUserView(viewModel: UsersViewModel())

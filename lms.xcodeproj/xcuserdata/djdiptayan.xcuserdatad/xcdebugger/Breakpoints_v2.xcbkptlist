@@ -32,7 +32,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "232"
             endingLineNumber = "232"
-            landmarkName = "fetchGenres(completion:)"
+            landmarkName = "addLibrians(email:password:name:userData:completion:)"
             landmarkType = "9">
          </BreakpointContent>
       </BreakpointProxy>
@@ -48,7 +48,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "237"
             endingLineNumber = "237"
-            landmarkName = "fetchGenres(completion:)"
+            landmarkName = "addLibrians(email:password:name:userData:completion:)"
             landmarkType = "9">
          </BreakpointContent>
       </BreakpointProxy>
@@ -64,7 +64,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "192"
             endingLineNumber = "192"
-            landmarkName = "fetchGenres(completion:)"
+            landmarkName = "addLibrians(email:password:name:userData:completion:)"
             landmarkType = "9">
          </BreakpointContent>
       </BreakpointProxy>

@@ -4,12 +4,18 @@ import Combine
 struct TwoFactorAuthView: View {
     @EnvironmentObject var themeManager: ThemeManager
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.dismiss) var dismiss
+    
+    let email: String
+    let onVerification: (Bool) -> Void
     
     @State private var otpText: String = ""
     @State private var isVerifying: Bool = false
     @State private var showError: Bool = false
     @State private var errorMessage: String = ""
     @State private var remainingTime: Int = 60
+    @State private var isResending: Bool = false
+    @State private var isGeneratingOTP: Bool = false
     
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     
@@ -29,7 +35,7 @@ struct TwoFactorAuthView: View {
                         .font(.system(size: 24, weight: .bold))
                         .foregroundColor(Color.text(for: colorScheme))
                     
-                    Text("Enter the 6-digit verification code sent to your device")
+                    Text("Enter the 6-digit verification code sent to \(email)")
                         .font(.system(size: 16))
                         .foregroundColor(Color.secondary(for: colorScheme))
                         .multilineTextAlignment(.center)
@@ -109,40 +115,123 @@ struct TwoFactorAuthView: View {
                             }
                     } else {
                         Button(action: resendCode) {
-                            Text("Resend Code")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(Color.accent(for: colorScheme))
+                            if isResending {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: Color.accent(for: colorScheme)))
+                                    .scaleEffect(0.8)
+                            } else {
+                                Text("Resend Code")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(Color.accent(for: colorScheme))
+                            }
                         }
+                        .disabled(isResending)
                     }
                 }
                 .padding(.top, 24)
+                
+                if isGeneratingOTP {
+                    Text("Sending verification code...")
+                        .font(.caption)
+                        .foregroundColor(Color.secondary(for: colorScheme))
+                        .padding(.top, 8)
+                }
                 
                 Spacer()
             }
             .padding(.horizontal, 24)
         }
+        .onAppear {
+            generateInitialOTP()
+        }
+    }
+    
+    private func generateInitialOTP() {
+        isGeneratingOTP = true
+        
+        Task {
+            do {
+                print("🔄 Generating initial OTP for email: \(email)")
+                let success = try await LoginManager.shared.generateOTP(email: email)
+                
+                await MainActor.run {
+                    isGeneratingOTP = false
+                    if !success {
+                        showError = true
+                        errorMessage = "Failed to send verification code. Please try again."
+                    }
+                }
+            } catch {
+                print("❌ Error generating initial OTP: \(error)")
+                await MainActor.run {
+                    isGeneratingOTP = false
+                    showError = true
+                    errorMessage = "An error occurred while sending the verification code. Please try again."
+                }
+            }
+        }
     }
     
     private func verifyCode() {
         isVerifying = true
+        showError = false
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            isVerifying = false
-            
-            if otpText == "123456" {
-                print("Verification successful")
-            } else {
-                showError = true
-                errorMessage = "Invalid verification code. Please try again."
-                otpText = ""
+        Task {
+            do {
+                let success = try await LoginManager.shared.verifyOTP(email: email, otp: otpText)
+                if success {
+                    await MainActor.run {
+                        onVerification(true)
+                        dismiss()
+                    }
+                } else {
+                    await MainActor.run {
+                        showError = true
+                        errorMessage = "Invalid verification code. Please try again."
+                        otpText = ""
+                        isVerifying = false
+                        onVerification(false)
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    showError = true
+                    errorMessage = "An error occurred. Please try again."
+                    otpText = ""
+                    isVerifying = false
+                    onVerification(false)
+                }
             }
         }
     }
     
     private func resendCode() {
-        remainingTime = 60
-        otpText = ""
+        isResending = true
         showError = false
+        
+        Task {
+            do {
+                print("🔄 Resending OTP for email: \(email)")
+                let success = try await LoginManager.shared.generateOTP(email: email)
+                await MainActor.run {
+                    if success {
+                        remainingTime = 60
+                        otpText = ""
+                    } else {
+                        showError = true
+                        errorMessage = "Failed to resend code. Please try again."
+                    }
+                    isResending = false
+                }
+            } catch {
+                print("❌ Error resending OTP: \(error)")
+                await MainActor.run {
+                    showError = true
+                    errorMessage = "An error occurred. Please try again."
+                    isResending = false
+                }
+            }
+        }
     }
 }
 
@@ -184,12 +273,12 @@ struct OTPBox: View {
 struct TwoFactorAuthView_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            TwoFactorAuthView()
+            TwoFactorAuthView(email: "example@example.com") { _ in }
                 .environmentObject(ThemeManager())
                 .preferredColorScheme(.light)
                 .previewDisplayName("Light Mode")
             
-            TwoFactorAuthView()
+            TwoFactorAuthView(email: "example@example.com") { _ in }
                 .environmentObject(ThemeManager())
                 .preferredColorScheme(.dark)
                 .previewDisplayName("Dark Mode")

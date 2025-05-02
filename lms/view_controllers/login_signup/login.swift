@@ -8,6 +8,18 @@ import DotLottie
 import Foundation
 import SwiftUI
 
+enum LoginDestination: Identifiable {
+    case admin, librarian, member
+
+    var id: String {
+        switch self {
+        case .admin: return "admin"
+        case .librarian: return "librarian"
+        case .member: return "member"
+        }
+    }
+}
+
 // Group related state variables in a single class
 class LoginState: ObservableObject {
     @Published var email = ""
@@ -18,23 +30,13 @@ class LoginState: ObservableObject {
     @Published var errorMessage = ""
     @Published var currentUser: User?
     @Published var showLoginAnimation = false
+    @Published var otpVerified = false
 
     // Navigation states
     @Published var showForgotPassword = false
     @Published var showSignup = false
     @Published var destination: LoginDestination?
-
-    enum LoginDestination: Identifiable {
-        case admin, librarian, member
-
-        var id: String {
-            switch self {
-            case .admin: return "admin"
-            case .librarian: return "librarian"
-            case .member: return "member"
-            }
-        }
-    }
+    @Published var show2FA = false
 
     func setError(_ error: Error) {
         if let loginError = error as? LoginError {
@@ -55,6 +57,7 @@ struct LoginView: View {
     @EnvironmentObject private var appState: AppState
 
     @State private var isLandscape = UIDevice.current.orientation.isLandscape
+    @State private var tempUser: (User, UserRole)?
 
     var body: some View {
         GeometryReader { geometry in
@@ -91,6 +94,21 @@ struct LoginView: View {
             }
             .sheet(isPresented: $state.showSignup) {
                 SignupContainerView()
+            }
+            .sheet(isPresented: $state.show2FA, onDismiss: {
+                if state.otpVerified {
+                    // Only proceed to destination if OTP was verified
+                    if let (user, role) = tempUser {
+                        state.destination = destinationForRole(role)
+                        appState.currentUser = user
+                        appState.currentUserRole = role
+                        appState.isLoggedIn = true
+                    }
+                }
+            }) {
+                TwoFactorAuthView(email: state.email) { success in
+                    state.otpVerified = success
+                }
             }
             .fullScreenCover(item: $state.destination) { destination in
                 switch destination {
@@ -341,8 +359,8 @@ struct LoginView: View {
         state.isProcessing = true
         state.showError = false
         state.errorMessage = ""
+        state.otpVerified = false
 
-        // Show login animation when login button is clicked
         withAnimation {
             state.showLoginAnimation = true
         }
@@ -350,26 +368,12 @@ struct LoginView: View {
         Task {
             do {
                 let (user, role) = try await LoginManager.shared.login(email: state.email, password: state.password)
-                state.currentUser = user
-
-                // Update AppState
+                
                 await MainActor.run {
-                    if let appState = getAppState() {
-                        appState.currentUser = user
-                        appState.currentUserRole = role
-                        appState.isLoggedIn = true
-                    }
-
                     state.isProcessing = false
                     state.showLoginAnimation = false
-                    switch role {
-                    case .admin:
-                        state.destination = .admin
-                    case .librarian:
-                        state.destination = .librarian
-                    case .member:
-                        state.destination = .member
-                    }
+                    tempUser = (user, role)
+                    state.show2FA = true
                 }
             } catch let error as LoginError {
                 await MainActor.run {
@@ -399,15 +403,15 @@ struct LoginView: View {
         }
     }
 
-    private func getAppState() -> AppState? {
-        // This hack allows us to access the EnvironmentObject in a closure
-        let mirror = Mirror(reflecting: self)
-        for child in mirror.children {
-            if let appState = child.value as? AppState {
-                return appState
-            }
+    private func destinationForRole(_ role: UserRole) -> LoginDestination {
+        switch role {
+        case .admin:
+            return .admin
+        case .librarian:
+            return .librarian
+        case .member:
+            return .member
         }
-        return nil
     }
 }
 

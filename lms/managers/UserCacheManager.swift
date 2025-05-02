@@ -24,11 +24,19 @@ class UserCacheManager {
     private let userKey = "cachedUser"
     private let libraryKey = "cachedLibrary"
     private let detailedUserKey = "cachedDetailedUser"
+    private let otpKey = "cachedOTP"
     
     private init() {
         // Configure cache limits
         cache.countLimit = 100 // Maximum number of users to cache
         cache.totalCostLimit = 50 * 1024 * 1024 // 50 MB limit
+    }
+    func cacheOtp(){
+        let isVerified = true
+        userDefaults.set(isVerified, forKey: otpKey)
+    }
+    func getCachedOtp() -> Bool? {
+        return userDefaults.object(forKey: otpKey) as? Bool
     }
     
     func cacheUser(_ user: User) {
@@ -89,6 +97,7 @@ class UserCacheManager {
         userDefaults.removeObject(forKey: userKey)
         userDefaults.removeObject(forKey: libraryKey)
         userDefaults.removeObject(forKey: detailedUserKey)
+        userDefaults.removeObject(forKey: otpKey)
         userDefaults.synchronize()
     }
     
