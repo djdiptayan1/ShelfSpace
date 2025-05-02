@@ -148,7 +148,7 @@ struct ProfileIcon: View {
             Image(systemName: "person.circle.fill")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .foregroundColor(.blue)
+                .foregroundColor(.teal)
                 .frame(width: 36, height: 36)
         }
         .padding([.trailing], 20)
@@ -286,48 +286,7 @@ struct AdminAnalyticsView: View {
 }
 // MARK: - Reusable Components
 
-//struct CirculationStatsDetailView: View {
-//    var body: some View {
-//        DetailViewTemplate(title: "Circulation Stats", value: "46") {
-//            SectionHeaderView(title: "Daily Circulation")
-//            
-//            let circulationData: [AdminAnalyticsView.CirculationData] = [
-//                AdminAnalyticsView.CirculationData(day: "Mon", value: 9),
-//                AdminAnalyticsView.CirculationData(day: "Tue", value: 10),
-//                AdminAnalyticsView.CirculationData(day: "Wed", value: 15),
-//                AdminAnalyticsView.CirculationData(day: "Thu", value: 12)
-//            ]
-//            
-//            Chart {
-//                ForEach(circulationData) { data in
-//                    BarMark(
-//                        x: .value("Day", data.day),
-//                        y: .value("Books", data.value)
-//                    )
-//                    .foregroundStyle(Color.teal)
-//                }
-//            }
-//            .frame(height: 200)
-//            
-//            SectionHeaderView(title: "Weekly Breakdown")
-//            
-//            VStack(spacing: 12) {
-//                DetailItemView(title: "Monday", value: "9", percentage: "19.6%")
-//                DetailItemView(title: "Tuesday", value: "10", percentage: "21.7%")
-//                DetailItemView(title: "Wednesday", value: "15", percentage: "32.6%")
-//                DetailItemView(title: "Thursday", value: "12", percentage: "26.1%")
-//            }
-//            
-//            SectionHeaderView(title: "Monthly Trends")
-//            
-//            VStack(spacing: 12) {
-//                DetailItemView(title: "This Month", value: "120")
-//                DetailItemView(title: "Last Month", value: "150")
-//                DetailItemView(title: "Growth", value: "-20%", percentage: "↓")
-//            }
-//        }
-//    }
-//}
+
 struct CirculationStatsDetailView: View {
     // Sample most borrowed book data
     let mostBorrowedBook = (
@@ -565,7 +524,7 @@ struct BorrowedBooksDetailView: View {
 
 struct TotalFinesDetailView: View {
     var body: some View {
-        DetailViewTemplate(title: "Total Fines", value: "₹640", color: .blue) {
+        DetailViewTemplate(title: "Total Fines", value: "₹640", color: .teal) {
             SectionHeaderView(title: "Fine Breakdown")
             
             VStack(spacing: 12) {
@@ -597,7 +556,7 @@ struct TotalFinesDetailView: View {
                         x: .value("Month", data.day),
                         y: .value("Fines (₹)", data.value)
                     )
-                    .foregroundStyle(Color.blue)
+                    .foregroundStyle(Color.teal)
                 }
             }
             .frame(height: 200)
@@ -753,7 +712,7 @@ struct DetailItemView: View {
 
 struct OverdueBooksDetailView: View {
     var body: some View {
-        DetailViewTemplate(title: "Overdue Books", value: "60", color: .blue) {
+        DetailViewTemplate(title: "Overdue Books", value: "60", color: .teal) {
             SectionHeaderView(title: "Overdue Breakdown")
             
             VStack(spacing: 12) {
