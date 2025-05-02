@@ -124,7 +124,7 @@ struct BookDetailView: View {
                                     .padding(.top, 5)
 
                                 // Author with "by" prefix as shown in the image
-                                Text("by Author XYZ")
+                                Text("by " + (book.authorNames!.isEmpty ? "" : book.authorNames![0]))
                                     .font(.system(size: 18))
                                     .foregroundColor(Color.text(for: colorScheme).opacity(0.7))
 
