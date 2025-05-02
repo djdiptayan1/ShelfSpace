@@ -4,19 +4,19 @@ struct BookDetailView: View {
     let book: BookModel
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.presentationMode) var presentationMode
-    
+
     // State to track book status (you might want to move this to your Book model)
     @State private var bookStatus: BookStatus = .available
-    
+
     // Add rating state
     @State private var userRating: Int = 0
-    
+
     // Add bookmark state
     @State private var isBookmarked: Bool = false
-    
+
     // Add tab selection state
     @State private var selectedTab: TabSection = .details
-    
+
     enum TabSection: String, CaseIterable {
         case details = "Details"
         case reviews = "Reviews"
@@ -24,13 +24,13 @@ struct BookDetailView: View {
     @State private var loadedImage: UIImage? = nil
     @State private var isLoading: Bool = false
     @State private var loadError: Bool = false
-    
+
     var body: some View {
         ZStack(alignment: .top) {
             // Background - light blue background like in the image
             Color(red: 0.9, green: 0.95, blue: 1.0)
                 .edgesIgnoringSafeArea(.all)
-            
+
             VStack(spacing: 0) {
                 // Fixed header with back button, title, and bookmark
                 HStack {
@@ -41,30 +41,48 @@ struct BookDetailView: View {
                             .font(.title2)
                             .foregroundColor(.black)
                     }
-                    
+
                     Spacer()
-                    
+
                     // Navigation title
                     Text("Book Details")
                         .font(.title2)
                         .fontWeight(.bold)
                         .foregroundColor(.black)
-                    
+
                     Spacer()
-                    
+
                     // Bookmark button moved to navigation bar
                     Button(action: {
-                        isBookmarked.toggle()
+                        Task{
+                            if(!isBookmarked){
+                                isBookmarked.toggle()
+                                LoginManager.shared.addToWishlist(bookId: book.id)
+                                do{
+                                    try await addToWishlistAPI(bookId: book.id)
+                                }
+                            }
+                            else {
+                                LoginManager.shared.removeFromWishlist(bookId: book.id)
+                                isBookmarked.toggle()
+                                do{
+                                    try await removeWishListApi(bookId: book.id)
+                                }
+                            }
+                        }
                     }) {
-                        Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
-                            .font(.system(size: 22))
-                            .foregroundColor(isBookmarked ? .black : .gray)
+                        Image(
+                            systemName: isBookmarked
+                                ? "bookmark.fill" : "bookmark"
+                        )
+                        .font(.system(size: 22))
+                        .foregroundColor(isBookmarked ? .black : .gray)
                     }
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 10)
                 .background(Color(red: 0.9, green: 0.95, blue: 1.0))
-                
+
                 // Main content
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
@@ -76,13 +94,19 @@ struct BookDetailView: View {
                                     .resizable()
                                     .aspectRatio(contentMode: .fill)
                                     .frame(width: 170, height: 240)
-                                    .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 3)
+                                    .shadow(
+                                        color: Color.black.opacity(0.2),
+                                        radius: 5, x: 0, y: 3
+                                    )
                                     .padding(.leading)
-                            }else {
+                            } else {
                                 RoundedRectangle(cornerRadius: 8)
                                     .fill(
                                         LinearGradient(
-                                            gradient: Gradient(colors: [Color(hex: "A1C4FD"), Color(hex: "C2E9FB")]),
+                                            gradient: Gradient(colors: [
+                                                Color(hex: "A1C4FD"),
+                                                Color(hex: "C2E9FB"),
+                                            ]),
                                             startPoint: .topLeading,
                                             endPoint: .bottomTrailing
                                         )
@@ -93,25 +117,26 @@ struct BookDetailView: View {
                                     .foregroundColor(.white.opacity(0.7))
                             }
 
-                            
                             VStack(alignment: .leading, spacing: 10) {
                                 // Title in larger font like the image
                                 Text(book.title)
                                     .font(.system(size: 28, weight: .bold))
                                     .foregroundColor(.black)
                                     .padding(.top, 5)
-                                
+
                                 // Author with "by" prefix as shown in the image
                                 Text("by ")
                                     .font(.system(size: 20))
                                     .foregroundColor(.gray)
-                                
+
                                 // Status badge - made to look like the blue button in the image
                                 Text(bookStatus.displayText)
                                     .font(.system(size: 16))
                                     .padding(.horizontal, 20)
                                     .padding(.vertical, 8)
-                                    .background(Color(red: 0.7, green: 0.85, blue: 1.0))
+                                    .background(
+                                        Color(red: 0.7, green: 0.85, blue: 1.0)
+                                    )
                                     .foregroundColor(.black)
                                     .cornerRadius(20)
                                     .padding(.top, 10)
@@ -119,7 +144,7 @@ struct BookDetailView: View {
                             .padding(.trailing)
                         }
                         .padding(.vertical)
-                        
+
                         // Genre tags in a horizontal scroll - styling similar to the teal buttons in the image
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 10) {
@@ -128,14 +153,17 @@ struct BookDetailView: View {
                                         .font(.system(size: 16))
                                         .padding(.horizontal, 20)
                                         .padding(.vertical, 12)
-                                        .background(Color(red: 0.7, green: 0.9, blue: 0.9))
+                                        .background(
+                                            Color(
+                                                red: 0.7, green: 0.9, blue: 0.9)
+                                        )
                                         .foregroundColor(.black)
                                         .cornerRadius(20)
                                 }
                             }
                             .padding(.horizontal)
                         }
-                        
+
                         // Tab selector for Details and Reviews
                         HStack(spacing: 0) {
                             ForEach(TabSection.allCases, id: \.self) { tab in
@@ -144,13 +172,22 @@ struct BookDetailView: View {
                                 }) {
                                     VStack(spacing: 8) {
                                         Text(tab.rawValue)
-                                            .font(.system(size: 16, weight: selectedTab == tab ? .bold : .medium))
-                                            .foregroundColor(selectedTab == tab ? .black : .gray)
-                                        
+                                            .font(
+                                                .system(
+                                                    size: 16,
+                                                    weight: selectedTab == tab
+                                                        ? .bold : .medium)
+                                            )
+                                            .foregroundColor(
+                                                selectedTab == tab
+                                                    ? .black : .gray)
+
                                         // Indicator line
                                         Rectangle()
                                             .frame(height: 3)
-                                            .foregroundColor(selectedTab == tab ? .blue : .clear)
+                                            .foregroundColor(
+                                                selectedTab == tab
+                                                    ? .blue : .clear)
                                     }
                                 }
                                 .frame(maxWidth: .infinity)
@@ -159,7 +196,7 @@ struct BookDetailView: View {
                         }
                         .padding(.horizontal)
                         .background(Color.white.opacity(0.8))
-                        
+
                         // Content based on selected tab
                         switch selectedTab {
                         case .details:
@@ -172,140 +209,151 @@ struct BookDetailView: View {
                 }
             }
             .onAppear {
+                if let cachedUser = UserCacheManager.shared.getCachedUser() {
+                    self.isBookmarked = cachedUser.wishlist_book_ids.contains(book.id)
+                }
                 loadCoverImage()
             }
             .navigationBarHidden(true)
         }
     }
     private func loadCoverImage() {
-            // Set loading state
-            isLoading = true
-            
-            // First try to load from local data
-            if let imageData = book.coverImageData {
-                loadedImage = UIImage(data: imageData)
-                isLoading = false
-                return
-            }
-            
-            // If no local data, try to load from URL
-            guard var urlString = book.coverImageUrl, !urlString.isEmpty else {
-    isLoading = false
-    return
-}
-if urlString.hasPrefix("http://") {
-    urlString = urlString.replacingOccurrences(of: "http://", with: "https://")
-}
-guard let url = URL(string: urlString) else {
-    isLoading = false
-    return
-}
-            
-            print("Loading image from URL: \(urlString)")
-            
-            URLSession.shared.dataTask(with: url) { data, response, error in
-                // Always reset loading state when completed
-                DispatchQueue.main.async {
-                    isLoading = false
-                }
-                
-                // Check for errors
-                if let error = error {
-                    print("Error loading image: \(error.localizedDescription)")
-                    DispatchQueue.main.async {
-                        loadError = true
-                    }
-                    return
-                }
-                
-                // Check for valid HTTP response
-                guard let httpResponse = response as? HTTPURLResponse else {
-                    print("Invalid response")
-                    DispatchQueue.main.async {
-                        loadError = true
-                    }
-                    return
-                }
-                
-                // Check for success status code
-                guard (200...299).contains(httpResponse.statusCode) else {
-                    print("HTTP Error: \(httpResponse.statusCode)")
-                    DispatchQueue.main.async {
-                        loadError = true
-                    }
-                    return
-                }
-                
-                // Check for valid image data
-                guard let data = data, let image = UIImage(data: data) else {
-                    print("Invalid image data")
-                    DispatchQueue.main.async {
-                        loadError = true
-                    }
-                    return
-                }
-                
-                // Update UI with loaded image
-                DispatchQueue.main.async {
-                    print("Image loaded successfully")
-                    loadedImage = image
-                }
-            }.resume()
+        // Set loading state
+        isLoading = true
+
+        // First try to load from local data
+        if let imageData = book.coverImageData {
+            loadedImage = UIImage(data: imageData)
+            isLoading = false
+            return
         }
 
-    
+        // If no local data, try to load from URL
+        guard var urlString = book.coverImageUrl, !urlString.isEmpty else {
+            isLoading = false
+            return
+        }
+        if urlString.hasPrefix("http://") {
+            urlString = urlString.replacingOccurrences(
+                of: "http://", with: "https://")
+        }
+        guard let url = URL(string: urlString) else {
+            isLoading = false
+            return
+        }
+
+        print("Loading image from URL: \(urlString)")
+
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            // Always reset loading state when completed
+            DispatchQueue.main.async {
+                isLoading = false
+            }
+
+            // Check for errors
+            if let error = error {
+                print("Error loading image: \(error.localizedDescription)")
+                DispatchQueue.main.async {
+                    loadError = true
+                }
+                return
+            }
+
+            // Check for valid HTTP response
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("Invalid response")
+                DispatchQueue.main.async {
+                    loadError = true
+                }
+                return
+            }
+
+            // Check for success status code
+            guard (200...299).contains(httpResponse.statusCode) else {
+                print("HTTP Error: \(httpResponse.statusCode)")
+                DispatchQueue.main.async {
+                    loadError = true
+                }
+                return
+            }
+
+            // Check for valid image data
+            guard let data = data, let image = UIImage(data: data) else {
+                print("Invalid image data")
+                DispatchQueue.main.async {
+                    loadError = true
+                }
+                return
+            }
+
+            // Update UI with loaded image
+            DispatchQueue.main.async {
+                print("Image loaded successfully")
+                loadedImage = image
+            }
+        }.resume()
+    }
+
     // MARK: - Details Section
     private var detailsSection: some View {
         VStack(alignment: .leading, spacing: 24) {
             // Cards section
             HStack(spacing: 16) {
                 // Card 1
-                CardView(topText: "0", bottomText: "Fine", colorScheme: colorScheme)
-                
+                CardView(
+                    topText: "0", bottomText: "Fine", colorScheme: colorScheme)
+
                 // Card 2
-                CardView(topText: "Yes", bottomText: "Available", colorScheme: colorScheme)
-                
+                CardView(
+                    topText: "Yes", bottomText: "Available",
+                    colorScheme: colorScheme)
+
                 // Card 3
-                CardView(topText: "4+", bottomText: "Rating", colorScheme: colorScheme)
+                CardView(
+                    topText: "4+", bottomText: "Rating",
+                    colorScheme: colorScheme)
             }
             .padding()
-            
+
             Divider()
                 .padding(.horizontal)
-            
+
             // Description
             VStack(alignment: .leading, spacing: 10) {
                 Text("Description")
                     .font(.title2)
                     .fontWeight(.semibold)
                     .foregroundColor(.black)
-                
+
                 Text(book.description!)
                     .font(.body)
                     .lineSpacing(6)
                     .foregroundColor(.black)
             }
             .padding(.horizontal)
-            
+
             // Add Rating Section after description
             VStack(alignment: .leading, spacing: 10) {
                 Text("Your Rating")
                     .font(.title2)
                     .fontWeight(.semibold)
                     .foregroundColor(.black)
-                
+
                 HStack {
                     ForEach(1...5, id: \.self) { star in
-                        Image(systemName: star <= userRating ? "star.fill" : "star")
-                            .foregroundColor(star <= userRating ? .yellow : .gray)
-                            .font(.title)
-                            .onTapGesture {
-                                userRating = star
-                            }
+                        Image(
+                            systemName: star <= userRating
+                                ? "star.fill" : "star"
+                        )
+                        .foregroundColor(star <= userRating ? .yellow : .gray)
+                        .font(.title)
+                        .onTapGesture {
+                            userRating = star
+                        }
                     }
-                    
+
                     Spacer()
-                    
+
                     if userRating > 0 {
                         Button(action: {
                             // Submit rating logic here
@@ -322,15 +370,15 @@ guard let url = URL(string: urlString) else {
                 }
             }
             .padding(.horizontal)
-            
+
             Spacer(minLength: 30)
-            
+
             // Action Button based on status
             actionButton
                 .padding()
         }
     }
-    
+
     // MARK: - Reviews Section Content
     // Using a method instead of a computed property to avoid naming conflicts
     private func reviewsSectionContent() -> some View {
@@ -338,7 +386,7 @@ guard let url = URL(string: urlString) else {
             ReviewsSection(book: book)
         }
     }
-    
+
     // Action button based on status
     private var actionButton: some View {
         Button(action: {
@@ -362,7 +410,7 @@ guard let url = URL(string: urlString) else {
                 .cornerRadius(10)
         }
     }
-    
+
     private var actionButtonText: String {
         switch bookStatus {
         case .available:
@@ -375,7 +423,7 @@ guard let url = URL(string: urlString) else {
             return "Return Now"
         }
     }
-    
+
     private var actionButtonColor: Color {
         switch bookStatus {
         case .available:
@@ -395,7 +443,7 @@ struct CardView: View {
     let topText: String
     let bottomText: String
     let colorScheme: ColorScheme
-    
+
     var body: some View {
         VStack(spacing: 12) {
             // Circular background for top text
@@ -407,7 +455,7 @@ struct CardView: View {
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(.black)
             }
-            
+
             Text(bottomText)
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.black)
@@ -429,7 +477,7 @@ enum BookStatus {
     case reading
     case requested
     case completed(dueDate: Date)
-    
+
     var displayText: String {
         switch self {
         case .available:
@@ -460,7 +508,7 @@ enum BookStatus {
 //                description: "A tale of gods, kings, immortal fame, and the human heart, The Song of Achilles is a dazzling literary feat that brilliantly reimagines Homer's enduring masterwork, The Iliad."
 //            ))
 //            .previewDisplayName("Available")
-//            
+//
 //            // Requested book with dark mode
 //            BookDetailView(book: Book(
 //                imageName: "book1",

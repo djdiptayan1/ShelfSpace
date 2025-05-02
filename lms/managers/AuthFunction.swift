@@ -417,4 +417,18 @@ class LoginManager {
         UserCacheManager.shared.cacheOtp()
         return otpResponse.success
     }
+    func addToWishlist(bookId:UUID){
+        if var cachedUser = UserCacheManager.shared.getCachedUser(){
+            cachedUser.wishlist_book_ids.append(bookId)
+            UserCacheManager.shared.updateUser(cachedUser)
+        }
+    }
+    func removeFromWishlist(bookId:UUID){
+        if var cachedUser = UserCacheManager.shared.getCachedUser(){
+            if let index = cachedUser.wishlist_book_ids.firstIndex(of: bookId){
+                cachedUser.wishlist_book_ids.remove(at: index)
+            }
+            UserCacheManager.shared.updateUser(cachedUser)
+        }
+    }
 }
