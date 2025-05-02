@@ -41,23 +41,23 @@ struct SplashScreenView: View {
                     
                     VStack {
                         DotLottieAnimation(
-                            fileName: "bookflip",
+                            fileName: "shelfspace",
                             config: AnimationConfig(
                                 autoplay: true,
                                 loop: true,
                                 mode: .bounce,
-                                speed: 1.5
+                                speed: 0.5
                             )
                         )
                         .view()
-                        .frame(width: 200, height: 200)
+                        .frame(width: 400, height: 400)
                         
-                        if let error = appState.prefetchError {
-                            Text(error)
-                                .foregroundColor(.red)
-                                .font(.caption)
-                                .padding(.top)
-                        }
+//                        if let error = appState.prefetchError {
+//                            Text(error)
+//                                .foregroundColor(.red)
+//                                .font(.caption)
+//                                .padding(.top)
+//                        }
                     }
                 }
                 .onAppear {

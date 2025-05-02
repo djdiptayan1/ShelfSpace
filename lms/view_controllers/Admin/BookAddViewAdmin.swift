@@ -77,8 +77,18 @@ struct BookAddViewAdmin: View {
                                 isLoading = true
                                 defer { isLoading = false }
                                 do {
+                                    // Generate a single book UUID for this book
+                                    let newBookId = UUID()
+                                    // Resolve author UUIDs for all author names, associating each with this book
+                                    var resolvedAuthorIds: [UUID] = []
+                                    for name in bookData.authorNames {
+                                        let uuid = try await getOrCreateAuthorId(authorName: name, bookId: newBookId)
+                                        resolvedAuthorIds.append(uuid)
+                                    }
+                                    bookData.authorIds = resolvedAuthorIds
+
                                     let bookModel = BookModel(
-                                        id: UUID(),
+                                        id: newBookId,
                                         libraryId: bookData.libraryId ?? UUID(),
                                         title: bookData.bookTitle,
                                         isbn: bookData.isbn,
@@ -86,7 +96,7 @@ struct BookAddViewAdmin: View {
                                         totalCopies: bookData.totalCopies,
                                         availableCopies: bookData.availableCopies,
                                         reservedCopies: bookData.reservedCopies,
-                                        authorIds: bookData.authorIds,
+                                        authorIds: bookData.authorIds.map { UUID(uuidString: $0.uuidString.lowercased()) ?? $0 },
                                         authorNames: bookData.authorNames,
                                         genreIds: bookData.genreIds,
                                         genreNames: bookData.genreNames,
@@ -123,14 +133,6 @@ struct BookAddViewAdmin: View {
                     Text(currentStep == .details ? "Back" : "Cancel")
                         .foregroundColor(currentStep == .details ? .blue : .red)
                 },
-                trailing: currentStep == .details ?
-                    Button(action: {
-                        saveBook()
-                        dismiss()
-                    }) {
-                        Text("Save")
-                            .fontWeight(.medium)
-                    } : nil
             )
             .sheet(isPresented: $showImagePicker) {
                 ImagePicker(image: $bookData.bookCover)
@@ -165,9 +167,10 @@ struct BookAddViewAdmin: View {
             totalCopies: bookData.totalCopies,
             availableCopies: bookData.availableCopies,
             reservedCopies: bookData.reservedCopies,
-            authorIds: bookData.authorIds,
+            authorIds: bookData.authorIds.map { UUID(uuidString: $0.uuidString.lowercased()) ?? $0 },
             authorNames: bookData.authorNames,
             genreIds: bookData.genreIds,
+            genreNames: bookData.genreNames,
             publishedDate: bookData.publishedDate,
             addedOn: Date(),
             updatedAt: Date(),

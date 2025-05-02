@@ -10,13 +10,27 @@ import Charts
 import NavigationBarLargeTitleItems
 
 struct HomeViewAdmin: View {
+    
     @Environment(\.colorScheme) private var colorScheme
     @State private var lastHostingView: UIView!
     @State private var isShowingProfile = false
-    @State private var prefetchedUser: User? = nil
-    @State private var prefetchedLibrary: Library? = nil
+    @State private var prefetchedUser: User?
+    @State private var prefetchedLibrary: Library?
     @State private var isPrefetchingProfile = false
     @State private var prefetchError: String? = nil
+    @State private var library: Library?
+    @State private var libraryName: String = "Library"
+    
+    init(prefetchedUser: User? = nil, prefetchedLibrary: Library? = nil) {
+        self.prefetchedUser = prefetchedUser
+        self.prefetchedLibrary = prefetchedLibrary
+        self.library = prefetchedLibrary
+        
+        // Try to get library name from keychain
+        if let name = try? KeychainManager.shared.getLibraryName() {
+            _libraryName = State(initialValue: name)
+        }
+    }
 
     var body: some View {
         NavigationView {
@@ -26,11 +40,13 @@ struct HomeViewAdmin: View {
                 ScrollView {
                     AdminAnalyticsView()
                 }
-                .navigationTitle("Library Name")
+                .navigationTitle(libraryName)
                 .navigationBarLargeTitleItems(trailing: ProfileIcon(isShowingProfile: $isShowingProfile))
             }
             .task {
-                await prefetchProfileData()
+                if library == nil {
+                    await prefetchProfileData()
+                }
             }
         }
         .sheet(isPresented: $isShowingProfile) {
@@ -82,6 +98,9 @@ struct HomeViewAdmin: View {
                 await MainActor.run {
                     self.prefetchedUser = cachedUser
                     self.prefetchedLibrary = libraryData
+                    self.library = libraryData
+                    self.libraryName = libraryData.name
+                    try? KeychainManager.shared.saveLibraryName(libraryData.name)
                     self.isPrefetchingProfile = false
                 }
                 return
@@ -96,6 +115,9 @@ struct HomeViewAdmin: View {
             await MainActor.run {
                 self.prefetchedUser = currentUser
                 self.prefetchedLibrary = libraryData
+                self.library = libraryData
+                self.libraryName = libraryData.name
+                try? KeychainManager.shared.saveLibraryName(libraryData.name)
                 self.isPrefetchingProfile = false
                 print("Profile data prefetched successfully.")
             }
@@ -105,6 +127,7 @@ struct HomeViewAdmin: View {
                 self.isPrefetchingProfile = false
                 self.prefetchedUser = nil
                 self.prefetchedLibrary = nil
+                self.library = nil
                 print("Error prefetching profile data: \(error.localizedDescription)")
             }
         }
@@ -155,7 +178,6 @@ struct ProfileIcon: View {
         .padding([.top], 5)
     }
 }
-
 
 struct AdminAnalyticsView: View {
     struct CirculationData: Identifiable {
@@ -285,7 +307,6 @@ struct AdminAnalyticsView: View {
     }
 }
 // MARK: - Reusable Components
-
 
 struct CirculationStatsDetailView: View {
     // Sample most borrowed book data
@@ -477,7 +498,6 @@ struct NewBookItemView: View {
     }
 }
 
-
 struct BorrowedBooksDetailView: View {
     var body: some View {
         DetailViewTemplate(title: "Borrowed Books", value: "350") {
@@ -554,7 +574,6 @@ struct TotalFinesDetailView: View {
         }
     }
 }
-
 
 
 
@@ -722,7 +741,6 @@ struct OverdueBooksDetailView: View {
         }
     }
 }
-
 
 // MARK: - Detail View Components (keep all existing detail views)
 // ... [Keep all the existing Detail View implementations] ...
