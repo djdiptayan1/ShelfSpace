@@ -60,6 +60,7 @@ struct BookViewAdmin: View {
                         // Loading or Book List (scrolls below search & filter)
                         if isLoading {
                             LoadingAnimationView(colorScheme: colorScheme)
+                                .padding(.top, 100)
 
                         } else {
                             if books.isEmpty {
@@ -233,7 +234,7 @@ struct LoadingAnimationView: View {
     var body: some View {
         VStack {
             DotLottieAnimation(
-                fileName: "policy",
+                fileName: "loading",
                 config: AnimationConfig(
                     autoplay: true,
                     loop: true,
@@ -242,7 +243,8 @@ struct LoadingAnimationView: View {
                 )
             )
             .view()
-            .frame(height: 600)
+            .padding(.top, 40)
+            .frame(height: 100)
         }
     }
 }

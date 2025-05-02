@@ -186,16 +186,16 @@ struct LoginView: View {
 
                 // Login animation centered
                 DotLottieAnimation(
-                    fileName: "bookflip",
+                    fileName: "shelfspace",
                     config: AnimationConfig(
                         autoplay: true,
                         loop: true,
                         mode: .bounce,
-                        speed: 1.5
+                        speed: 0.5
                     )
                 )
                 .view()
-                .frame(width: 300, height: 300)
+                .frame(width: 400, height: 400)
             }
             .transition(.opacity)
         }
