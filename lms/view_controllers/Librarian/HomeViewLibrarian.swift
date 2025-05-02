@@ -6,9 +6,12 @@ struct HomeViewLibrarian: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var isShowingProfile = false
     @State private var prefetchedUser: User? = nil
-    @State private var prefetchedLibrary: Library? = nil
+    @State private var prefetchedLibrary: Library?
     @State private var isPrefetchingProfile = false
     @State private var prefetchError: String? = nil
+    
+    @State private var library: Library?
+    @State private var libraryName: String = "Library Loading..."
     
     @State private var books: [BookModel] = []
     @State private var searchText: String = ""
@@ -19,6 +22,17 @@ struct HomeViewLibrarian: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var showError = false
+    
+    init(prefetchedUser: User? = nil, prefetchedLibrary: Library? = nil) {
+        self.prefetchedUser = prefetchedUser
+        self.prefetchedLibrary = prefetchedLibrary
+        self.library = prefetchedLibrary
+        
+        // Try to get library name from keychain
+        if let name = try? KeychainManager.shared.getLibraryName() {
+            _libraryName = State(initialValue: name)
+        }
+    }
 
     var filteredBooks: [BookModel] {
         var result = books
@@ -69,7 +83,7 @@ struct HomeViewLibrarian: View {
                     await loadBooks()
                 }
             }
-            .navigationTitle("My Library")
+            .navigationTitle(libraryName)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack {
@@ -90,6 +104,9 @@ struct HomeViewLibrarian: View {
                         }
                     }
                 }
+            }
+            .task {
+                await prefetchProfileData()
             }
             .sheet(isPresented: $showingAddBookSheet) {
                 if let bookToEdit = bookToEdit {
@@ -202,29 +219,29 @@ struct HomeViewLibrarian: View {
     
     private func prefetchProfileData() async {
         guard !isPrefetchingProfile else { return }
+
         isPrefetchingProfile = true
         prefetchError = nil
-        print("Prefetching profile data...")
+
         do {
-            if let cachedUser = UserCacheManager.shared.getCachedUser() {
-                print("Using cached user data")
-                let libraryData = try await fetchLibraryData(libraryId: cachedUser.library_id)
-                await MainActor.run {
-                    self.prefetchedUser = cachedUser
-                    self.prefetchedLibrary = libraryData
-                    self.isPrefetchingProfile = false
-                }
-                return
+            guard
+                let currentUser = try await LoginManager.shared.getCurrentUser()
+            else {
+                throw NSError(
+                    domain: "HomeView", code: 404,
+                    userInfo: [
+                        NSLocalizedDescriptionKey:
+                            "No current user session found."
+                    ])
             }
-            guard let currentUser = try await LoginManager.shared.getCurrentUser() else {
-                throw NSError(domain: "HomeViewLibrarian", code: 404, userInfo: [NSLocalizedDescriptionKey: "No current user session found."])
-            }
-            let libraryData = try await fetchLibraryData(libraryId: currentUser.library_id)
+
+            let libraryData = try await fetchLibraryData(
+                libraryId: currentUser.library_id)
+
             await MainActor.run {
                 self.prefetchedUser = currentUser
                 self.prefetchedLibrary = libraryData
                 self.isPrefetchingProfile = false
-                print("Profile data prefetched successfully.")
             }
         } catch {
             await MainActor.run {
@@ -232,30 +249,46 @@ struct HomeViewLibrarian: View {
                 self.isPrefetchingProfile = false
                 self.prefetchedUser = nil
                 self.prefetchedLibrary = nil
-                print("Error prefetching profile data: \(error.localizedDescription)")
             }
         }
     }
     
     private func fetchLibraryData(libraryId: String) async throws -> Library {
         guard let token = try? LoginManager.shared.getCurrentToken(),
-              let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/libraries/\(libraryId)") else {
+            let url = URL(
+                string:
+                    "https://lms-temp-be.vercel.app/api/v1/libraries/\(libraryId)"
+            )
+        else {
             throw URLError(.badURL)
         }
+
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+
+        guard let httpResponse = response as? HTTPURLResponse,
+            httpResponse.statusCode == 200
+        else {
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
-            throw NSError(domain: "APIError", code: statusCode, userInfo: [NSLocalizedDescriptionKey: "Failed to fetch library data. Status code: \(statusCode)"])
+            throw NSError(
+                domain: "APIError", code: statusCode,
+                userInfo: [
+                    NSLocalizedDescriptionKey:
+                        "Failed to fetch library data. Status code: \(statusCode)"
+                ])
         }
+
         do {
             return try JSONDecoder().decode(Library.self, from: data)
         } catch {
             print("JSON Decoding Error for Library: \(error)")
-            print("Raw data: \(String(data: data, encoding: .utf8) ?? "Invalid data")")
+            print(
+                "Raw data: \(String(data: data, encoding: .utf8) ?? "Invalid data")"
+            )
             throw error
         }
     }
