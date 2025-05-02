@@ -39,13 +39,10 @@ struct HomeView: View {
     @State private var isLoading = false
 
     // Sample data
-    let categories = [
-        "Romance", "Fiction", "Thriller", "Action", "Sci-Fi", "Mystery",
-    ]
-
+    let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
     // Combined books data for search
     var allBooks: [BookModel] {
-        return newArrivals + recommendations + topSelling
+        return newArrivals
     }
 
     // Filtered books based on search text or selected genre
@@ -395,19 +392,19 @@ struct HomeView: View {
                 ForEach(categories, id: \.self) { category in
                     Button(action: {
                         withAnimation {
-                            selectedGenre = category
+                            selectedGenre = category.displayName
                             showSearchResults = true
                         }
                     }) {
                         VStack(spacing: 5) {
-                            Image(systemName: iconForCategory(category))
+                            Image(systemName: category.iconName)
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
                                 .frame(width: 25, height: 25)
                                 .foregroundColor(
                                     Color.primary(for: colorScheme))
 
-                            Text(category)
+                            Text(category.displayName)
                                 .font(.subheadline)
                                 .foregroundColor(Color.text(for: colorScheme))
                         }
@@ -657,7 +654,7 @@ struct SearchResultCard: View {
                     .foregroundColor(Color.text(for: colorScheme))
                     .lineLimit(2)
 
-                Text("book.author")
+                Text(book.authorNames!.isEmpty ? "" : book.authorNames![0])
                     .font(.subheadline)
                     .foregroundColor(Color.text(for: colorScheme).opacity(0.8))
 
@@ -827,7 +824,7 @@ struct NewArrivalCard: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .foregroundColor(Color.text(for: colorScheme))
 
-                    Text("book.author")
+                    Text(book.authorNames!.isEmpty ? "" : book.authorNames![0])
                         .font(.headline)
                         .foregroundColor(
                             Color.text(for: colorScheme).opacity(0.7)
@@ -991,7 +988,7 @@ struct RecommendationCard: View {
                     .lineLimit(2)
                     .foregroundColor(Color.text(for: colorScheme))
 
-                Text("book.author")
+                Text(book.authorNames!.isEmpty ? "" : book.authorNames![0])
                     .font(.subheadline)
                     .foregroundColor(Color.text(for: colorScheme).opacity(0.8))
 
@@ -1157,7 +1154,7 @@ struct TopSellingCard: View {
                 .lineLimit(2)
                 .foregroundColor(Color.text(for: colorScheme))
 
-            Text("book.author")
+            Text(book.authorNames!.isEmpty ? "" : book.authorNames![0])
                 .font(.subheadline)
                 .foregroundColor(Color.text(for: colorScheme).opacity(0.8))
         }

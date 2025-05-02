@@ -33,6 +33,7 @@ struct BookModel: Identifiable, Codable {
     var coverImageData: Data?     // Local cache (for UI only)
     
     var bookCover: UIImage? = nil
+    
 
     enum CodingKeys: String, CodingKey {
         case id = "book_id"
@@ -44,7 +45,7 @@ struct BookModel: Identifiable, Codable {
         case availableCopies = "available_copies"
         case reservedCopies = "reserved_copies"
         case authorIds = "author_ids"
-        case authorNames = "author_names"
+        case authorNames = "authorNames"
         case genreIds = "genre_ids"
         case genreNames = "genre_names"
         case publishedDate = "published_date"
