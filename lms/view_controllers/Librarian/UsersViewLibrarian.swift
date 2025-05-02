@@ -26,9 +26,8 @@ struct UsersViewLibrarian: View {
                         // Prepare to add a librarian
                         viewModel.prepareToAddUser(role: .librarian)
                     }) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(Color.primary(for: colorScheme)) // Use color helper
+                        Image(systemName: "plus")
+                            .foregroundColor(Color.primary(for: colorScheme))
                     }
                 }
             }
