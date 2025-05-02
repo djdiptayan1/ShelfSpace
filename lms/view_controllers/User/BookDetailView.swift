@@ -1,4 +1,3 @@
-
 import SwiftUI
 
 struct BookDetailView: View {
@@ -12,21 +11,32 @@ struct BookDetailView: View {
     // Add rating state
     @State private var userRating: Int = 0
     
+    // Add bookmark state
+    @State private var isBookmarked: Bool = false
+    
+    // Add tab selection state
+    @State private var selectedTab: TabSection = .details
+    
+    enum TabSection: String, CaseIterable {
+        case details = "Details"
+        case reviews = "Reviews"
+    }
+    
     var body: some View {
         ZStack(alignment: .top) {
-            // Background
-            ReusableBackground(colorScheme: colorScheme)
+            // Background - light blue background like in the image
+            Color(red: 0.9, green: 0.95, blue: 1.0)
                 .edgesIgnoringSafeArea(.all)
             
             VStack(spacing: 0) {
-                // Fixed header with back button and title
+                // Fixed header with back button, title, and bookmark
                 HStack {
                     Button(action: {
                         presentationMode.wrappedValue.dismiss()
                     }) {
                         Image(systemName: "chevron.left")
                             .font(.title2)
-                            .foregroundColor(Color.primary(for: colorScheme))
+                            .foregroundColor(.black)
                     }
                     
                     Spacer()
@@ -35,139 +45,109 @@ struct BookDetailView: View {
                     Text("Book Details")
                         .font(.title2)
                         .fontWeight(.bold)
-                        .foregroundColor(Color.text(for: colorScheme))
+                        .foregroundColor(.black)
                     
                     Spacer()
+                    
+                    // Bookmark button moved to navigation bar
+                    Button(action: {
+                        isBookmarked.toggle()
+                    }) {
+                        Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
+                            .font(.system(size: 22))
+                            .foregroundColor(isBookmarked ? .black : .gray)
+                    }
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 10)
-                .background(ReusableBackground(colorScheme: colorScheme))
+                .background(Color(red: 0.9, green: 0.95, blue: 1.0))
                 
-                ////////////
-                // Scrollable content
+                // Main content
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-                        // Add spacing for the fixed header
-                        HStack{
+                    VStack(alignment: .leading, spacing: 24) {
+                        // Book cover and details layout similar to the provided image
+                        HStack(alignment: .top, spacing: 20) {
                             // Book Cover Image
                             Image(book.imageName)
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
-                                .frame(width:130 ,height: 240)
-                                .shadow(color: Color.primary(for: colorScheme).opacity(0.3), radius: 10, x: 0, y: 5)
-                                .padding(.horizontal)
-                                .padding()
+                                .frame(width: 170, height: 240)
+                                .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 3)
+                                .padding(.leading)
                             
-                            VStack(alignment:.leading, spacing:12){
-                                // Book Title
+                            VStack(alignment: .leading, spacing: 10) {
+                                // Title in larger font like the image
                                 Text(book.title)
-                                    .font(.system(size: 22))
-                                    .fontWeight(.bold)
-                                    .foregroundColor(Color.text(for: colorScheme))
-                                    .padding(.horizontal)
-            
-                                // Author
+                                    .font(.system(size: 28, weight: .bold))
+                                    .foregroundColor(.black)
+                                    .padding(.top, 5)
+                                
+                                // Author with "by" prefix as shown in the image
                                 Text("by \(book.author)")
-                                    .font(.headline)
-                                    .foregroundColor(Color.gray.opacity(0.8))
-                                    .padding(.horizontal)
-                               
-                                // Status indicator
-                                statusBadge
-                                    .padding(.top)
+                                    .font(.system(size: 20))
+                                    .foregroundColor(.gray)
+                                
+                                // Status badge - made to look like the blue button in the image
+                                Text(bookStatus.displayText)
+                                    .font(.system(size: 16))
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 8)
+                                    .background(Color(red: 0.7, green: 0.85, blue: 1.0))
+                                    .foregroundColor(.black)
+                                    .cornerRadius(20)
+                                    .padding(.top, 10)
                             }
+                            .padding(.trailing)
                         }
+                        .padding(.vertical)
                         
-                        // MARK: - GENRE AND OTHER
-                        // Genres
+                        // Genre tags in a horizontal scroll - styling similar to the teal buttons in the image
                         ScrollView(.horizontal, showsIndicators: false) {
-                            HStack {
+                            HStack(spacing: 10) {
                                 ForEach(book.genres, id: \.self) { genre in
                                     Text(genre)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical,14)
-                                        .background(Color.primary(for: colorScheme).opacity(0.3))
-                                        .foregroundColor(Color.text(for: colorScheme))
-                                        .cornerRadius(10)
-                                        .padding(.trailing,6)
+                                        .font(.system(size: 16))
+                                        .padding(.horizontal, 20)
+                                        .padding(.vertical, 12)
+                                        .background(Color(red: 0.7, green: 0.9, blue: 0.9))
+                                        .foregroundColor(.black)
+                                        .cornerRadius(20)
                                 }
                             }
                             .padding(.horizontal)
                         }
                         
-                        //CARD FINE AVAILABLE
-                        HStack(spacing: 16) {
-                            // Card 1
-                            CardView(topText: "0", bottomText: "Fine", colorScheme: colorScheme)
-                
-                            // Card 2
-                            CardView(topText: "Yes", bottomText: "Available", colorScheme: colorScheme)
-                             
-                            // Card 3
-                            CardView(topText: "4+", bottomText: "Rating", colorScheme: colorScheme)
-                        }
-                        .padding()
-                        
-                        Divider()
-                            .padding(.horizontal)
-                            .background(Color.secondary(for: colorScheme))
-                        
-                        // Description
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("Description")
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                                .foregroundColor(Color.text(for: colorScheme))
-                            
-                            Text(book.description)
-                                .font(.body)
-                                .lineSpacing(6)
-                                .foregroundColor(Color.text(for: colorScheme))
-                        }
-                        .padding(.horizontal)
-                        
-                        // Add Rating Section after description
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("Your Rating")
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                                .foregroundColor(Color.text(for: colorScheme))
-                            
-                            HStack {
-                                ForEach(1...5, id: \.self) { star in
-                                    Image(systemName: star <= userRating ? "star.fill" : "star")
-                                        .foregroundColor(star <= userRating ? .yellow : .gray)
-                                        .font(.title)
-                                        .onTapGesture {
-                                            userRating = star
-                                        }
-                                }
-                                
-                                Spacer()
-                                
-                                if userRating > 0 {
-                                    Button(action: {
-                                        // Submit rating logic here
-                                        // For now just print the rating
-                                        print("Rating submitted: \(userRating)")
-                                    }) {
-                                        Text("Submit")
-                                            .padding(.horizontal, 16)
-                                            .padding(.vertical, 8)
-                                            .background(Color.primary(for: colorScheme).opacity(0.6))
-                                            .foregroundColor(.white)
-                                            .cornerRadius(8)
+                        // Tab selector for Details and Reviews
+                        HStack(spacing: 0) {
+                            ForEach(TabSection.allCases, id: \.self) { tab in
+                                Button(action: {
+                                    selectedTab = tab
+                                }) {
+                                    VStack(spacing: 8) {
+                                        Text(tab.rawValue)
+                                            .font(.system(size: 16, weight: selectedTab == tab ? .bold : .medium))
+                                            .foregroundColor(selectedTab == tab ? .black : .gray)
+                                        
+                                        // Indicator line
+                                        Rectangle()
+                                            .frame(height: 3)
+                                            .foregroundColor(selectedTab == tab ? .blue : .clear)
                                     }
                                 }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
                             }
                         }
                         .padding(.horizontal)
+                        .background(Color.white.opacity(0.8))
                         
-                        Spacer(minLength: 30)
-                        
-                        // Action Button based on status
-                        actionButton
-                            .padding()
+                        // Content based on selected tab
+                        switch selectedTab {
+                        case .details:
+                            detailsSection
+                        case .reviews:
+                            reviewsSectionContent()
+                        }
                     }
                     .padding(.vertical)
                 }
@@ -176,134 +156,143 @@ struct BookDetailView: View {
         }
     }
     
-// MARK: - Status badge view
-    private var statusBadge: some View {
-        Group {
-            switch bookStatus {
-            case .available:
-                Text("Available")
-                    .font(.system(size: 22))
-                    .padding(22)
-                    .padding(.horizontal)
-                    .background(Color.secondary(for: colorScheme).opacity(0.5))
-                    .foregroundColor(Color.text(for: colorScheme))
-                    .cornerRadius(8)
+    // MARK: - Details Section
+    private var detailsSection: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            // Cards section
+            HStack(spacing: 16) {
+                // Card 1
+                CardView(topText: "0", bottomText: "Fine", colorScheme: colorScheme)
+                
+                // Card 2
+                CardView(topText: "Yes", bottomText: "Available", colorScheme: colorScheme)
+                
+                // Card 3
+                CardView(topText: "4+", bottomText: "Rating", colorScheme: colorScheme)
+            }
+            .padding()
+            
+            Divider()
+                .padding(.horizontal)
+            
+            // Description
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Description")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.black)
+                
+                Text(book.description)
+                    .font(.body)
+                    .lineSpacing(6)
+                    .foregroundColor(.black)
+            }
+            .padding(.horizontal)
+            
+            // Add Rating Section after description
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Your Rating")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.black)
+                
+                HStack {
+                    ForEach(1...5, id: \.self) { star in
+                        Image(systemName: star <= userRating ? "star.fill" : "star")
+                            .foregroundColor(star <= userRating ? .yellow : .gray)
+                            .font(.title)
+                            .onTapGesture {
+                                userRating = star
+                            }
+                    }
                     
-            case .reading:
-                Text("Reading")
-                    .font(.system(size: 22))
-                    .padding(22)
-                    .padding(.horizontal)
-                    .background(Color.secondary(for: colorScheme))
-                    .foregroundColor(Color.text(for: colorScheme))
-                    .cornerRadius(8)
-            case .requested:
-                Text("Requested")
-                    .font(.system(size: 22))
-                    .padding(22)
-                    .padding(.horizontal)
-                    .background(Color.primary(for: colorScheme))
-                    .foregroundColor(Color.text(for: colorScheme))
-                    .cornerRadius(8)
-            case .completed(let dueDate):
-                if dueDate < Date() {
-                    Text("Overdue")
-                        .font(.system(size: 22))
-                        .padding(22)
-                        .padding(.horizontal)
-                        .background(Color.red)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
-                } else {
-                    Text("Due \(dueDate.formatted(.dateTime.day().month().year()))")
-                        .font(.system(size: 22))
-                        .padding(22)
-                        .padding(.horizontal)
-                        .background(Color.orange)
-                        .foregroundColor(.white)
-                        .cornerRadius(8)
+                    Spacer()
+                    
+                    if userRating > 0 {
+                        Button(action: {
+                            // Submit rating logic here
+                            print("Rating submitted: \(userRating)")
+                        }) {
+                            Text("Submit")
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(Color.blue.opacity(0.6))
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
+                        }
+                    }
                 }
             }
-        }.padding()
+            .padding(.horizontal)
+            
+            Spacer(minLength: 30)
+            
+            // Action Button based on status
+            actionButton
+                .padding()
+        }
     }
     
-    // MARK: - Action button based on status
+    // MARK: - Reviews Section Content
+    // Using a method instead of a computed property to avoid naming conflicts
+    private func reviewsSectionContent() -> some View {
+        VStack(alignment: .leading, spacing: 24) {
+            ReviewsSection(book: book)
+        }
+    }
+    
+    // Action button based on status
     private var actionButton: some View {
-        Group {
+        Button(action: {
+            // Action based on current status
             switch bookStatus {
             case .available:
-                Button(action: {
-                    // Borrow action
-                    bookStatus = .reading
-                }) {
-                    Text("Borrow")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.primary(for: colorScheme).opacity(0.6))
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
-                }
-                
+                bookStatus = .reading
             case .reading:
-                Button(action: {
-                    // Return action
-                    bookStatus = .available
-                }) {
-                    Text("Return Book")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.green)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
-                }
-                
+                bookStatus = .available
             case .requested:
-                Button(action: {
-                    // Cancel request action
-                    bookStatus = .available
-                }) {
-                    Text("Cancel Request")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.gray)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
-                }
-                
-            case .completed(let dueDate):
-                if dueDate < Date() {
-                    Button(action: {
-                        // Return overdue book action
-                        bookStatus = .available
-                    }) {
-                        Text("Return Now")
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.red)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                    }
-                } else {
-                    Button(action: {
-                        // Renew action
-                        // You might want to add renewal logic here
-                    }) {
-                        Text("Renew")
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.orange)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                    }
-                }
+                bookStatus = .available
+            case .completed:
+                bookStatus = .available
             }
+        }) {
+            Text(actionButtonText)
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(actionButtonColor)
+                .foregroundColor(.white)
+                .cornerRadius(10)
+        }
+    }
+    
+    private var actionButtonText: String {
+        switch bookStatus {
+        case .available:
+            return "Borrow"
+        case .reading:
+            return "Return Book"
+        case .requested:
+            return "Cancel Request"
+        case .completed:
+            return "Return Now"
+        }
+    }
+    
+    private var actionButtonColor: Color {
+        switch bookStatus {
+        case .available:
+            return .blue
+        case .reading:
+            return .green
+        case .requested:
+            return .gray
+        case .completed:
+            return .red
         }
     }
 }
 
-
-// MARK: - CARD VIEW FINE RATING
-
+// MARK: - CARD VIEW
 struct CardView: View {
     let topText: String
     let bottomText: String
@@ -314,30 +303,27 @@ struct CardView: View {
             // Circular background for top text
             ZStack {
                 Circle()
-                    .fill(Color.accent(for: colorScheme).opacity(0.25))
+                    .fill(Color.blue.opacity(0.15))
                     .frame(width: 60, height: 60)
                 Text(topText)
                     .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(Color.text(for: colorScheme))
+                    .foregroundColor(.black)
             }
             
             Text(bottomText)
-                .font(.system(size: 18, weight: .medium))
-                .foregroundColor(Color.text(for: colorScheme))
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.black)
         }
-        .frame(width: 110, height: 110)
-        .background(Color.TabbarBackground(for: colorScheme).opacity(0.8))
+        .frame(width: 100, height: 110)
+        .background(Color.white.opacity(0.8))
         .cornerRadius(12)
-        .shadow(color: Color.primary(for: colorScheme).opacity(0.2), radius: 5, x: 0, y: 2)
+        .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 2)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.accent(for: colorScheme).opacity(0.3), lineWidth: 1)
+                .stroke(Color.blue.opacity(0.2), lineWidth: 1)
         )
-        .padding(.horizontal, 1)
     }
 }
-
-
 
 // MARK: - Book status enum to handle different states
 enum BookStatus {
@@ -345,10 +331,24 @@ enum BookStatus {
     case reading
     case requested
     case completed(dueDate: Date)
+    
+    var displayText: String {
+        switch self {
+        case .available:
+            return "Available"
+        case .reading:
+            return "Reading"
+        case .requested:
+            return "Requested"
+        case .completed(let dueDate):
+            if dueDate < Date() {
+                return "Overdue"
+            } else {
+                return "Due \(dueDate.formatted(.dateTime.day().month()))"
+            }
+        }
+    }
 }
-
-
-
 
 struct BookDetailView_Previews: PreviewProvider {
     static var previews: some View {
@@ -356,43 +356,23 @@ struct BookDetailView_Previews: PreviewProvider {
             // Available book
             BookDetailView(book: Book(
                 imageName: "book1",
-                title: "Create Your Own Business",
-                author: "Alex Michaelides",
-                genres: ["Thriller", "Mystery","Horror","Serious"],
-                description: "A psychological thriller about a woman who shoots her husband and then stops speakingA psychological thriller about a woman who shoots her husband and then stops speakingA psychological thriller about a woman who shoots her husband and then stops speakingA psychological thriller about a woman who shoots her husband and then stops speakingA psychological thriller about a woman who shoots her husband and then stops speaking."
+                title: "The Song of Achilles",
+                author: "Madeline Miller",
+                genres: ["Historical Fiction", "Fantasy"],
+                description: "A tale of gods, kings, immortal fame, and the human heart, The Song of Achilles is a dazzling literary feat that brilliantly reimagines Homer's enduring masterwork, The Iliad."
             ))
             .previewDisplayName("Available")
             
-            // Requested book
+            // Requested book with dark mode
             BookDetailView(book: Book(
                 imageName: "book1",
-                title: "Create Your Own Business",
-                author: "Alex Michaelides",
-                genres: ["Thriller", "Mystery"],
-                description: "A psychological thriller about a woman who shoots her husband and then stops speaking."
+                title: "The Song of Achilles",
+                author: "Madeline Miller",
+                genres: ["Historical Fiction", "Fantasy"],
+                description: "A tale of gods, kings, immortal fame, and the human heart, The Song of Achilles is a dazzling literary feat that brilliantly reimagines Homer's enduring masterwork, The Iliad."
             ))
-            .previewDisplayName("Requested")
-            
-            // Rented book with due date
-            BookDetailView(book: Book(
-                imageName: "book1",
-                title: "Create Your Own Business",
-                author: "Alex Michaelides",
-                genres: ["Thriller", "Mystery"],
-                description: "A psychological thriller about a woman who shoots her husband and then stops speaking."
-            ))
-            .previewDisplayName("Rented")
-            
-            // Overdue book
-            BookDetailView(book: Book(
-                imageName: "book1",
-                title: "Create Your Own Business",
-                author: "Alex Michaelides",
-                genres: ["Thriller", "Mystery"],
-                description: "A psychological thriller about a woman who shoots her husband and then stops speaking."
-            ))
-            .previewDisplayName("Overdue")
+            .preferredColorScheme(.dark)
+            .previewDisplayName("Dark Mode")
         }
-        
     }
 }
