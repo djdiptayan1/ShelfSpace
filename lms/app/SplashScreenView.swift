@@ -46,7 +46,7 @@ struct SplashScreenView: View {
                                 autoplay: true,
                                 loop: true,
                                 mode: .bounce,
-                                speed: 0.5
+                                speed: 1.0
                             )
                         )
                         .view()
