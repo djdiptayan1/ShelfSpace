@@ -46,14 +46,14 @@ extension Book {
 
 // MARK: - Simplified Reviews Section
 struct ReviewsSection: View {
-    let book: Book
+    let book: BookModel
     @State private var showingWriteReview = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Header with review count and write review button
             HStack {
-                Text("Reviews (\(book.reviews.count))")
+                Text("Reviews ()")
                     .font(.title2)
                     .fontWeight(.semibold)
                 
@@ -78,7 +78,7 @@ struct ReviewsSection: View {
             }
             
             // List of reviews
-            if book.reviews.isEmpty {
+            if [].isEmpty {
                 Text("No reviews yet. Be the first to review!")
                     .foregroundColor(.gray)
                     .padding()
@@ -86,11 +86,11 @@ struct ReviewsSection: View {
                     .background(Color.white.opacity(0.7))
                     .cornerRadius(8)
             } else {
-                VStack(spacing: 16) {
-                    ForEach(book.reviews) { review in
-                        ReviewItemView(review: review)
-                    }
-                }
+//                VStack(spacing: 16) {
+//                    ForEach(book.reviews) { review in
+//                        ReviewItemView(review: review)
+//                    }
+//                }
             }
         }
         .padding(.horizontal)
@@ -169,7 +169,7 @@ struct ReviewItemView: View {
 
 // MARK: - Write Review View
 struct WriteReviewView: View {
-    let book: Book
+    let book: BookModel
     @Environment(\.presentationMode) var presentationMode
     
     @State private var userRating: Int = 0
@@ -251,18 +251,18 @@ struct WriteReviewView: View {
 }
 
 // MARK: - Preview
-struct ReviewsSection_Previews: PreviewProvider {
-    static var previews: some View {
-        ScrollView {
-            ReviewsSection(book: Book(
-                imageName: "book1",
-                title: "The Song of Achilles",
-                author: "Madeline Miller",
-                genres: ["Historical Fiction", "Fantasy"],
-                description: "A tale of gods, kings, immortal fame, and the human heart, The Song of Achilles is a dazzling literary feat that brilliantly reimagines Homer's enduring masterwork, The Iliad."
-            ))
-            .padding(.vertical)
-        }
-        .background(Color(red: 0.9, green: 0.95, blue: 1.0))
-    }
-}
+//struct ReviewsSection_Previews: PreviewProvider {
+//    static var previews: some View {
+//        ScrollView {
+//            ReviewsSection(book: Book(
+//                imageName: "book1",
+//                title: "The Song of Achilles",
+//                author: "Madeline Miller",
+//                genres: ["Historical Fiction", "Fantasy"],
+//                description: "A tale of gods, kings, immortal fame, and the human heart, The Song of Achilles is a dazzling literary feat that brilliantly reimagines Homer's enduring masterwork, The Iliad."
+//            ))
+//            .padding(.vertical)
+//        }
+//        .background(Color(red: 0.9, green: 0.95, blue: 1.0))
+//    }
+//}
