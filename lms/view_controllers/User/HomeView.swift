@@ -253,10 +253,10 @@ struct HomeView: View {
     private var headerSection: some View {
         HStack {
             VStack(alignment: .leading) {
-                Text("Welcome Navdeep!")
+                Text("Welcome " + (prefetchedUser != nil ? prefetchedUser!.name : "loading..."))
                     .font(.headline)
                     .foregroundColor(Color.text(for: colorScheme))
-                Text("Library Name")
+                Text((prefetchedLibrary?.name ?? "loading..."))
                     .font(.title)
                     .fontWeight(.bold)
                     .foregroundColor(Color.text(for: colorScheme))
