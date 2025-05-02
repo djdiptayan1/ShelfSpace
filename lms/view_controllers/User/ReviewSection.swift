@@ -47,31 +47,29 @@ extension Book {
 // MARK: - Simplified Reviews Section
 struct ReviewsSection: View {
     let book: BookModel
+    @Environment(\.colorScheme) var colorScheme
     @State private var showingWriteReview = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Header with review count and write review button
             HStack {
-                Text("Reviews ()")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                
-                Spacer()
-                
                 Button(action: {
                     showingWriteReview.toggle()
                 }) {
                     HStack {
                         Image(systemName: "square.and.pencil")
                         Text("Write Review")
+                        Spacer() // This will push content to the left
                     }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color.blue)
+                    .foregroundColor(Color.text(for: colorScheme))
+                    .padding(.horizontal)
+                    .padding(.vertical)
+                    .background(Color.accent(for: colorScheme))
                     .cornerRadius(8)
                 }
+                .frame(maxWidth: .infinity) // Makes the button take full width
+                .padding(.horizontal, 16) // Adds 16-point padding on both sides
                 .sheet(isPresented: $showingWriteReview) {
                     WriteReviewView(book: book)
                 }
@@ -85,6 +83,8 @@ struct ReviewsSection: View {
                     .frame(maxWidth: .infinity)
                     .background(Color.white.opacity(0.7))
                     .cornerRadius(8)
+                    .padding(.horizontal)
+                    .padding(.vertical)
             } else {
 //                VStack(spacing: 16) {
 //                    ForEach(book.reviews) { review in

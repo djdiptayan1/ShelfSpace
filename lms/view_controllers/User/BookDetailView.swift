@@ -18,7 +18,7 @@ struct BookDetailView: View {
     @State private var selectedTab: TabSection = .details
 
     enum TabSection: String, CaseIterable {
-        case details = "Details"
+        case details = "Description"
         case reviews = "Reviews"
     }
     @State private var loadedImage: UIImage? = nil
@@ -27,9 +27,8 @@ struct BookDetailView: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            // Background - light blue background like in the image
-            Color(red: 0.9, green: 0.95, blue: 1.0)
-                .edgesIgnoringSafeArea(.all)
+            // Using the reusable background instead of hard-coded color
+            ReusableBackground(colorScheme: colorScheme)
 
             VStack(spacing: 0) {
                 // Fixed header with back button, title, and bookmark
@@ -39,16 +38,16 @@ struct BookDetailView: View {
                     }) {
                         Image(systemName: "chevron.left")
                             .font(.title2)
-                            .foregroundColor(.black)
+                            .foregroundColor(Color.text(for: colorScheme))
                     }
 
                     Spacer()
 
                     // Navigation title
                     Text("Book Details")
-                        .font(.title2)
+                        .font(.title3)
                         .fontWeight(.bold)
-                        .foregroundColor(.black)
+                        .foregroundColor(Color.text(for: colorScheme))
 
                     Spacer()
 
@@ -81,7 +80,7 @@ struct BookDetailView: View {
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 10)
-                .background(Color(red: 0.9, green: 0.95, blue: 1.0))
+//                .background(Color.background(for: colorScheme).opacity(0.8)) // Using your color system
 
                 // Main content
                 ScrollView {
@@ -120,30 +119,27 @@ struct BookDetailView: View {
                             VStack(alignment: .leading, spacing: 10) {
                                 // Title in larger font like the image
                                 Text(book.title)
-                                    .font(.system(size: 28, weight: .bold))
-                                    .foregroundColor(.black)
+                                    .font(.system(size: 24, weight: .bold))
+                                    .foregroundColor(Color.text(for: colorScheme))
                                     .padding(.top, 5)
 
                                 // Author with "by" prefix as shown in the image
-                                Text("by ")
-                                    .font(.system(size: 20))
-                                    .foregroundColor(.gray)
+                                Text("by Author XYZ")
+                                    .font(.system(size: 18))
+                                    .foregroundColor(Color.text(for: colorScheme).opacity(0.7))
 
-                                // Status badge - made to look like the blue button in the image
-                                Text(bookStatus.displayText)
-                                    .font(.system(size: 16))
-                                    .padding(.horizontal, 20)
-                                    .padding(.vertical, 8)
-                                    .background(
-                                        Color(red: 0.7, green: 0.85, blue: 1.0)
-                                    )
-                                    .foregroundColor(.black)
-                                    .cornerRadius(20)
-                                    .padding(.top, 10)
+                                
                             }
                             .padding(.trailing)
+                            
                         }
-                        .padding(.vertical)
+//                        .padding(.vertical)
+                        // Status badge - made to look like the blue button in the image
+                        Text(bookStatus.displayText)
+                            .font(.system(size: 18))
+                            .foregroundColor(Color.green)
+//                            .cornerRadius(20)
+                            .padding(.leading,16)
 
                         // Genre tags in a horizontal scroll - styling similar to the teal buttons in the image
                         ScrollView(.horizontal, showsIndicators: false) {
@@ -154,10 +150,9 @@ struct BookDetailView: View {
                                         .padding(.horizontal, 20)
                                         .padding(.vertical, 12)
                                         .background(
-                                            Color(
-                                                red: 0.7, green: 0.9, blue: 0.9)
+                                            Color.secondary(for: colorScheme).opacity(0.5)
                                         )
-                                        .foregroundColor(.black)
+                                        .foregroundColor(Color.text(for: colorScheme))
                                         .cornerRadius(20)
                                 }
                             }
@@ -180,7 +175,7 @@ struct BookDetailView: View {
                                             )
                                             .foregroundColor(
                                                 selectedTab == tab
-                                                    ? .black : .gray)
+                                                    ? Color.text(for: colorScheme) : .gray)
 
                                         // Indicator line
                                         Rectangle()
@@ -195,7 +190,7 @@ struct BookDetailView: View {
                             }
                         }
                         .padding(.horizontal)
-                        .background(Color.white.opacity(0.8))
+//                        .background(Color.accent(for: colorScheme).opacity(0.2))
 
                         // Content based on selected tab
                         switch selectedTab {
@@ -217,6 +212,8 @@ struct BookDetailView: View {
             .navigationBarHidden(true)
         }
     }
+    
+    // Rest of the code remains the same...
     private func loadCoverImage() {
         // Set loading state
         isLoading = true
@@ -298,79 +295,21 @@ struct BookDetailView: View {
     private var detailsSection: some View {
         VStack(alignment: .leading, spacing: 24) {
             // Cards section
-            HStack(spacing: 16) {
-                // Card 1
-                CardView(
-                    topText: "0", bottomText: "Fine", colorScheme: colorScheme)
-
-                // Card 2
-                CardView(
-                    topText: "Yes", bottomText: "Available",
-                    colorScheme: colorScheme)
-
-                // Card 3
-                CardView(
-                    topText: "4+", bottomText: "Rating",
-                    colorScheme: colorScheme)
-            }
-            .padding()
-
             Divider()
                 .padding(.horizontal)
 
             // Description
             VStack(alignment: .leading, spacing: 10) {
-                Text("Description")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.black)
-
+            
                 Text(book.description!)
                     .font(.body)
                     .lineSpacing(6)
-                    .foregroundColor(.black)
+                    .foregroundColor(Color.text(for: colorScheme))
             }
             .padding(.horizontal)
 
             // Add Rating Section after description
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Your Rating")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.black)
-
-                HStack {
-                    ForEach(1...5, id: \.self) { star in
-                        Image(
-                            systemName: star <= userRating
-                                ? "star.fill" : "star"
-                        )
-                        .foregroundColor(star <= userRating ? .yellow : .gray)
-                        .font(.title)
-                        .onTapGesture {
-                            userRating = star
-                        }
-                    }
-
-                    Spacer()
-
-                    if userRating > 0 {
-                        Button(action: {
-                            // Submit rating logic here
-                            print("Rating submitted: \(userRating)")
-                        }) {
-                            Text("Submit")
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(Color.blue.opacity(0.6))
-                                .foregroundColor(.white)
-                                .cornerRadius(8)
-                        }
-                    }
-                }
-            }
-            .padding(.horizontal)
-
+           
             Spacer(minLength: 30)
 
             // Action Button based on status
@@ -406,7 +345,7 @@ struct BookDetailView: View {
                 .frame(maxWidth: .infinity)
                 .padding()
                 .background(actionButtonColor)
-                .foregroundColor(.white)
+                .foregroundColor(Color.text(for: colorScheme))
                 .cornerRadius(10)
         }
     }
@@ -427,7 +366,7 @@ struct BookDetailView: View {
     private var actionButtonColor: Color {
         switch bookStatus {
         case .available:
-            return .blue
+            return Color.accent(for: colorScheme)
         case .reading:
             return .green
         case .requested:
@@ -435,39 +374,6 @@ struct BookDetailView: View {
         case .completed:
             return .red
         }
-    }
-}
-
-// MARK: - CARD VIEW
-struct CardView: View {
-    let topText: String
-    let bottomText: String
-    let colorScheme: ColorScheme
-
-    var body: some View {
-        VStack(spacing: 12) {
-            // Circular background for top text
-            ZStack {
-                Circle()
-                    .fill(Color.blue.opacity(0.15))
-                    .frame(width: 60, height: 60)
-                Text(topText)
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(.black)
-            }
-
-            Text(bottomText)
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(.black)
-        }
-        .frame(width: 100, height: 110)
-        .background(Color.white.opacity(0.8))
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.1), radius: 3, x: 0, y: 2)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.blue.opacity(0.2), lineWidth: 1)
-        )
     }
 }
 
@@ -496,29 +402,4 @@ enum BookStatus {
     }
 }
 
-//struct BookDetailView_Previews: PreviewProvider {
-//    static var previews: some View {
-//        Group {
-//            // Available book
-//            BookDetailView(book: Book(
-//                imageName: "book1",
-//                title: "The Song of Achilles",
-//                author: "Madeline Miller",
-//                genres: ["Historical Fiction", "Fantasy"],
-//                description: "A tale of gods, kings, immortal fame, and the human heart, The Song of Achilles is a dazzling literary feat that brilliantly reimagines Homer's enduring masterwork, The Iliad."
-//            ))
-//            .previewDisplayName("Available")
-//
-//            // Requested book with dark mode
-//            BookDetailView(book: Book(
-//                imageName: "book1",
-//                title: "The Song of Achilles",
-//                author: "Madeline Miller",
-//                genres: ["Historical Fiction", "Fantasy"],
-//                description: "A tale of gods, kings, immortal fame, and the human heart, The Song of Achilles is a dazzling literary feat that brilliantly reimagines Homer's enduring masterwork, The Iliad."
-//            ))
-//            .preferredColorScheme(.dark)
-//            .previewDisplayName("Dark Mode")
-//        }
-//    }
-//}
+
