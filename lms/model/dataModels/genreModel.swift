@@ -95,35 +95,35 @@ enum BookGenre: String, CaseIterable, Identifiable, Hashable {
         case .mystery, .crime:
             return "magnifyingglass"
         case .thriller:
-            return "bolt.fill"
+            return "bolt"
         case .romance:
-            return "heart.fill"
+            return "heart"
         case .scienceFiction:
-            return "star.fill"
+            return "star"
         case .fantasy:
             return "wand.and.stars"
         case .horror:
-            return "theatermasks.fill"
+            return "theatermasks"
         case .contemporary:
-            return "person.2.fill"
+            return "person.2"
         case .classics:
-            return "clock.fill"
+            return "clock"
         case .youngAdult:
-            return "person.fill"
+            return "person"
         case .adventure:
-            return "map.fill"
+            return "map"
         case .dystopian:
-            return "building.2.fill"
+            return "building.2"
         case .historicalFiction, .history:
-            return "scroll.fill"
+            return "scroll"
         case .nonFiction:
-            return "doc.text.fill"
+            return "doc.text"
         case .biography:
-            return "person.text.rectangle.fill"
+            return "person.text.rectangle"
         case .selfHelp:
-            return "hand.raised.fill"
+            return "hand.raised"
         case .business:
-            return "briefcase.fill"
+            return "briefcase"
         case .poetry:
             return "text.quote"
         case .all:

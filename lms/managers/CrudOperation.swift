@@ -677,10 +677,11 @@ func updatePolicy(policyId: UUID, policyData: Policy, completion: @escaping (Boo
 func fetchPolicy(libraryId: UUID, completion: @escaping (Policy?) -> Void) {
     Task {
         do {
+            let libraryID = try KeychainManager.shared.getLibraryId()
             let token = try KeychainManager.shared.getToken()
-            print("Fetching policy data for library ID: \(libraryId)")
+            print("Fetching policy data for library ID: \(libraryID)")
 
-            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/policies/library/\(libraryId.uuidString)") else {
+            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/policies/library/\(libraryID)") else {
                 throw URLError(.badURL)
             }
 
