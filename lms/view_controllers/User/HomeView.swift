@@ -39,13 +39,10 @@ struct HomeView: View {
     @State private var isLoading = false
 
     // Sample data
-    let categories = [
-        "Romance", "Fiction", "Thriller", "Action", "Sci-Fi", "Mystery",
-    ]
-
+    let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
     // Combined books data for search
     var allBooks: [BookModel] {
-        return newArrivals + recommendations + topSelling
+        return newArrivals
     }
 
     // Filtered books based on search text or selected genre
@@ -395,19 +392,19 @@ struct HomeView: View {
                 ForEach(categories, id: \.self) { category in
                     Button(action: {
                         withAnimation {
-                            selectedGenre = category
+                            selectedGenre = category.displayName
                             showSearchResults = true
                         }
                     }) {
                         VStack(spacing: 5) {
-                            Image(systemName: iconForCategory(category))
+                            Image(systemName: category.iconName)
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
                                 .frame(width: 25, height: 25)
                                 .foregroundColor(
                                     Color.primary(for: colorScheme))
 
-                            Text(category)
+                            Text(category.displayName)
                                 .font(.subheadline)
                                 .foregroundColor(Color.text(for: colorScheme))
                         }
