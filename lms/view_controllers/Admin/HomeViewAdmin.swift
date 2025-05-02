@@ -384,10 +384,10 @@ struct CirculationStatsDetailView: View {
             SectionHeaderView(title: "Weekly Breakdown")
             
             VStack(spacing: 12) {
-                DetailItemView(title: "Monday", value: "9", percentage: "19.6%")
-                DetailItemView(title: "Tuesday", value: "10", percentage: "21.7%")
-                DetailItemView(title: "Wednesday", value: "15", percentage: "32.6%")
-                DetailItemView(title: "Thursday", value: "12", percentage: "26.1%")
+                DetailItemView(title: "Monday", value: "9")
+                DetailItemView(title: "Tuesday", value: "10")
+                DetailItemView(title: "Wednesday", value: "15")
+                DetailItemView(title: "Thursday", value: "12")
             }
             
             SectionHeaderView(title: "Monthly Trends")
@@ -395,7 +395,7 @@ struct CirculationStatsDetailView: View {
             VStack(spacing: 12) {
                 DetailItemView(title: "This Month", value: "120")
                 DetailItemView(title: "Last Month", value: "150")
-                DetailItemView(title: "Growth", value: "-20%", percentage: "↓")
+                DetailItemView(title: "Growth", value: "-20%")
             }
         }
     }
@@ -407,17 +407,17 @@ struct TotalBooksDetailView: View {
             SectionHeaderView(title: "Collection Breakdown")
             
             VStack(spacing: 12) {
-                DetailItemView(title: "Fiction", value: "800", percentage: "40%")
-                DetailItemView(title: "Non-Fiction", value: "1000", percentage: "50%")
-                DetailItemView(title: "Reference", value: "200", percentage: "10%")
+                DetailItemView(title: "Fiction", value: "800")
+                DetailItemView(title: "Non-Fiction", value: "1000")
+                DetailItemView(title: "Reference", value: "200")
             }
             
             SectionHeaderView(title: "Book Status")
             
             VStack(spacing: 12) {
-                DetailItemView(title: "Available", value: "1650", percentage: "82.5%")
-                DetailItemView(title: "Checked Out", value: "350", percentage: "17.5%")
-                DetailItemView(title: "Reserved", value: "50", percentage: "2.5%")
+                DetailItemView(title: "Available", value: "1650")
+                DetailItemView(title: "Checked Out", value: "350")
+                DetailItemView(title: "Reserved", value: "50")
             }
             
             SectionHeaderView(title: "Collection Growth")
@@ -459,8 +459,8 @@ struct NewBooksDetailView: View {
             SectionHeaderView(title: "Categories")
             
             VStack(spacing: 12) {
-                DetailItemView(title: "Science", value: "3", percentage: "60%")
-                DetailItemView(title: "Humanities", value: "2", percentage: "40%")
+                DetailItemView(title: "Science", value: "3")
+                DetailItemView(title: "Humanities", value: "2")
             }
         }
     }
@@ -504,19 +504,19 @@ struct BorrowedBooksDetailView: View {
             SectionHeaderView(title: "Due Date Breakdown")
             
             VStack(spacing: 12) {
-                DetailItemView(title: "Overdue", value: "60", percentage: "17%")
-                DetailItemView(title: "Due Today", value: "15", percentage: "4%")
-                DetailItemView(title: "Due This Week", value: "120", percentage: "34%")
-                DetailItemView(title: "Due Next Week", value: "155", percentage: "45%")
+                DetailItemView(title: "Overdue", value: "60")
+                DetailItemView(title: "Due Today", value: "15")
+                DetailItemView(title: "Due This Week", value: "120")
+                DetailItemView(title: "Due Next Week", value: "155")
             }
             
             SectionHeaderView(title: "Popular Categories")
             
             VStack(spacing: 12) {
-                DetailItemView(title: "Fiction", value: "158", percentage: "45%")
-                DetailItemView(title: "Science", value: "105", percentage: "30%")
-                DetailItemView(title: "History", value: "52", percentage: "15%")
-                DetailItemView(title: "Other", value: "35", percentage: "10%")
+                DetailItemView(title: "Fiction", value: "158")
+                DetailItemView(title: "Science", value: "105")
+                DetailItemView(title: "History", value: "52")
+                DetailItemView(title: "Other", value: "35")
             }
             
             SectionHeaderView(title: "Borrowing Trend")
@@ -548,17 +548,8 @@ struct TotalFinesDetailView: View {
             SectionHeaderView(title: "Fine Breakdown")
             
             VStack(spacing: 12) {
-                DetailItemView(title: "Collected", value: "₹540", percentage: "84%")
-                DetailItemView(title: "Pending", value: "₹100", percentage: "16%")
-                DetailItemView(title: "Waived", value: "₹50")
-            }
-            
-            SectionHeaderView(title: "By User Type")
-            
-            VStack(spacing: 12) {
-                DetailItemView(title: "Students", value: "₹520", percentage: "81%")
-                DetailItemView(title: "Faculty", value: "₹80", percentage: "13%")
-                DetailItemView(title: "Staff", value: "₹40", percentage: "6%")
+                DetailItemView(title: "Collected", value: "₹540")
+                DetailItemView(title: "Pending", value: "₹100")
             }
             
             SectionHeaderView(title: "Monthly Collection")
@@ -735,17 +726,17 @@ struct OverdueBooksDetailView: View {
             SectionHeaderView(title: "Overdue Breakdown")
             
             VStack(spacing: 12) {
-                DetailItemView(title: "1-7 days", value: "35", percentage: "58%")
-                DetailItemView(title: "8-14 days", value: "15", percentage: "25%")
-                DetailItemView(title: "15+ days", value: "10", percentage: "17%")
+                DetailItemView(title: "1-7 days", value: "35")
+                DetailItemView(title: "8-14 days", value: "15")
+                DetailItemView(title: "15+ days", value: "10")
             }
             
             SectionHeaderView(title: "Overdue By Category")
             
             VStack(spacing: 12) {
-                DetailItemView(title: "Fiction", value: "40", percentage: "67%")
-                DetailItemView(title: "Non-Fiction", value: "15", percentage: "25%")
-                DetailItemView(title: "Reference", value: "5", percentage: "8%")
+                DetailItemView(title: "Fiction", value: "40")
+                DetailItemView(title: "Non-Fiction", value: "15")
+                DetailItemView(title: "Reference", value: "5")
             }
         }
     }
