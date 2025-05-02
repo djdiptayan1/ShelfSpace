@@ -273,7 +273,7 @@ struct LibrarianViews_Previews: PreviewProvider {
             UsersViewLibrarian()
                 .preferredColorScheme(.light)
                 .previewDisplayName("Users Light")
-            ManageViewLibrarian()
+            RequestViewLibrarian()
                 .preferredColorScheme(.light)
                 .previewDisplayName("Manage Light")
         }

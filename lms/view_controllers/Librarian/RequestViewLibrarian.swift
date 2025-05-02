@@ -7,14 +7,14 @@
 
 import SwiftUI
 
-struct ManageViewLibrarian: View {
+struct RequestViewLibrarian: View {
     var body: some View {
         NavigationView {
-            Text("Manage Screen Librarian")
-                .navigationTitle("Manage")
+            Text("Request View Librarian")
+                .navigationTitle("Request")
         }
     }
 }
 #Preview {
-    ManageViewLibrarian()
+    RequestViewLibrarian()
 }

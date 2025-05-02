@@ -240,7 +240,7 @@ struct LibrarianTabbar: View {
                     Label("Users", systemImage: "person.2.fill")
                 }
 
-            ManageViewLibrarian()
+            RequestViewLibrarian()
                 .tag(2)
                 .tabItem {
                     Label("Requests", systemImage: "tray.full.fill")
