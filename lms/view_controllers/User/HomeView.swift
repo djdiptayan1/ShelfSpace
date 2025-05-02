@@ -657,7 +657,7 @@ struct SearchResultCard: View {
                     .foregroundColor(Color.text(for: colorScheme))
                     .lineLimit(2)
 
-                Text("book.author")
+                Text(book.authorNames!.isEmpty ? "" : book.authorNames![0])
                     .font(.subheadline)
                     .foregroundColor(Color.text(for: colorScheme).opacity(0.8))
 
@@ -827,7 +827,7 @@ struct NewArrivalCard: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .foregroundColor(Color.text(for: colorScheme))
 
-                    Text("book.author")
+                    Text(book.authorNames!.isEmpty ? "" : book.authorNames![0])
                         .font(.headline)
                         .foregroundColor(
                             Color.text(for: colorScheme).opacity(0.7)
@@ -991,7 +991,7 @@ struct RecommendationCard: View {
                     .lineLimit(2)
                     .foregroundColor(Color.text(for: colorScheme))
 
-                Text("book.author")
+                Text(book.authorNames!.isEmpty ? "" : book.authorNames![0])
                     .font(.subheadline)
                     .foregroundColor(Color.text(for: colorScheme).opacity(0.8))
 
@@ -1157,7 +1157,7 @@ struct TopSellingCard: View {
                 .lineLimit(2)
                 .foregroundColor(Color.text(for: colorScheme))
 
-            Text("book.author")
+            Text(book.authorNames!.isEmpty ? "" : book.authorNames![0])
                 .font(.subheadline)
                 .foregroundColor(Color.text(for: colorScheme).opacity(0.8))
         }

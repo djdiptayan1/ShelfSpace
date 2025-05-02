@@ -132,7 +132,7 @@ struct BookAddViewAdmin: View {
                 }) {
                     Text(currentStep == .details ? "Back" : "Cancel")
                         .foregroundColor(currentStep == .details ? .blue : .red)
-                },
+                }
             )
             .sheet(isPresented: $showImagePicker) {
                 ImagePicker(image: $bookData.bookCover)
