@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct BookDetailView: View {
-    let book: Book
+    let book: BookModel
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.presentationMode) var presentationMode
     
@@ -21,6 +21,9 @@ struct BookDetailView: View {
         case details = "Details"
         case reviews = "Reviews"
     }
+    @State private var loadedImage: UIImage? = nil
+    @State private var isLoading: Bool = false
+    @State private var loadError: Bool = false
     
     var body: some View {
         ZStack(alignment: .top) {
@@ -68,12 +71,28 @@ struct BookDetailView: View {
                         // Book cover and details layout similar to the provided image
                         HStack(alignment: .top, spacing: 20) {
                             // Book Cover Image
-                            Image(book.imageName)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 170, height: 240)
-                                .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 3)
-                                .padding(.leading)
+                            if let image = loadedImage {
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: 170, height: 240)
+                                    .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 3)
+                                    .padding(.leading)
+                            }else {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(
+                                        LinearGradient(
+                                            gradient: Gradient(colors: [Color(hex: "A1C4FD"), Color(hex: "C2E9FB")]),
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+
+                                Image(systemName: "book.fill")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(.white.opacity(0.7))
+                            }
+
                             
                             VStack(alignment: .leading, spacing: 10) {
                                 // Title in larger font like the image
@@ -83,7 +102,7 @@ struct BookDetailView: View {
                                     .padding(.top, 5)
                                 
                                 // Author with "by" prefix as shown in the image
-                                Text("by \(book.author)")
+                                Text("by ")
                                     .font(.system(size: 20))
                                     .foregroundColor(.gray)
                                 
@@ -104,7 +123,7 @@ struct BookDetailView: View {
                         // Genre tags in a horizontal scroll - styling similar to the teal buttons in the image
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 10) {
-                                ForEach(book.genres, id: \.self) { genre in
+                                ForEach(book.genreNames!, id: \.self) { genre in
                                     Text(genre)
                                         .font(.system(size: 16))
                                         .padding(.horizontal, 20)
@@ -152,9 +171,88 @@ struct BookDetailView: View {
                     .padding(.vertical)
                 }
             }
+            .onAppear {
+                loadCoverImage()
+            }
             .navigationBarHidden(true)
         }
     }
+    private func loadCoverImage() {
+            // Set loading state
+            isLoading = true
+            
+            // First try to load from local data
+            if let imageData = book.coverImageData {
+                loadedImage = UIImage(data: imageData)
+                isLoading = false
+                return
+            }
+            
+            // If no local data, try to load from URL
+            guard var urlString = book.coverImageUrl, !urlString.isEmpty else {
+    isLoading = false
+    return
+}
+if urlString.hasPrefix("http://") {
+    urlString = urlString.replacingOccurrences(of: "http://", with: "https://")
+}
+guard let url = URL(string: urlString) else {
+    isLoading = false
+    return
+}
+            
+            print("Loading image from URL: \(urlString)")
+            
+            URLSession.shared.dataTask(with: url) { data, response, error in
+                // Always reset loading state when completed
+                DispatchQueue.main.async {
+                    isLoading = false
+                }
+                
+                // Check for errors
+                if let error = error {
+                    print("Error loading image: \(error.localizedDescription)")
+                    DispatchQueue.main.async {
+                        loadError = true
+                    }
+                    return
+                }
+                
+                // Check for valid HTTP response
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    print("Invalid response")
+                    DispatchQueue.main.async {
+                        loadError = true
+                    }
+                    return
+                }
+                
+                // Check for success status code
+                guard (200...299).contains(httpResponse.statusCode) else {
+                    print("HTTP Error: \(httpResponse.statusCode)")
+                    DispatchQueue.main.async {
+                        loadError = true
+                    }
+                    return
+                }
+                
+                // Check for valid image data
+                guard let data = data, let image = UIImage(data: data) else {
+                    print("Invalid image data")
+                    DispatchQueue.main.async {
+                        loadError = true
+                    }
+                    return
+                }
+                
+                // Update UI with loaded image
+                DispatchQueue.main.async {
+                    print("Image loaded successfully")
+                    loadedImage = image
+                }
+            }.resume()
+        }
+
     
     // MARK: - Details Section
     private var detailsSection: some View {
@@ -182,7 +280,7 @@ struct BookDetailView: View {
                     .fontWeight(.semibold)
                     .foregroundColor(.black)
                 
-                Text(book.description)
+                Text(book.description!)
                     .font(.body)
                     .lineSpacing(6)
                     .foregroundColor(.black)
@@ -350,29 +448,29 @@ enum BookStatus {
     }
 }
 
-struct BookDetailView_Previews: PreviewProvider {
-    static var previews: some View {
-        Group {
-            // Available book
-            BookDetailView(book: Book(
-                imageName: "book1",
-                title: "The Song of Achilles",
-                author: "Madeline Miller",
-                genres: ["Historical Fiction", "Fantasy"],
-                description: "A tale of gods, kings, immortal fame, and the human heart, The Song of Achilles is a dazzling literary feat that brilliantly reimagines Homer's enduring masterwork, The Iliad."
-            ))
-            .previewDisplayName("Available")
-            
-            // Requested book with dark mode
-            BookDetailView(book: Book(
-                imageName: "book1",
-                title: "The Song of Achilles",
-                author: "Madeline Miller",
-                genres: ["Historical Fiction", "Fantasy"],
-                description: "A tale of gods, kings, immortal fame, and the human heart, The Song of Achilles is a dazzling literary feat that brilliantly reimagines Homer's enduring masterwork, The Iliad."
-            ))
-            .preferredColorScheme(.dark)
-            .previewDisplayName("Dark Mode")
-        }
-    }
-}
+//struct BookDetailView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        Group {
+//            // Available book
+//            BookDetailView(book: Book(
+//                imageName: "book1",
+//                title: "The Song of Achilles",
+//                author: "Madeline Miller",
+//                genres: ["Historical Fiction", "Fantasy"],
+//                description: "A tale of gods, kings, immortal fame, and the human heart, The Song of Achilles is a dazzling literary feat that brilliantly reimagines Homer's enduring masterwork, The Iliad."
+//            ))
+//            .previewDisplayName("Available")
+//            
+//            // Requested book with dark mode
+//            BookDetailView(book: Book(
+//                imageName: "book1",
+//                title: "The Song of Achilles",
+//                author: "Madeline Miller",
+//                genres: ["Historical Fiction", "Fantasy"],
+//                description: "A tale of gods, kings, immortal fame, and the human heart, The Song of Achilles is a dazzling literary feat that brilliantly reimagines Homer's enduring masterwork, The Iliad."
+//            ))
+//            .preferredColorScheme(.dark)
+//            .previewDisplayName("Dark Mode")
+//        }
+//    }
+//}
