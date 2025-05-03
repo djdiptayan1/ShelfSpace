@@ -15,13 +15,17 @@ enum RequestType: String {
     case checkIn = "Check In"
 }
 
-struct BookRequest: Identifiable {
+struct BookRequest: Identifiable, Equatable {
     let id: UUID
     let type: RequestType
     let book: BookModel
     let user: User
     let requestDate: Date
     let dueDate: Date?
+    
+    static func == (lhs: BookRequest, rhs: BookRequest) -> Bool {
+        return lhs.id == rhs.id
+    }
 }
 
 // MARK: - Main View
@@ -35,6 +39,9 @@ struct RequestViewLibrarian: View {
     @State private var searchText = ""
     @State private var showAlert = false
     @State private var alertMessage = ""
+    @State private var cameraPermissionGranted = false
+    @State private var requestToDelete: BookRequest?
+    @State private var showDeleteConfirmation = false
     
     // Dummy data
     @State private var allRequests: [BookRequest] = [
@@ -132,8 +139,8 @@ struct RequestViewLibrarian: View {
         return segmentFiltered.filter {
             $0.user.name.lowercased().contains(lowercasedSearch) ||
             $0.book.title.lowercased().contains(lowercasedSearch) ||
-            ($0.book.isbn?.lowercased().contains(lowercasedSearch) ?? false
-        )}
+            ($0.book.isbn?.lowercased().contains(lowercasedSearch) ?? false)
+        }
     }
     
     var body: some View {
@@ -175,13 +182,11 @@ struct RequestViewLibrarian: View {
                         ForEach(filteredRequests) { request in
                             RequestCardView(request: request) {
                                 selectedRequest = request
-                                checkCameraPermission()
                             }
                             .swipeActions(edge: .trailing) {
                                 Button(role: .destructive) {
-                                    withAnimation {
-                                        allRequests.removeAll { $0.id == request.id }
-                                    }
+                                    requestToDelete = request
+                                    showDeleteConfirmation = true
                                 } label: {
                                     Label("Reject", systemImage: "trash")
                                 }
@@ -204,44 +209,88 @@ struct RequestViewLibrarian: View {
             } message: {
                 Text(alertMessage)
             }
+            .alert("Confirm Rejection", isPresented: $showDeleteConfirmation) {
+                Button("Cancel", role: .cancel) {}
+                Button("Reject", role: .destructive) {
+                    if let request = requestToDelete {
+                        withAnimation {
+                            allRequests.removeAll { $0.id == request.id }
+                        }
+                    }
+                }
+            } message: {
+                Text("Are you sure you want to reject this request? This action cannot be undone.")
+            }
+            .onChange(of: selectedRequest) { newValue in
+                if newValue != nil {
+                    checkCameraPermission()
+                }
+            }
         }
     }
     
     private func handleScannedBarcode(_ barcode: String, for request: BookRequest) {
         if barcode == request.book.isbn {
             withAnimation {
+                // Remove the original request
                 allRequests.removeAll { $0.id == request.id }
+                
+                // If it was a check-out, create a check-in request
+                if request.type == .checkOut {
+                    let newRequest = BookRequest(
+                        id: UUID(),
+                        type: .checkIn,
+                        book: request.book,
+                        user: request.user,
+                        requestDate: Date(),
+                        dueDate: request.dueDate
+                    )
+                    allRequests.append(newRequest)
+                }
             }
             alertMessage = "Book successfully \(request.type == .checkOut ? "checked out" : "checked in")"
+            showAlert = true
+            showCamera = false
+            selectedRequest = nil
         } else {
             alertMessage = "Wrong book scanned. Expected ISBN: \(request.book.isbn ?? "")"
+            showAlert = true
         }
-        showAlert = true
     }
     
     private func checkCameraPermission() {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .authorized:
-            showCamera = true
+            cameraPermissionGranted = true
+            DispatchQueue.main.async {
+                showCamera = true
+            }
+            
         case .notDetermined:
             AVCaptureDevice.requestAccess(for: .video) { granted in
                 DispatchQueue.main.async {
                     if granted {
+                        cameraPermissionGranted = true
                         showCamera = true
                     } else {
                         alertMessage = "Camera access required for scanning"
                         showAlert = true
+                        selectedRequest = nil
                     }
                 }
             }
+            
         default:
-            alertMessage = "Please enable camera access in Settings"
-            showAlert = true
+            DispatchQueue.main.async {
+                alertMessage = "Please enable camera access in Settings"
+                showAlert = true
+                selectedRequest = nil
+            }
         }
     }
 }
 
-// MARK: - Request Card View
+// MARK: - Request Card View (unchanged)
 
 struct RequestCardView: View {
     let request: BookRequest
