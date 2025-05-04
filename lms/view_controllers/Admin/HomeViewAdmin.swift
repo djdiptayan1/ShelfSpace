@@ -19,6 +19,7 @@ struct HomeViewAdmin: View {
     @State private var prefetchError: String? = nil
     @State private var library: Library?
     @State private var libraryName: String = "Library"
+    @State private var showProfileSheet = false
 
     init(prefetchedUser: User? = nil, prefetchedLibrary: Library? = nil) {
         self.prefetchedUser = prefetchedUser
@@ -40,22 +41,23 @@ struct HomeViewAdmin: View {
                     AdminAnalyticsView()
                 }
                 .navigationTitle(libraryName)
-                .navigationBarLargeTitleItems(trailing: ProfileIcon(isShowingProfile: $isShowingProfile))
+                .navigationBarLargeTitleItems(trailing: ProfileIcon(showProfileSheet: $showProfileSheet))
             }
             .task {
                 await prefetchProfileData()
             }
         }
-        .sheet(isPresented: $isShowingProfile) {
-            Group {
+        .sheet(isPresented: $showProfileSheet) {
+            NavigationView {
                 if isPrefetchingProfile {
                     ProgressView("Loading Profile...")
                         .padding()
-                } else if let user = prefetchedUser, let library = prefetchedLibrary {
-                    ProfileView(prefetchedUser: user, prefetchedLibrary: library)
-                        .navigationBarItems(trailing: Button("Done") {
-                            isShowingProfile = false
-                        })
+                } else if let user = prefetchedUser {
+                    ProfileView()
+                        .navigationBarItems(
+                            trailing: Button("Done") {
+                                showProfileSheet = false
+                            })
                 } else {
                     VStack(spacing: 16) {
                         Image(systemName: "exclamationmark.triangle.fill")
@@ -158,11 +160,11 @@ struct HomeViewAdmin: View {
 }
 
 struct ProfileIcon: View {
-    @Binding var isShowingProfile: Bool
+    @Binding var showProfileSheet: Bool
 
     var body: some View {
         Button(action: {
-            isShowingProfile = true
+            showProfileSheet = true
         }) {
             Image(systemName: "person.circle.fill")
                 .resizable()
