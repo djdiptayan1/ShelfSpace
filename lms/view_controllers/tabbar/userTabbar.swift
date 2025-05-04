@@ -21,6 +21,13 @@ struct UserTabbar: View {
                     Text("Home")
                 }
 
+            ExploreBooksView()
+                           .tag(1)
+                           .tabItem {
+                               Image(systemName: "magnifyingglass")
+                               Text("Explore")
+                           }
+            
             BookCollectionuser()
                 .tag(1)
                 .tabItem {
