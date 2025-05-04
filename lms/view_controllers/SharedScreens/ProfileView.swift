@@ -91,7 +91,9 @@ struct ProfileView: View {
                             )
                             
                             // Stats Card
-                            StatsCardView(user: user)
+                            if user.role == .member {
+                                StatsCardView(user: user)
+                            }
                         }
                         .padding(.horizontal)
                         
@@ -113,13 +115,6 @@ struct ProfileView: View {
         }
         .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button("Done") {
-                    dismiss()
-                }
-            }
-        }
         .alert("Log Out", isPresented: $showLogoutAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Log Out", role: .destructive) {
