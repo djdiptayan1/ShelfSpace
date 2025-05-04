@@ -20,13 +20,13 @@ struct UserTabbar: View {
                     Image(systemName: "house")
                     Text("Home")
                 }
-
+            
             ExploreBooksView()
-                           .tag(1)
-                           .tabItem {
-                               Image(systemName: "magnifyingglass")
-                               Text("Explore")
-                           }
+                .tag(1)
+                .tabItem {
+                    Image(systemName: "magnifyingglass")
+                    Text("Explore")
+                }
             
             BookCollectionuser()
                 .tag(1)
@@ -34,45 +34,14 @@ struct UserTabbar: View {
                     Image(systemName: "books.vertical.fill")
                     Text("My Books")
                 }
-
+            
         }
         .accentColor(Color.primary(for: colorScheme))
-        .onAppear {
-            let appearance = UITabBarAppearance()
-            appearance.configureWithOpaqueBackground()
-            appearance.backgroundColor = UIColor(Color.TabbarBackground(for: colorScheme))
-            
-            let itemAppearance = UITabBarItemAppearance()
-            itemAppearance.normal.iconColor = UIColor(Color.text(for: colorScheme).opacity(0.6))
-            itemAppearance.normal.titleTextAttributes = [
-                .foregroundColor: UIColor(Color.text(for: colorScheme).opacity(0.6))
-            ]
-            itemAppearance.selected.iconColor = UIColor(Color.primary(for: colorScheme))
-            itemAppearance.selected.titleTextAttributes = [
-                .foregroundColor: UIColor(Color.primary(for: colorScheme))
-            ]
-            
-            appearance.stackedLayoutAppearance = itemAppearance
-            appearance.inlineLayoutAppearance = itemAppearance
-            appearance.compactInlineLayoutAppearance = itemAppearance
-            
-            UITabBar.appearance().standardAppearance = appearance
-            if #available(iOS 15.0, *) {
-                UITabBar.appearance().scrollEdgeAppearance = appearance
-            }
-        }
+        .toolbarBackground(Color.TabbarBackground(for: colorScheme), for: .tabBar)
+        .toolbarBackground(.visible, for: .tabBar)
+        .toolbarColorScheme(colorScheme, for: .tabBar)
     }
 }
-
-//struct HomeViewUser: View {
-//    var body: some View {
-//        NavigationView {
-//            Text("Home Screen user")
-//                .navigationTitle("Home")
-//        }
-//    }
-//}
-
 #Preview {
     UserTabbar()
 }
