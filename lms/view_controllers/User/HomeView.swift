@@ -66,9 +66,22 @@ struct HomeView: View {
 
     @State private var newArrivals: [BookModel] = []
 
-    @State private var recommendations: [BookModel] = []
-
     @State private var topSelling: [BookModel] = []
+
+    private var recommendations: [BookModel] {
+        if prefetchedUser == nil {
+            return allBooks
+        }
+        let selectedGenres = Set(prefetchedUser!.interests ?? [])
+        print(prefetchedUser!)
+        return allBooks.filter { book in
+            
+            let matchesGenre = selectedGenres.isEmpty ||
+                !selectedGenres.isDisjoint(with: book.genreNames ?? [])
+
+            return  matchesGenre
+        }
+    }
 
     let authors = [
         Author(imageName: "author1", name: "Stephen King"),
@@ -202,7 +215,6 @@ struct HomeView: View {
             switch result {
             case let .success(fetchedBooks):
                 self.newArrivals = fetchedBooks
-                self.recommendations = fetchedBooks
                 self.topSelling = fetchedBooks
                 for book in fetchedBooks where book.coverImageUrl != nil {
                     self.preloadBookCover(for: book)
