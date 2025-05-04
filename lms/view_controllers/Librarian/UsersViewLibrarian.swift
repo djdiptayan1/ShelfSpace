@@ -99,13 +99,13 @@ import SwiftUI
 struct UsersViewLibrarian: View {
     @StateObject private var viewModel = UsersViewModel()
     @Environment(\.colorScheme) private var colorScheme
-
+    
     var body: some View {
         NavigationView {
             ZStack {
                 ReusableBackground(colorScheme: colorScheme)
-
-
+                
+                
                 VStack(spacing: 0) {
                     // Custom header with "Users" title and "+" button
                     HStack {
@@ -126,50 +126,73 @@ struct UsersViewLibrarian: View {
                     .padding(.horizontal)
                     .padding(.top, 10)
                     .padding(.bottom, 8)
-
+                    
                     // Display only the librarians list
                     librariansListView
                 }
-
+                
                 // Changed to show members list instead of librarians
                 membersListView
-
+                
             }
             .onAppear {
                 viewModel.fetchUsersoflibrary()
             }
-
+            
             // Present the AddLibrarianView sheet
             .sheet(isPresented: $viewModel.isShowingAddUserSheet) {
                 // Pass the single ViewModel instance down
                 AddLibrarianView(viewModel: viewModel)
-
-            .navigationTitle("Members") // Changed title
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        // Changed to add member instead of librarian
-                        viewModel.prepareToAddUser(role: .member)
-                    }) {
-                        Image(systemName: "plus")
-                            .foregroundColor(Color.primary(for: colorScheme))
+                
+                    .navigationTitle("Members") // Changed title
+                    .navigationBarTitleDisplayMode(.large)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button(action: {
+                                // Changed to add member instead of librarian
+                                viewModel.prepareToAddUser(role: .member)
+                            }) {
+                                Image(systemName: "plus")
+                                    .foregroundColor(Color.primary(for: colorScheme))
+                            }
+                        }
                     }
-                }
-            }
-            .sheet(isPresented: $viewModel.isShowingAddUserSheet) {
-                AddUserView(viewModel: viewModel)
-
-            }
-            .alert(viewModel.alertTitle, isPresented: $viewModel.showAlert) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(viewModel.alertMessage)
+                    .sheet(isPresented: $viewModel.isShowingAddUserSheet) {
+                        AddUserView(viewModel: viewModel)
+                        
+                    }
+                    .alert(viewModel.alertTitle, isPresented: $viewModel.showAlert) {
+                        Button("OK", role: .cancel) { }
+                    } message: {
+                        Text(viewModel.alertMessage)
+                    }
             }
         }
+             
+                
+         
     }
+    var librariansListView: some View {
+       List {
+           // Use the computed property from ViewModel
+           ForEach(viewModel.activeLibrarians) { user in
+               // Navigate to the dedicated Row View (no deactivation action)
+               LibrarianRow(user: user, viewModel: viewModel)
+           }
+       }
+       .listStyle(.plain)
+       .overlay {
+           if viewModel.activeLibrarians.isEmpty {
+               EmptyStateView(type: "Users", colorScheme: colorScheme) // Use helper view
+           }
+       }
+       .refreshable {
+           print("Refreshing Users...")
+           // Example: await viewModel.fetchUsers()
+       }
+   }
 
-    private var membersListView: some View {
+    var membersListView: some View {
         List {
             // Changed to show members instead of librarians
             ForEach(viewModel.activeMembers) { user in
@@ -178,7 +201,7 @@ struct UsersViewLibrarian: View {
         }
         .listStyle(.plain)
         .overlay {
-
+            
             if viewModel.activeLibrarians.isEmpty {
                 EmptyStateView(type: "Users", colorScheme: colorScheme) // Use helper view
             }
@@ -186,34 +209,34 @@ struct UsersViewLibrarian: View {
         .refreshable {
             print("Refreshing Users...")
             // Example: await viewModel.fetchUsers()
-
+            
             if viewModel.activeMembers.isEmpty {
                 EmptyStateView(type: "members", colorScheme: colorScheme)
             }
         }
         .refreshable {
             viewModel.fetchUsersoflibrary()
-
+            
         }
     }
 
     private func addMockData() {
-        #if DEBUG
-        viewModel.users = [
-
-            User(id: UUID(), email: "user1@example.com", role: .librarian, name: "Alice (Mock)", is_active: true, library_id: "MAINLIB", profileImage: UIImage(systemName: "person.crop.circle.fill")?.jpegData(compressionQuality: 0.8)),
-            User(id: UUID(), email: "user2@example.com", role: .librarian, name: "Charles (Mock)", is_active: false, library_id: "BRANCHLIB") // Inactive
-
-            // Changed mock data to show members
-            User(id: UUID(), email: "member1@example.com", role: .member, name: "John Doe", is_active: true,
-                 library_id: "MAINLIB", borrowed_book_ids: [], reserved_book_ids: [], wishlist_book_ids: [],
-                 created_at: "", updated_at: "", profileImage: UIImage(systemName: "person.crop.circle.fill")?.jpegData(compressionQuality: 0.8)),
-            User(id: UUID(), email: "member2@example.com", role: .member, name: "Jane Smith", is_active: true,
-                 library_id: "MAINLIB", borrowed_book_ids: [], reserved_book_ids: [], wishlist_book_ids: [])
-
-        ]
-        #endif
-    }
+#if DEBUG
+       viewModel.users = [
+           
+           User(id: UUID(), email: "user1@example.com", role: .librarian, name: "Alice (Mock)", is_active: true, library_id: "MAINLIB", profileImage: UIImage(systemName: "person.crop.circle.fill")?.jpegData(compressionQuality: 0.8)),
+           User(id: UUID(), email: "user2@example.com", role: .librarian, name: "Charles (Mock)", is_active: false, library_id: "BRANCHLIB"), // Inactive
+           
+           // Changed mock data to show members
+           User(id: UUID(), email: "member1@example.com", role: .member, name: "John Doe", is_active: true,
+                library_id: "MAINLIB", borrowed_book_ids: [], reserved_book_ids: [], wishlist_book_ids: [],
+                created_at: "", updated_at: "", profileImage: UIImage(systemName: "person.crop.circle.fill")?.jpegData(compressionQuality: 0.8)),
+           User(id: UUID(), email: "member2@example.com", role: .member, name: "Jane Smith", is_active: true,
+                library_id: "MAINLIB", borrowed_book_ids: [], reserved_book_ids: [], wishlist_book_ids: [])
+           
+       ]
+#endif
+   }
 }
 
 
