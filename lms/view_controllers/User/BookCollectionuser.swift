@@ -40,7 +40,7 @@ struct BookCollectionuser: View {
     @State private var expandedTab: Bool = true
     
     // Sample books data
-    private let demoBooks: [BookModel] = [
+    @State private var demoBooks: [BookModel] = [
         BookModel(
             id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
             libraryId: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
@@ -114,6 +114,11 @@ struct BookCollectionuser: View {
                 Spacer()
             }
         }
+        .onAppear(){
+            Task{
+                self.demoBooks = try await getWishList()
+            }
+        }
         .background(ReusableBackground(colorScheme: colorScheme))
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -171,33 +176,48 @@ struct BookCardView: View {
     let book: BookModel
     let tab: BookCollectionTab
     let colorScheme: ColorScheme
+    @State private var loadedImage: UIImage? = nil
+    @State private var isLoading: Bool = false
+    @State private var loadError: Bool = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Book Image Container
             ZStack(alignment: .topTrailing) {
-                RoundedRectangle(cornerRadius:10)
-                    .fill(Color.TabbarBackground(for: colorScheme))
-                    .frame(height: 200)
-                    .shadow(color: colorScheme == .dark ? Color.white.opacity(0.05) : Color.gray.opacity(0.3),
-                            radius: 5, x: 0, y: 3)
-                    .overlay(
-                        Text("BOOK IMAGE")
-                            .foregroundColor(Color.text(for: colorScheme).opacity(0.5))
-                            .font(.caption2)
-                    )
-                
-                // Bookmark Button
-//                Button(action: {}) {
-//                    Image(systemName: "bookmark.fill")
-//                        .foregroundColor(Color.primary(for: colorScheme))
-//                        .padding(8)
-//                        .background(Color.TabbarBackground(for: colorScheme))
-//                        .clipShape(Circle())
-//                        .shadow(color: colorScheme == .dark ? Color.white.opacity(0.05) : Color.gray.opacity(0.3),
-//                                radius: 2, x: 0, y: 1)
-//                        .padding(8)
-//                }
+                if let image = loadedImage {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(height: 200)
+                        .clipped()
+                        .cornerRadius(8)
+                }else{
+                    RoundedRectangle(cornerRadius:10)
+                        .fill(Color.TabbarBackground(for: colorScheme))
+                        .frame(height: 200)
+                        .shadow(color: colorScheme == .dark ? Color.white.opacity(0.05) : Color.gray.opacity(0.3),
+                                radius: 5, x: 0, y: 3)
+                        .overlay(
+                            Text("BOOK IMAGE")
+                                .foregroundColor(Color.text(for: colorScheme).opacity(0.5))
+                                .font(.caption2)
+                        )
+                    
+                    // Bookmark Button
+                    //                Button(action: {}) {
+                    //                    Image(systemName: "bookmark.fill")
+                    //                        .foregroundColor(Color.primary(for: colorScheme))
+                    //                        .padding(8)
+                    //                        .background(Color.TabbarBackground(for: colorScheme))
+                    //                        .clipShape(Circle())
+                    //                        .shadow(color: colorScheme == .dark ? Color.white.opacity(0.05) : Color.gray.opacity(0.3),
+                    //                                radius: 2, x: 0, y: 1)
+                    //                        .padding(8)
+                    //                }
+                }
+            }
+            .onAppear(){
+                loadCoverImage()
             }
             
             // Book Title
@@ -259,6 +279,50 @@ struct BookCardView: View {
         .cornerRadius(10)
         .shadow(color: colorScheme == .dark ? Color.white.opacity(0.05) : Color.gray.opacity(0.2),
                 radius: 6, x: 0, y: 3)
+    }
+    private func loadCoverImage() {
+        // Set loading state
+        isLoading = true
+        
+        // First try to load from local data
+        if let imageData = book.coverImageData {
+            loadedImage = UIImage(data: imageData)
+            isLoading = false
+            return
+        }
+        
+        // If no local data, try to load from URL
+        guard var urlString = book.coverImageUrl, !urlString.isEmpty else {
+            isLoading = false
+            return
+        }
+        if urlString.hasPrefix("http://") {
+            urlString = urlString.replacingOccurrences(
+                of: "http://", with: "https://")
+        }
+        guard let url = URL(string: urlString) else {
+            isLoading = false
+            return
+        }
+        
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            DispatchQueue.main.async {
+                isLoading = false
+                
+                if let error = error {
+                    print("Error loading image: \(error.localizedDescription)")
+                    loadError = true
+                    return
+                }
+                
+                guard let data = data, let image = UIImage(data: data) else {
+                    loadError = true
+                    return
+                }
+                
+                loadedImage = image
+            }
+        }.resume()
     }
 }
 

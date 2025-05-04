@@ -24,6 +24,8 @@ struct APIUserResponse: Codable {
     let name: String
     let library_id : String
     let is_active: Bool
+    let interests: [String]?
+    let wishlist_book_ids:[UUID]
 
 }
 class LoginManager {
@@ -115,7 +117,9 @@ class LoginManager {
                     role: decodedResponse.role,
                     name: decodedResponse.name,
                     is_active: decodedResponse.is_active,
-                    library_id: decodedResponse.library_id
+                    library_id: decodedResponse.library_id,
+                    wishlist_book_ids:decodedResponse.wishlist_book_ids,
+                    interests: decodedResponse.interests
                 )
 
                 // Cache the user data
@@ -262,7 +266,9 @@ class LoginManager {
                 role: decodedResponse.role,
                 name: decodedResponse.name,
                 is_active: decodedResponse.is_active,
-                library_id: decodedResponse.library_id
+                library_id: decodedResponse.library_id,
+                wishlist_book_ids:decodedResponse.wishlist_book_ids,
+                interests: decodedResponse.interests
             )
             
             // Cache the user data
