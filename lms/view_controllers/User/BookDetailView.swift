@@ -59,6 +59,8 @@ struct BookDetailView: View {
                                 LoginManager.shared.addToWishlist(bookId: book.id)
                                 do{
                                     try await addToWishlistAPI(bookId: book.id)
+                                }catch{
+                                    LoginManager.shared.removeFromWishlist(bookId: book.id)
                                 }
                             }
                             else {
@@ -66,6 +68,9 @@ struct BookDetailView: View {
                                 isBookmarked.toggle()
                                 do{
                                     try await removeWishListApi(bookId: book.id)
+                                }
+                                catch{
+                                    LoginManager.shared.addToWishlist(bookId: book.id)
                                 }
                             }
                         }

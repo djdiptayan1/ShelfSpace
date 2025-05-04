@@ -1013,3 +1013,65 @@ func removeWishListApi(bookId:UUID)async throws{
     }
 
 }
+func getWishList()async throws -> [BookModel]{
+    do {
+        // Get authentication token and library ID
+        guard let token = try? KeychainManager.shared.getToken() else {
+            throw BookFetchError.tokenMissing
+        }
+        
+        let libraryIdString = try KeychainManager.shared.getLibraryId()
+        print("Using library ID from keychain: \(libraryIdString)")
+        
+        // Create URL request
+        guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/wishlists/my") else {
+            throw BookFetchError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.addValue("application/json", forHTTPHeaderField: "accept")
+        request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        // Make the network request
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        // Check response status
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw BookFetchError.unknown
+        }
+        
+        guard (200 ... 299).contains(httpResponse.statusCode) else {
+            throw BookFetchError.serverError(httpResponse.statusCode)
+        }
+        
+        // Use the JSON utility to decode the response
+        let booksResponse = try JSONUtility.shared.decode(PaginatedResponse<[WishlistModel]>.self, from: data)
+        
+        // Process books if needed
+        let processedBooks = booksResponse.data.map { res in
+            var mutableBook = res.book
+            return mutableBook
+        }
+        if (200...299).contains(httpResponse.statusCode) {
+            print("✅ Book removed from wishlist")
+        return processedBooks
+        } else {
+            do {
+                let errorResponse = try JSONUtility.shared.decode(ErrorResponse.self, from: data)
+                print("❌ Error removing from wishlist: \(errorResponse.errorMessage)")
+                throw NSError(domain: "RemoveFromWishlistError", code: httpResponse.statusCode,
+                              userInfo: [NSLocalizedDescriptionKey: errorResponse.errorMessage])
+            } catch {
+                let rawErrorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+                print("❌ Error removing from wishlist (raw): \(rawErrorMessage)")
+                print("Underlying decoding error (if any):")
+                error.logDetails()
+                throw NSError(domain: "RemoveFromWishlistError", code: httpResponse.statusCode,
+                              userInfo: [NSLocalizedDescriptionKey: rawErrorMessage])
+            }
+            return []
+        }
+        
+    }
+}
