@@ -1,20 +1,20 @@
-//CODE FOR NORMAL ADD BUTTON
+// CODE FOR NORMAL ADD BUTTON
 
-//import Foundation
-//import NavigationBarLargeTitleItems
-//import SwiftUI
+// import Foundation
+// import NavigationBarLargeTitleItems
+// import SwiftUI
 //
-//struct HomeViewLibrarian: View {
+// struct HomeViewLibrarian: View {
 //    @Environment(\.colorScheme) private var colorScheme
 //    @State private var isShowingProfile = false
 //    @State private var prefetchedUser: User? = nil
 //    @State private var prefetchedLibrary: Library?
 //    @State private var isPrefetchingProfile = false
 //    @State private var prefetchError: String? = nil
-//    
+//
 //    @State private var library: Library?
 //    @State private var libraryName: String = "Infosys Library"
-//    
+//
 //    @State private var books: [BookModel] = []
 //    @State private var searchText: String = ""
 //    @State private var selectedCategory: BookGenre = .all
@@ -24,12 +24,12 @@
 //    @State private var isLoading = false
 //    @State private var errorMessage: String?
 //    @State private var showError = false
-//    
+//
 //    init(prefetchedUser: User? = nil, prefetchedLibrary: Library? = nil) {
 //        self.prefetchedUser = prefetchedUser
 //        self.prefetchedLibrary = prefetchedLibrary
 //        self.library = prefetchedLibrary
-//        
+//
 //        // Try to get library name from keychain
 //        if let name = try? KeychainManager.shared.getLibraryName() {
 //            _libraryName = State(initialValue: name)
@@ -49,7 +49,7 @@
 //        }
 //        return result
 //    }
-//    
+//
 //    var body: some View {
 //        NavigationView {
 //            ZStack {
@@ -174,7 +174,7 @@
 //            }
 //        }
 //    }
-//    
+//
 //    private func loadBooks() async {
 //        isLoading = true
 //        fetchBooks { result in
@@ -191,7 +191,7 @@
 //            }
 //        }
 //    }
-//    
+//
 //    private func preloadBookCover(for book: BookModel) {
 //        guard let urlString = book.coverImageUrl,
 //              let url = URL(string: urlString) else {
@@ -214,7 +214,7 @@
 //            }
 //        }.resume()
 //    }
-//    
+//
 //    private func deleteBook(_ book: BookModel) {
 //        if let index = books.firstIndex(where: { $0.id == book.id }) {
 //            withAnimation {
@@ -222,13 +222,13 @@
 //            }
 //        }
 //    }
-//    
+//
 //    private func addNewBook(_ book: BookModel) {
 //        withAnimation {
 //            books.append(book)
 //        }
 //    }
-//    
+//
 //    private func prefetchProfileData() async {
 //        guard !isPrefetchingProfile else { return }
 //
@@ -264,7 +264,7 @@
 //            }
 //        }
 //    }
-//    
+//
 //    private func fetchLibraryData(libraryId: String) async throws -> Library {
 //        guard let token = try? LoginManager.shared.getCurrentToken(),
 //            let url = URL(
@@ -304,9 +304,9 @@
 //            throw error
 //        }
 //    }
-//}
+// }
 //
-//struct LibrarianViews_Previews: PreviewProvider {
+// struct LibrarianViews_Previews: PreviewProvider {
 //    static var previews: some View {
 //        Group {
 //            HomeViewLibrarian()
@@ -323,10 +323,7 @@
 //                .previewDisplayName("Manage Light")
 //        }
 //    }
-//}
-
-
-
+// }
 
 // CODE WITH FLOATING ADD BUTTON
 
@@ -338,13 +335,15 @@ struct HomeViewLibrarian: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var isShowingProfile = false
     @State private var prefetchedUser: User? = nil
-    @State private var prefetchedLibrary: Library?
+    @State private var prefetchedLibrary: Library? = nil
     @State private var isPrefetchingProfile = false
     @State private var prefetchError: String? = nil
     
+    @State private var showProfileSheet = false
+
     @State private var library: Library?
-    @State private var libraryName: String = "Infosys Library"
-    
+    @State private var libraryName: String = "library loading..."
+
     @State private var books: [BookModel] = []
     @State private var searchText: String = ""
     @State private var selectedCategory: BookGenre = .all
@@ -354,12 +353,12 @@ struct HomeViewLibrarian: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var showError = false
-    
+
     init(prefetchedUser: User? = nil, prefetchedLibrary: Library? = nil) {
         self.prefetchedUser = prefetchedUser
         self.prefetchedLibrary = prefetchedLibrary
-        self.library = prefetchedLibrary
-        
+        library = prefetchedLibrary
+
         // Try to get library name from keychain
         if let name = try? KeychainManager.shared.getLibraryName() {
             _libraryName = State(initialValue: name)
@@ -374,36 +373,38 @@ struct HomeViewLibrarian: View {
         if !searchText.isEmpty {
             result = result.filter { book in
                 book.title.localizedCaseInsensitiveContains(searchText) ||
-                (book.isbn ?? "").localizedCaseInsensitiveContains(searchText)
+                    (book.isbn ?? "").localizedCaseInsensitiveContains(searchText)
             }
         }
         return result
     }
-    
+
     var body: some View {
         NavigationView {
             ZStack {
                 ReusableBackground(colorScheme: colorScheme)
                 VStack(spacing: 0) {
                     // Custom header with "Infosys Library" title and profile button
-                    HStack {
-                        Text(libraryName)
-                            .font(.largeTitle)
-                            .fontWeight(.bold)
-                            .foregroundColor(.black) // Fixed black color
-                        Spacer()
-                        Button(action: {
-                            isShowingProfile = true
-                        }) {
-                            Image(systemName: "person.circle.fill")
-                                .resizable()
-                                .frame(width: 36, height: 36)
-                                .foregroundColor(.red)
-                        }
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 10)
-                    .padding(.bottom, 8)
+//                    HStack {
+//                        Text((prefetchedLibrary?.name ?? "loading..."))
+//                            .font(.largeTitle)
+//                            .fontWeight(.bold)
+//                            .foregroundColor(Color(UIColor.label))
+//                        Spacer()
+//                        Button(action: {
+//                            isShowingProfile = true
+//                        }) {
+//                            Image(systemName: "person.circle.fill")
+//                                .resizable()
+//                                .frame(width: 36, height: 36)
+//                                .foregroundColor(.red)
+//                        }
+//                    }
+//                    .padding(.horizontal)
+//                    .padding(.top, 10)
+//                    .padding(.bottom, 8)
+                    headerSection
+                        .padding(.bottom, 12)
 
                     ScrollView {
                         VStack(spacing: 16) {
@@ -436,7 +437,7 @@ struct HomeViewLibrarian: View {
                         await loadBooks()
                     }
                 }
-                
+
                 // Floating Action Button at bottom right
                 VStack {
                     Spacer()
@@ -517,6 +518,67 @@ struct HomeViewLibrarian: View {
         }
     }
     
+    private var headerSection: some View {
+        HStack {
+            VStack(alignment: .leading) {
+                Text("Welcome " + (prefetchedUser != nil ? prefetchedUser!.name : "loading..."))
+                    .font(.headline)
+                    .foregroundColor(Color.text(for: colorScheme))
+                Text((prefetchedLibrary?.name ?? "loading..."))
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .foregroundColor(Color.text(for: colorScheme))
+            }
+
+            Spacer()
+
+            Button(action: { showProfileSheet = true }) {
+                Image(systemName: "person.circle.fill")
+                    .resizable()
+                    .frame(width: 44, height: 44)
+                    .foregroundColor(
+                        Color.primary(for: colorScheme).opacity(0.8))
+            }
+        }
+        .task{
+            await prefetchProfileData()
+        }
+        .padding(.horizontal)
+        .sheet(isPresented: $showProfileSheet) {
+            NavigationView {
+                if isPrefetchingProfile {
+                    ProgressView("Loading Profile...")
+                        .padding()
+                } else if let user = prefetchedUser {
+                    ProfileView()
+                        .navigationBarItems(
+                            trailing: Button("Done") {
+                                showProfileSheet = false
+                            })
+                } else {
+                    VStack(spacing: 16) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.largeTitle)
+                            .foregroundColor(.orange)
+                        Text("Could Not Load Profile")
+                            .font(.headline)
+                        if let errorMsg = prefetchError {
+                            Text(errorMsg)
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                                .multilineTextAlignment(.center)
+                        }
+                        Button("Retry") {
+                            Task { await prefetchProfileData() }
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                    .padding()
+                }
+            }
+        }
+    }
+
     private func loadBooks() async {
         isLoading = true
         fetchBooks { result in
@@ -533,7 +595,7 @@ struct HomeViewLibrarian: View {
             }
         }
     }
-    
+
     private func preloadBookCover(for book: BookModel) {
         guard let urlString = book.coverImageUrl,
               let url = URL(string: urlString) else {
@@ -545,7 +607,7 @@ struct HomeViewLibrarian: View {
                 return
             }
             if let httpResponse = response as? HTTPURLResponse,
-               !(200...299).contains(httpResponse.statusCode) {
+               !(200 ... 299).contains(httpResponse.statusCode) {
                 print("HTTP Error \(httpResponse.statusCode) preloading image for \(book.title)")
                 return
             }
@@ -556,7 +618,7 @@ struct HomeViewLibrarian: View {
             }
         }.resume()
     }
-    
+
     private func deleteBook(_ book: BookModel) {
         if let index = books.firstIndex(where: { $0.id == book.id }) {
             withAnimation {
@@ -564,13 +626,13 @@ struct HomeViewLibrarian: View {
             }
         }
     }
-    
+
     private func addNewBook(_ book: BookModel) {
         withAnimation {
             books.append(book)
         }
     }
-    
+
     private func prefetchProfileData() async {
         guard !isPrefetchingProfile else { return }
 
@@ -585,7 +647,7 @@ struct HomeViewLibrarian: View {
                     domain: "HomeView", code: 404,
                     userInfo: [
                         NSLocalizedDescriptionKey:
-                            "No current user session found."
+                            "No current user session found.",
                     ])
             }
 
@@ -606,13 +668,13 @@ struct HomeViewLibrarian: View {
             }
         }
     }
-    
+
     private func fetchLibraryData(libraryId: String) async throws -> Library {
         guard let token = try? LoginManager.shared.getCurrentToken(),
-            let url = URL(
-                string:
-                    "https://lms-temp-be.vercel.app/api/v1/libraries/\(libraryId)"
-            )
+              let url = URL(
+                  string:
+                  "https://lms-temp-be.vercel.app/api/v1/libraries/\(libraryId)"
+              )
         else {
             throw URLError(.badURL)
         }
@@ -625,14 +687,14 @@ struct HomeViewLibrarian: View {
         let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse,
-            httpResponse.statusCode == 200
+              httpResponse.statusCode == 200
         else {
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
             throw NSError(
                 domain: "APIError", code: statusCode,
                 userInfo: [
                     NSLocalizedDescriptionKey:
-                        "Failed to fetch library data. Status code: \(statusCode)"
+                        "Failed to fetch library data. Status code: \(statusCode)",
                 ])
         }
 
