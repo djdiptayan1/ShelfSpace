@@ -1075,3 +1075,116 @@ func getWishList()async throws -> [BookModel]{
         
     }
 }
+
+class ReviewHandler{
+    static let shared = ReviewHandler()
+    
+    
+    func createReview(rating:Int,bookId:UUID,comment:String) async throws -> ReviewModel?{
+        guard let token = try? KeychainManager.shared.getToken() else {
+            throw URLError(.userAuthenticationRequired)
+        }
+        guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/reviews") else {
+            throw URLError(.badURL)
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = ["bookId": bookId.uuidString,"rating":rating,"comment":comment]
+        let jsonData = try JSONSerialization.data(withJSONObject: body, options: [])
+        
+        request.httpBody = jsonData
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+
+        print("\u{1F4E5} Server response status code: \(httpResponse.statusCode)")
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("\u{1F4E5} Server response body: \(responseString)")
+        }
+        let booksResponse = try JSONUtility.shared.decode(ReviewModel.self, from: data)
+
+        if (200...299).contains(httpResponse.statusCode) {
+            print("✅ Created Review")
+            return booksResponse
+        } else {
+            do {
+                let errorResponse = try JSONUtility.shared.decode(ErrorResponse.self, from: data)
+                print("❌ Error creating review: \(errorResponse.errorMessage)")
+                throw NSError(domain: "CreateReviewError", code: httpResponse.statusCode,
+                              userInfo: [NSLocalizedDescriptionKey: errorResponse.errorMessage])
+            } catch {
+                let rawErrorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+                print("❌ Error creating review (raw): \(rawErrorMessage)")
+                print("Underlying decoding error (if any):")
+                error.logDetails()
+                throw NSError(domain: "CreateReviewError", code: httpResponse.statusCode,
+                              userInfo: [NSLocalizedDescriptionKey: rawErrorMessage])
+            }
+        }
+
+    }
+    func getReview(bookId: UUID)async throws -> [ReviewModel]{
+        do {
+            // Get authentication token and library ID
+            guard let token = try? KeychainManager.shared.getToken() else {
+                throw BookFetchError.tokenMissing
+            }
+            
+            
+            // Create URL request
+            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/reviews/book/\(bookId.uuidString)?page=1&limit=100&sortBy=reviewed_at&sortOrder=asc") else {
+                throw BookFetchError.invalidURL
+            }
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "GET"
+            request.addValue("application/json", forHTTPHeaderField: "accept")
+            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            
+            // Make the network request
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            // Check response status
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw BookFetchError.unknown
+            }
+            
+            guard (200 ... 299).contains(httpResponse.statusCode) else {
+                throw BookFetchError.serverError(httpResponse.statusCode)
+            }
+            
+            // Use the JSON utility to decode the response
+            let booksResponse = try JSONUtility.shared.decode(PaginatedResponse<[ReviewModel]>.self, from: data)
+            
+            // Process books if needed
+            let processedBooks = booksResponse.data.map { res in
+                return res
+            }
+            if (200...299).contains(httpResponse.statusCode) {
+                print("✅ got review")
+                return processedBooks
+            } else {
+                do {
+                    let errorResponse = try JSONUtility.shared.decode(ErrorResponse.self, from: data)
+                    print("❌ Error getting review: \(errorResponse.errorMessage)")
+                    throw NSError(domain: "ReviewFetchError", code: httpResponse.statusCode,
+                                  userInfo: [NSLocalizedDescriptionKey: errorResponse.errorMessage])
+                } catch {
+                    let rawErrorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+                    print("❌ Error fetching review (raw): \(rawErrorMessage)")
+                    print("Underlying decoding error (if any):")
+                    error.logDetails()
+                    throw NSError(domain: "ReviewFetchError", code: httpResponse.statusCode,
+                                  userInfo: [NSLocalizedDescriptionKey: rawErrorMessage])
+                }
+            }
+            
+        }
+    }
+
+}
