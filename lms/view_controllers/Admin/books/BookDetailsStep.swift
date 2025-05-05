@@ -255,8 +255,8 @@ struct BookDetailsStep: View {
                     DetailCard(title: "Copy Management") {
                         VStack(spacing: 20) {
                             CopyManagementStepper(title: "Total Copies", value: $bookData.totalCopies, range: 1 ... 100)
-                            CopyManagementStepper(title: "Available Copies", value: $bookData.availableCopies, range: 0 ... bookData.totalCopies)
-                            CopyManagementStepper(title: "Reserved Copies", value: $bookData.reservedCopies, range: 0 ... bookData.totalCopies)
+//                            CopyManagementStepper(title: "Available Copies", value: $bookData.availableCopies, range: 0 ... bookData.totalCopies)
+//                            CopyManagementStepper(title: "Reserved Copies", value: $bookData.reservedCopies, range: 0 ... bookData.totalCopies)
                         }
                     }
                 }

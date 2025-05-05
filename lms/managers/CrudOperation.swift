@@ -92,7 +92,7 @@ func fetchUsers(completion: @escaping (Result<[User], Error>) -> Void) {
             let token = try KeychainManager.shared.getToken()
             let libraryId = try KeychainManager.shared.getLibraryId()
 
-            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/users?libraryId=\(libraryId)") else {
+            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/users?limit=200&libraryId=\(libraryId)") else {
                 throw URLError(.badURL)
             }
 
@@ -141,7 +141,7 @@ func fetchLibraries(completion: @escaping (Result<[Library], Error>) -> Void) {
             let token = try KeychainManager.shared.getToken()
             print("fetching libraries with token: \(token)")
 
-            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/libraries") else {
+            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/libraries?limit=200") else {
                 throw URLError(.badURL)
             }
 
@@ -512,7 +512,7 @@ func fetchBooks(completion: @escaping (Result<[BookModel], Error>) -> Void) { //
                 print("Using library ID from keychain: \(libraryIdString)")
                 
                 // Create URL request
-                guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/books?libraryId=\(libraryIdString)") else {
+                guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/books?limit=200&libraryId=\(libraryIdString)") else {
                     throw BookFetchError.invalidURL
                 }
                 
@@ -1024,7 +1024,7 @@ func getWishList()async throws -> [BookModel]{
         print("Using library ID from keychain: \(libraryIdString)")
         
         // Create URL request
-        guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/wishlists/my") else {
+        guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/wishlists/my?limit=200") else {
             throw BookFetchError.invalidURL
         }
         

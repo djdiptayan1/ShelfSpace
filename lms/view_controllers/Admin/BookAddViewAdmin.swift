@@ -165,8 +165,8 @@ struct BookAddViewAdmin: View {
             isbn: bookData.isbn,
             description: bookData.description,
             totalCopies: bookData.totalCopies,
-            availableCopies: bookData.availableCopies,
-            reservedCopies: bookData.reservedCopies,
+            availableCopies: bookData.totalCopies,
+            reservedCopies: 0,
             authorIds: bookData.authorIds.map { UUID(uuidString: $0.uuidString.lowercased()) ?? $0 },
             authorNames: bookData.authorNames,
             genreIds: bookData.genreIds,
@@ -192,8 +192,8 @@ struct BookAddViewAdmin: View {
         data.bookTitle = model.title
         data.description = model.description ?? ""
         data.totalCopies = model.totalCopies
-        data.availableCopies = model.availableCopies
-        data.reservedCopies = model.reservedCopies
+        data.availableCopies = model.totalCopies
+        data.reservedCopies = 0
         data.authorNames = model.authorNames ?? []
         data.authorIds = model.authorIds
         data.genreNames = model.genreNames ?? []

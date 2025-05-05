@@ -82,18 +82,18 @@ struct BooksCell: View {
 
                     Spacer()
 
-                    // Published date with nice formatting
-                    if let publishedDate = book.publishedDate {
-                        Text(formatDate(publishedDate))
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(Color(hex: "95A5A6"))
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(colorScheme == .dark ? Color(hex: "2A2A2A") : Color(hex: "EEF1F5"))
-                            )
-                    }
+//                    // Published date with nice formatting
+//                    if let publishedDate = book.publishedDate {
+//                        Text(formatDate(publishedDate))
+//                            .font(.system(size: 13, weight: .medium))
+//                            .foregroundColor(Color(hex: "95A5A6"))
+//                            .padding(.horizontal, 8)
+//                            .padding(.vertical, 4)
+//                            .background(
+//                                RoundedRectangle(cornerRadius: 6)
+//                                    .fill(colorScheme == .dark ? Color(hex: "2A2A2A") : Color(hex: "EEF1F5"))
+//                            )
+//                    }
                 }
             }
         }
