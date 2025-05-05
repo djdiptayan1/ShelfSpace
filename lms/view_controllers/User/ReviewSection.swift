@@ -49,34 +49,44 @@ struct ReviewsSection: View {
     let book: BookModel
     @Environment(\.colorScheme) var colorScheme
     @State private var showingWriteReview = false
+    @State private var reviews: [ReviewModel] = []
+    private var isUserReviewed: Bool {
+        let user = UserCacheManager.shared.getCachedUser()
+        if let userId = user?.id {
+            return reviews.contains(where: { $0.user_id == userId })
+        }
+        return false
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Header with review count and write review button
-            HStack {
-                Button(action: {
-                    showingWriteReview.toggle()
-                }) {
-                    HStack {
-                        Image(systemName: "square.and.pencil")
-                        Text("Write Review")
-                        Spacer() // This will push content to the left
+            if(!isUserReviewed){
+                HStack {
+                    Button(action: {
+                        showingWriteReview.toggle()
+                    }) {
+                        HStack {
+                            Image(systemName: "square.and.pencil")
+                            Text("Write Review")
+                            Spacer() // This will push content to the left
+                        }
+                        .foregroundColor(Color.text(for: colorScheme))
+                        .padding(.horizontal)
+                        .padding(.vertical)
+                        .background(Color.accent(for: colorScheme))
+                        .cornerRadius(8)
                     }
-                    .foregroundColor(Color.text(for: colorScheme))
-                    .padding(.horizontal)
-                    .padding(.vertical)
-                    .background(Color.accent(for: colorScheme))
-                    .cornerRadius(8)
-                }
-                .frame(maxWidth: .infinity) // Makes the button take full width
-                .padding(.horizontal, 16) // Adds 16-point padding on both sides
-                .sheet(isPresented: $showingWriteReview) {
-                    WriteReviewView(book: book)
+                    .frame(maxWidth: .infinity) // Makes the button take full width
+                    .padding(.horizontal, 16) // Adds 16-point padding on both sides
+                    .sheet(isPresented: $showingWriteReview) {
+                        WriteReviewView(book: book,reviews : $reviews)
+                    }
                 }
             }
             
             // List of reviews
-            if [].isEmpty {
+            if reviews.isEmpty {
                 Text("No reviews yet. Be the first to review!")
                     .foregroundColor(.gray)
                     .padding()
@@ -86,11 +96,16 @@ struct ReviewsSection: View {
                     .padding(.horizontal)
                     .padding(.vertical)
             } else {
-//                VStack(spacing: 16) {
-//                    ForEach(book.reviews) { review in
-//                        ReviewItemView(review: review)
-//                    }
-//                }
+                VStack(spacing: 16) {
+                    ForEach(reviews) { review in
+                        ReviewItemView(review: review)
+                    }
+                }
+            }
+        }
+        .onAppear(){
+            Task{
+                reviews = try await ReviewHandler.shared.getReview(bookId: book.id)
             }
         }
         .padding(.horizontal)
@@ -99,16 +114,16 @@ struct ReviewsSection: View {
 
 // MARK: - Individual Review Item
 struct ReviewItemView: View {
-    let review: Review
+    let review: ReviewModel
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Review header with username and date
             HStack {
-                Text(review.username)
+                Text(review.user?.name ?? "Anonymous")
                     .font(.headline)
                 
-                if review.isVerified {
+                if true {
                     Image(systemName: "checkmark.seal.fill")
                         .foregroundColor(.green)
                         .font(.system(size: 14))
@@ -116,7 +131,7 @@ struct ReviewItemView: View {
                 
                 Spacer()
                 
-                Text(review.date.formatted(.dateTime.day().month().year()))
+                Text(review.reviewed_at.formatted(.dateTime.day().month().year()))
                     .font(.subheadline)
                     .foregroundColor(.gray)
             }
@@ -171,6 +186,8 @@ struct ReviewItemView: View {
 struct WriteReviewView: View {
     let book: BookModel
     @Environment(\.presentationMode) var presentationMode
+    
+    @Binding var reviews: [ReviewModel]
     
     @State private var userRating: Int = 0
     @State private var reviewText: String = ""
@@ -240,12 +257,14 @@ struct WriteReviewView: View {
         isSubmitting = true
         
         // In a real app, you would save the review to your backend
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+        Task{
+            let newReview = try await ReviewHandler.shared.createReview(rating: userRating, bookId: book.id, comment: reviewText)
+            if(newReview != nil){
+                reviews.append(newReview!)
+            }
+            
             isSubmitting = false
             presentationMode.wrappedValue.dismiss()
-            
-            // You would typically handle the response from your API here
-            // and update the UI accordingly
         }
     }
 }
