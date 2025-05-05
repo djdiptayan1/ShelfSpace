@@ -14,6 +14,7 @@ struct BorrowModel: Codable,Identifiable {
     let borrow_date:Date
     let return_date:Date?
     let status:BorrowStatus
+    let book:BookModel?
     
     enum CodingKeys: String,CodingKey {
         case id = "borrow_id"
@@ -22,6 +23,7 @@ struct BorrowModel: Codable,Identifiable {
         case borrow_date
         case return_date
         case status
+        case book
     }
 }
 

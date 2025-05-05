@@ -1223,6 +1223,7 @@ class BorrowHandler{
 
         if (200...299).contains(httpResponse.statusCode) {
             print("✅ Created Review")
+            borrowCache = []
             return booksResponse
         } else {
             do {
