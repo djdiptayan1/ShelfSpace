@@ -29,7 +29,7 @@ struct UserTabbar: View {
                 }
             
             BookCollectionuser()
-                .tag(1)
+                .tag(2)
                 .tabItem {
                     Image(systemName: "books.vertical.fill")
                     Text("My Books")
