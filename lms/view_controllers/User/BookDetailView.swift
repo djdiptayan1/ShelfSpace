@@ -24,6 +24,9 @@ struct BookDetailView: View {
     @State private var loadedImage: UIImage? = nil
     @State private var isLoading: Bool = false
     @State private var loadError: Bool = false
+    
+    @State private var isBorrowLoading: Bool = false
+    @State private var borrow:BorrowModel?
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -209,10 +212,33 @@ struct BookDetailView: View {
                 }
             }
             .onAppear {
+                if(book.availableCopies <= 0){
+                    bookStatus = .notAvailable
+                }
                 if let cachedUser = UserCacheManager.shared.getCachedUser() {
                     self.isBookmarked = cachedUser.wishlist_book_ids.contains(book.id)
                 }
                 loadCoverImage()
+            }
+            .onAppear(){
+                Task{
+                    self.isBorrowLoading = true
+                    borrow = try await BorrowHandler.shared.getBorrowForBookId(book.id)
+                    self.isBorrowLoading = false
+                    if let borrow = borrow {
+                        self.isBorrowLoading = false
+                        switch(borrow.status){
+                        case .requested:
+                            bookStatus = .requested
+                        case .borrowed:
+                            bookStatus = .reading
+                        case .returned:
+                            bookStatus = .completed(dueDate: borrow.borrow_date)
+                        case .overdue:
+                            bookStatus = .completed(dueDate: borrow.borrow_date)
+                        }
+                    }
+                }
             }
             .navigationBarHidden(true)
         }
@@ -335,26 +361,95 @@ struct BookDetailView: View {
     private var actionButton: some View {
         Button(action: {
             // Action based on current status
-            switch bookStatus {
-            case .available:
-                bookStatus = .reading
-            case .reading:
-                bookStatus = .available
-            case .requested:
-                bookStatus = .available
-            case .completed:
-                bookStatus = .available
+            Task {
+                switch bookStatus {
+                case .available:
+                    withAnimation {
+                        isBorrowLoading = true
+                    }
+                    do {
+                        borrow = try await BorrowHandler.shared.borrow(bookId: book.id)
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            isBorrowLoading = false
+                            bookStatus = .requested
+                        }
+                    } catch {
+                        withAnimation {
+                            isBorrowLoading = false
+                            // Handle error state if needed
+                        }
+                    }
+                case .reading:
+                    break
+                    bookStatus = .available
+                case .requested:
+                    withAnimation {
+                        isBorrowLoading = true
+                    }
+                    do {
+                        try await BorrowHandler.shared.cancelBorrow(borrow!.id)
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            isBorrowLoading = false
+                            bookStatus = .available
+                        }
+                    } catch {
+                        withAnimation {
+                            isBorrowLoading = false
+                            // Handle error state if needed
+                        }
+                    }
+                case .completed:
+                    break
+                    bookStatus = .available
+                case .notAvailable:
+                    break
+                }
             }
         }) {
-            Text(actionButtonText)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(actionButtonColor)
-                .foregroundColor(Color.text(for: colorScheme))
-                .cornerRadius(10)
+            ZStack {
+                // Background and text (hidden during loading)
+                Text(actionButtonText)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(actionButtonColor)
+                    .foregroundColor(Color.text(for: colorScheme))
+                    .cornerRadius(10)
+                    .opacity(isBorrowLoading ? 0 : 1)
+                
+                // Loading indicator
+                if isBorrowLoading {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: Color.text(for: colorScheme)))
+                            .scaleEffect(0.8)
+                        
+                        Text(loadingText())
+                            .font(.subheadline)
+                            .foregroundColor(Color.text(for: colorScheme))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(actionButtonColor.opacity(0.8))
+                    .cornerRadius(10)
+                    .transition(.opacity)
+                }
+            }
+            .animation(.easeInOut(duration: 0.2), value: isBorrowLoading)
+            .disabled(isBorrowLoading)
         }
     }
 
+    // Helper function to provide context-aware loading text
+    private func loadingText() -> String {
+        switch bookStatus {
+        case .available:
+            return "Borrowing..."
+        case .requested:
+            return "Canceling..."
+        default:
+            return "Processing..."
+        }
+    }
     private var actionButtonText: String {
         switch bookStatus {
         case .available:
@@ -365,6 +460,8 @@ struct BookDetailView: View {
             return "Cancel Request"
         case .completed:
             return "Return Now"
+        case .notAvailable:
+            return "Not Available"
         }
     }
 
@@ -374,7 +471,7 @@ struct BookDetailView: View {
             return Color.accent(for: colorScheme)
         case .reading:
             return .green
-        case .requested:
+        case .requested,.notAvailable:
             return .gray
         case .completed:
             return .red
@@ -388,6 +485,7 @@ enum BookStatus {
     case reading
     case requested
     case completed(dueDate: Date)
+    case notAvailable
 
     var displayText: String {
         switch self {
@@ -397,6 +495,8 @@ enum BookStatus {
             return "Reading"
         case .requested:
             return "Requested"
+        case .notAvailable:
+            return "Not Available"
         case .completed(let dueDate):
             if dueDate < Date() {
                 return "Overdue"
