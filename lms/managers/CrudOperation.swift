@@ -1325,6 +1325,7 @@ class BorrowHandler{
 
         if (200...299).contains(httpResponse.statusCode) {
             print("✅ Book removed from wishlist")
+            borrowCache = borrowCache.filter{$0.id != borrowId}
         } else {
             do {
                 let errorResponse = try JSONUtility.shared.decode(ErrorResponse.self, from: data)
