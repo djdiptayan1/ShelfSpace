@@ -18,7 +18,7 @@ struct HomeViewAdmin: View {
     @State private var isPrefetchingProfile = false
     @State private var prefetchError: String? = nil
     @State private var library: Library?
-    @State private var libraryName: String = "Library"
+    @State private var libraryName: String = "Library loading..."
     @State private var showProfileSheet = false
 
     init(prefetchedUser: User? = nil, prefetchedLibrary: Library? = nil) {
@@ -40,7 +40,7 @@ struct HomeViewAdmin: View {
                 ScrollView {
                     AdminAnalyticsView()
                 }
-                .navigationTitle(libraryName)
+                .navigationTitle((prefetchedLibrary?.name ?? "loading..."))
                 .navigationBarLargeTitleItems(trailing: ProfileIcon(showProfileSheet: $showProfileSheet))
             }
             .task {

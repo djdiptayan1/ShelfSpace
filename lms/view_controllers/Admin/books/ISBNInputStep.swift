@@ -25,9 +25,9 @@ struct BookData {
     var genreNames: [String] = []
     
     var publishedDate: Date
-    var authorIds: [UUID]            // ✅ Added to match DB
-    var genreIds: [UUID]             // ✅ Already present
-    var libraryId: UUID?             // ✅ Added to match DB
+    var authorIds: [UUID]
+    var genreIds: [UUID]
+    var libraryId: UUID?
     
     var publisher: String
     var pageCount: String
@@ -195,7 +195,12 @@ struct ISBNInputStep: View {
             // Continue Button
             Button(action: {
                 Task {
-                    await fetchBookInfo()
+                    if bookData.isbn.count == 10 || bookData.isbn.count == 13 {
+                        await fetchBookInfo()
+                    } else {
+                        showError = true
+                        errorMessage = "ISBN must be either 10 or 13 digits."
+                    }
                 }
             }) {
                 HStack {

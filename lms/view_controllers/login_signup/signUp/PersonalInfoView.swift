@@ -47,12 +47,16 @@ struct PersonalInfoView: View {
                         fieldType: .name
                     )
                     .focused($focusedField, equals: .name)
+                    .onChange(of: viewModel.name) { _ in
+                        viewModel.resetError()
+                    }
 
                     // Gender Selection
                     Menu {
                         ForEach(genderOptions, id: \.self) { option in
                             Button(action: {
                                 viewModel.gender = option
+                                viewModel.resetError()
                             }) {
                                 Text(option)
                             }
@@ -101,6 +105,7 @@ struct PersonalInfoView: View {
                         ForEach(4 ... 90, id: \.self) { age in
                             Button(action: {
                                 viewModel.age = "\(age)"
+                                viewModel.resetError()
                             }) {
                                 Text("\(age)")
                             }
@@ -144,6 +149,9 @@ struct PersonalInfoView: View {
                         fieldType: .phone
                     )
                     .focused($focusedField, equals: .phone)
+                    .onChange(of: viewModel.phoneNumber) { _ in
+                        viewModel.resetError()
+                    }
                 }
                 .padding(.horizontal, 24)
 
@@ -156,11 +164,29 @@ struct PersonalInfoView: View {
 
                 Button {
                     withAnimation {
-                        if viewModel.isStep2Valid {
-                            viewModel.nextStep()
-                        } else {
-                            viewModel.errorMessage = "Please fill in all fields correctly."
+                        if viewModel.name.isEmpty {
+                            viewModel.errorMessage = "Name is required."
                             viewModel.showError = true
+                        } else if viewModel.gender.isEmpty {
+                            viewModel.errorMessage = "Gender is required."
+                            viewModel.showError = true
+                        } else if viewModel.age.isEmpty {
+                            viewModel.errorMessage = "Age is required."
+                            viewModel.showError = true
+                        } else if Int(viewModel.age) == nil || Int(viewModel.age)! < 5 {
+                            viewModel.errorMessage = "You must be at least 5 years old."
+                            viewModel.showError = true
+                        } else if viewModel.phoneNumber.isEmpty {
+                            viewModel.errorMessage = "Phone number is required."
+                            viewModel.showError = true
+                        } else if viewModel.phoneNumber.count != 10 || !viewModel.phoneNumber.allSatisfy({ $0.isNumber }) {
+                            viewModel.errorMessage = "Phone number must be exactly 10 digits."
+                            viewModel.showError = true
+                        } else if !viewModel.isValidPhone(viewModel.phoneNumber) {
+                            viewModel.errorMessage = "Please enter a valid phone number."
+                            viewModel.showError = true
+                        } else {
+                            viewModel.nextStep()
                         }
                     }
                 } label: {

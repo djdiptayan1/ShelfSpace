@@ -92,7 +92,7 @@ struct ProfileView: View {
                             
                             // Stats Card
                             if user.role == .member {
-                                StatsCardView(user: user)
+                            StatsCardView(user: user)
                             }
                         }
                         .padding(.horizontal)

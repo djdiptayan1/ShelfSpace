@@ -33,6 +33,8 @@ struct AddUserView: View {
     @State private var showingImagePicker = false
     @State private var password: String = ""
     @State private var isLoading = false
+    @State private var showError = false
+    @State private var errorMessage = ""
 
 
     // Determine title and colors based on the role being added
@@ -107,8 +109,22 @@ struct AddUserView: View {
     
     private var formSection: some View {
         VStack(spacing: 16) {
+            if showError {
+                Text(errorMessage)
+                    .foregroundColor(.red)
+                    .font(.system(size: 14, design: .rounded))
+                    .padding(.bottom, 4)
+            }
             nameField
+                .onChange(of: viewModel.newUserInputName) { _ in
+                    showError = false
+                    errorMessage = ""
+                }
             emailField
+                .onChange(of: viewModel.newUserInputEmail) { _ in
+                    showError = false
+                    errorMessage = ""
+                }
         }
         .padding(.horizontal, 20)
     }
@@ -186,13 +202,22 @@ struct AddUserView: View {
     
     private var saveButton: some View {
         Button("Save") {
+            if viewModel.newUserInputName.isEmpty {
+                errorMessage = "Name is required."
+                showError = true
+                return
+            } else if viewModel.newUserInputEmail.isEmpty {
+                errorMessage = "Email is required."
+                showError = true
+                return
+            } else if !viewModel.isValidEmail(viewModel.newUserInputEmail) {
+                errorMessage = "Please enter a valid email address."
+                showError = true
+                return
+            }
             let role = viewModel.roleToAdd == .librarian ? "librarian" : "member"
             password = randomPassword(length: 8)
-            //loading
             isLoading = true
-            
-            
-            
             createUserWithAuth(
                 email: viewModel.newUserInputEmail,
                 password: password,

@@ -39,10 +39,10 @@ class UsersViewModel: ObservableObject {
     @Published var newUserInputLibraryId: String = ""
     @Published var newUserInputImage: UIImage? = nil
 
-    // State for Deactivation Confirmation
-    @Published var userToDeactivate: UUID?
-    @Published var showDeactivateConfirmation = false
-    @Published var userMarkedForDeactivation: User?
+    // State for Deactivation/Activation Confirmation
+    @Published var userToToggle: User?
+    @Published var showToggleConfirmation = false
+    @Published var toggleActionIsActivate = false
 
     // --- Functions ---
 
@@ -78,41 +78,46 @@ class UsersViewModel: ObservableObject {
     }
 
     func toggleUserActiveStatus(_ user: User) {
+        userToToggle = user
+        toggleActionIsActivate = !(user.is_active ?? false)
+        showToggleConfirmation = true
+    }
+
+    func confirmToggleUserStatus() {
+        guard let user = userToToggle else { return }
         let userId = user.id
-        let newActiveStatus = !(user.is_active ?? false)
-        
-        // Update UI immediately for better UX
+        let newActiveStatus = toggleActionIsActivate
+        // Optimistically update UI
         if let index = users.firstIndex(where: { $0.id == userId }) {
             users[index].is_active = newActiveStatus
             objectWillChange.send()
         }
-        
         // Call API to update the user status in background
         updateUserActiveStatus(userId: userId, isActive: newActiveStatus) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
                 case .success:
-                    // Show success alert
                     let action = newActiveStatus ? "activated" : "deactivated"
                     self?.showAlert(
                         title: "Success",
                         message: "User has been \(action) successfully.",
                         type: .success
                     )
+                    self?.fetchUsersoflibrary()
                 case .failure(let error):
                     // Revert the UI change if API call fails
                     if let index = self?.users.firstIndex(where: { $0.id == userId }) {
                         self?.users[index].is_active = !newActiveStatus
                         self?.objectWillChange.send()
                     }
-                    
-                    // Show error alert
                     self?.showAlert(
                         title: "Error",
                         message: "Failed to update user status: \(error.localizedDescription)",
                         type: .error
                     )
                 }
+                self?.userToToggle = nil
+                self?.showToggleConfirmation = false
             }
         }
     }
@@ -205,43 +210,6 @@ class UsersViewModel: ObservableObject {
         let message: String
     }
 
-    func confirmDeactivateUser(_ user: User) {
-        userToDeactivate = user.id
-        userMarkedForDeactivation = user
-        showDeactivateConfirmation = true
-    }
-
-    func deactivateConfirmed() {
-        guard let id = userToDeactivate else {
-             print("Error: No user ID marked for deactivation.")
-             return
-         }
-
-        // Find the index of the user in the main users array
-        if let index = users.firstIndex(where: { $0.id == id }) {
-            // Modify the is_active property directly on the user object in the array
-            users[index].is_active = false
-            print("User '\(users[index].name)' (ID: \(id)) marked as inactive.")
-
-            // --- IMPORTANT ---
-            // If 'users' comes from a database/API, you MUST also call a function here
-            // to update the backend/persistent storage with the new 'isActive' status.
-            // Example: updateUserStatusOnBackend(userId: id, isActive: false)
-            // ---
-
-            objectWillChange.send() // Notify SwiftUI about the data change
-        } else {
-            print("Error: User with ID \(id) not found in the users array for deactivation.")
-        }
-
-        // Reset the temporary state variables
-        userToDeactivate = nil
-        userMarkedForDeactivation = nil
-        // showDeactivateConfirmation is handled by its binding
-    }
-    // --- END OF CORRECTION ---
-
-
     func resetUserInputForm() {
         newUserInputName = ""
         newUserInputEmail = ""
@@ -267,6 +235,7 @@ class UsersViewModel: ObservableObject {
                 switch result {
                 case .success(let fetchedUsers):
                     self?.users = fetchedUsers
+                    self?.objectWillChange.send()
                 case .failure(let error):
                     self?.showAlert(title: "Error", message: "Failed to fetch users: \(error.localizedDescription)", type: .error)
                 }

@@ -73,6 +73,9 @@ struct signupView: View {
                                 fieldType: .email
                             )
                             .focused($focusedField, equals: .email)
+                            .onChange(of: viewModel.email) { _ in
+                                viewModel.resetError()
+                            }
 
                             CustomTextField(
                                 text: $viewModel.password,
@@ -86,6 +89,9 @@ struct signupView: View {
                                 fieldType: .password
                             )
                             .focused($focusedField, equals: .password)
+                            .onChange(of: viewModel.password) { _ in
+                                viewModel.resetError()
+                            }
 
                             CustomTextField(
                                 text: $viewModel.confirmPassword,
@@ -99,6 +105,9 @@ struct signupView: View {
                                 fieldType: .confirmPassword
                             )
                             .focused($focusedField, equals: .confirmPassword)
+                            .onChange(of: viewModel.confirmPassword) { _ in
+                                viewModel.resetError()
+                            }
                         }
                         .padding(.horizontal, 24)
 
@@ -111,16 +120,30 @@ struct signupView: View {
 
                         Button {
                             withAnimation {
-                                if viewModel.isStep1Valid {
+                                if viewModel.email.isEmpty {
+                                    viewModel.errorMessage = "Email is required."
+                                    viewModel.showError = true
+                                } else if !viewModel.isValidEmail(viewModel.email) {
+                                    viewModel.errorMessage = "Please enter a valid email address."
+                                    viewModel.showError = true
+                                } else if viewModel.password.isEmpty {
+                                    viewModel.errorMessage = "Password is required."
+                                    viewModel.showError = true
+                                } else if viewModel.password.count < 4 {
+                                    viewModel.errorMessage = "Password must be at least 4 characters."
+                                    viewModel.showError = true
+                                } else if viewModel.confirmPassword.isEmpty {
+                                    viewModel.errorMessage = "Please confirm your password."
+                                    viewModel.showError = true
+                                } else if viewModel.password != viewModel.confirmPassword {
+                                    viewModel.errorMessage = "Passwords do not match."
+                                    viewModel.showError = true
+                                } else {
                                     viewModel.createAuthAccount { success in
-                                        
                                         if success {
                                             viewModel.nextStep()
                                         }
                                     }
-                                } else {
-                                    viewModel.errorMessage = "Please fill in all fields correctly."
-                                    viewModel.showError = true
                                 }
                             }
                         } label: {

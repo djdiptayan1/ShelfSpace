@@ -67,39 +67,39 @@ class PolicyViewModel: ObservableObject {
             let libraryId = UUID(uuidString: libraryIdString)!
             var policyToSave = policy
             policyToSave.library_id = libraryId
-
-            if let policyId = policy.policy_id {
-                // Update existing policy
+        
+        if let policyId = policy.policy_id {
+            // Update existing policy
                 updatePolicy(policyId: policyId, policyData: policyToSave) { [weak self] success in
-                    guard let self = self else { return }
-                    DispatchQueue.main.async {
-                        self.isLoading = false
-                        self.saveSuccess = success
-                        if success {
-                            print("✅ Policy updated successfully")
-                            self.currentPolicy = policy
-                            self.errorMessage = nil
-                        } else {
-                            print("❌ Failed to update policy")
-                            self.errorMessage = "Failed to update policy"
-                        }
-                        self.showAnimation = false
-                        completion(success)
+                guard let self = self else { return }
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                    self.saveSuccess = success
+                    if success {
+                        print("✅ Policy updated successfully")
+                        self.currentPolicy = policy
+                        self.errorMessage = nil
+                    } else {
+                        print("❌ Failed to update policy")
+                        self.errorMessage = "Failed to update policy"
                     }
+                    self.showAnimation = false
+                    completion(success)
                 }
-            } else {
+            }
+        } else {
                 // Try to insert, but if it fails with "already exists", fetch and update
                 insertPolicy(policyData: policyToSave) { [weak self] success, policyId in
-                    guard let self = self else { return }
-                    DispatchQueue.main.async {
-                        self.isLoading = false
-                        self.saveSuccess = success
-                        if success && policyId != nil {
-                            print("✅ New policy created successfully")
-                            var savedPolicy = policy
-                            savedPolicy.policy_id = policyId
-                            self.currentPolicy = savedPolicy
-                            self.errorMessage = nil
+                guard let self = self else { return }
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                    self.saveSuccess = success
+                    if success && policyId != nil {
+                        print("✅ New policy created successfully")
+                        var savedPolicy = policy
+                        savedPolicy.policy_id = policyId
+                        self.currentPolicy = savedPolicy
+                        self.errorMessage = nil
                             self.showAnimation = false
                             completion(true)
                         } else {
@@ -115,9 +115,9 @@ class PolicyViewModel: ObservableObject {
                                         completion(false)
                                     }
                                 }
-                            } else {
-                                print("❌ Failed to create policy")
-                                self.errorMessage = "Failed to create policy"
+                    } else {
+                        print("❌ Failed to create policy")
+                        self.errorMessage = "Failed to create policy"
                                 self.showAnimation = false
                                 completion(false)
                             }

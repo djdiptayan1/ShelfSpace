@@ -8,8 +8,7 @@
 import Foundation
 import SwiftUI
 
-struct UsersViewAdmin: View {
-    // Use @StateObject to create and own the ViewModel instance for this view hierarchy
+struct UsersViewAdmin: View {    // Use @StateObject to create and own the ViewModel instance for this view hierarchy
     @StateObject private var viewModel = UsersViewModel()
     @Environment(\.colorScheme) private var colorScheme
 
@@ -58,23 +57,24 @@ struct UsersViewAdmin: View {
                 // Pass the single ViewModel instance down
                 AddUserView(viewModel: viewModel)
             }
-            // Confirmation dialog for deactivation
+            // Confirmation dialog for activation/deactivation
             .confirmationDialog(
-                "Confirm Deactivation",
-                isPresented: $viewModel.showDeactivateConfirmation,
-                presenting: viewModel.userMarkedForDeactivation // Pass user data
-            ) { user in // Closure receives the user data
-                 Button("Deactivate \(user.name)", role: .destructive) {
-                    viewModel.deactivateConfirmed() // Call VM function
-                 }
-                 Button("Cancel", role: .cancel) {
-                     // Reset temporary state if needed (VM handles main reset)
-                     viewModel.userToDeactivate = nil
-                     viewModel.userMarkedForDeactivation = nil
-                 }
-            } message: { user in // Closure for the message, receives user data
-                let userType = user.role == .librarian ? "librarian" : "member"
-                Text("Are you sure you want to deactivate this \(userType) (\(user.name))? They will no longer have access.")
+                viewModel.toggleActionIsActivate ? "Confirm Activation" : "Confirm Deactivation",
+                isPresented: $viewModel.showToggleConfirmation,
+                presenting: viewModel.userToToggle
+            ) { user in
+                Button(
+                    viewModel.toggleActionIsActivate ? "Activate \(user.name)" : "Deactivate \(user.name)",
+                    role: viewModel.toggleActionIsActivate ? .none : .destructive
+                ) {
+                    viewModel.confirmToggleUserStatus()
+                }
+                Button("Cancel", role: .cancel) {
+                    viewModel.userToToggle = nil
+                }
+            } message: { user in
+                let action = viewModel.toggleActionIsActivate ? "activate" : "deactivate"
+                Text("Are you sure you want to \(action) this \(user.role.rawValue) (\(user.name))?")
             }
             .alert(viewModel.alertTitle, isPresented: $viewModel.showAlert) {
                 Button("OK", role: .cancel) { }
@@ -90,44 +90,38 @@ struct UsersViewAdmin: View {
 
     private var librariansListView: some View {
         List {
-            // Use the computed property from ViewModel
             ForEach(viewModel.activeLibrarians) { user in
-                 // Navigate to the dedicated Row View
-                 LibrarianRow(user: user, viewModel: viewModel)
+                LibrarianRow(user: user, viewModel: viewModel)
             }
         }
+        .id(viewModel.users.map(\ .id).map(\ .uuidString).joined())
         .listStyle(.plain)
-        .overlay { // Show empty state if list is empty
+        .overlay {
             if viewModel.activeLibrarians.isEmpty {
-                EmptyStateView(type: "Librarians", colorScheme: colorScheme) // Use helper view
+                EmptyStateView(type: "Librarians", colorScheme: colorScheme)
             }
         }
-        .refreshable { // Example refresh action
-             // Add logic to fetch/refresh users from your data source
-             print("Refreshing librarians...")
-             // Example: await viewModel.fetchUsers()
-         }
+        .refreshable {
+            print("Refreshing librarians...")
+        }
     }
 
     private var membersListView: some View {
         List {
-            // Use the computed property from ViewModel
             ForEach(viewModel.activeMembers) { user in
-                 // Navigate to the dedicated Row View
-                 MemberRow(user: user, viewModel: viewModel)
+                MemberRow(user: user, viewModel: viewModel)
             }
         }
+        .id(viewModel.users.map(\ .id).map(\ .uuidString).joined())
         .listStyle(.plain)
-        .overlay { // Show empty state if list is empty
+        .overlay {
             if viewModel.activeMembers.isEmpty {
-                 EmptyStateView(type: "Members", colorScheme: colorScheme) // Use helper view
+                EmptyStateView(type: "Members", colorScheme: colorScheme)
             }
         }
-         .refreshable { // Example refresh action
-             // Add logic to fetch/refresh users from your data source
-             print("Refreshing members...")
-             // Example: await viewModel.fetchUsers()
-         }
+        .refreshable {
+            print("Refreshing members...")
+        }
     }
 
      // Helper function to add mock data for previews/testing
