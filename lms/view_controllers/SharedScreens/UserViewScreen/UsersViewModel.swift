@@ -103,7 +103,10 @@ class UsersViewModel: ObservableObject {
                         message: "User has been \(action) successfully.",
                         type: .success
                     )
+                    // Refresh the user list
                     self?.fetchUsersoflibrary()
+                    // Force UI update
+                    self?.objectWillChange.send()
                 case .failure(let error):
                     // Revert the UI change if API call fails
                     if let index = self?.users.firstIndex(where: { $0.id == userId }) {
@@ -234,7 +237,9 @@ class UsersViewModel: ObservableObject {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let fetchedUsers):
+                    print("Successfully fetched \(fetchedUsers.count) users")
                     self?.users = fetchedUsers
+                    // Force UI update
                     self?.objectWillChange.send()
                 case .failure(let error):
                     self?.showAlert(title: "Error", message: "Failed to fetch users: \(error.localizedDescription)", type: .error)

@@ -92,9 +92,10 @@ struct UsersViewAdmin: View {    // Use @StateObject to create and own the ViewM
         List {
             ForEach(viewModel.activeLibrarians) { user in
                 LibrarianRow(user: user, viewModel: viewModel)
+                    .id(user.id.uuidString + (user.is_active ?? false ? "-active" : "-inactive"))
             }
         }
-        .id(viewModel.users.map(\ .id).map(\ .uuidString).joined())
+        .id(viewModel.activeLibrarians.map { $0.id.uuidString + ($0.is_active ?? false ? "-active" : "-inactive") }.joined())
         .listStyle(.plain)
         .overlay {
             if viewModel.activeLibrarians.isEmpty {
@@ -103,6 +104,7 @@ struct UsersViewAdmin: View {    // Use @StateObject to create and own the ViewM
         }
         .refreshable {
             print("Refreshing librarians...")
+            viewModel.fetchUsersoflibrary()
         }
     }
 
@@ -110,9 +112,10 @@ struct UsersViewAdmin: View {    // Use @StateObject to create and own the ViewM
         List {
             ForEach(viewModel.activeMembers) { user in
                 MemberRow(user: user, viewModel: viewModel)
+                    .id(user.id.uuidString + (user.is_active ?? false ? "-active" : "-inactive"))
             }
         }
-        .id(viewModel.users.map(\ .id).map(\ .uuidString).joined())
+        .id(viewModel.activeMembers.map { $0.id.uuidString + ($0.is_active ?? false ? "-active" : "-inactive") }.joined())
         .listStyle(.plain)
         .overlay {
             if viewModel.activeMembers.isEmpty {
@@ -121,6 +124,7 @@ struct UsersViewAdmin: View {    // Use @StateObject to create and own the ViewM
         }
         .refreshable {
             print("Refreshing members...")
+            viewModel.fetchUsersoflibrary()
         }
     }
 

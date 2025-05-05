@@ -55,9 +55,9 @@ struct MemberRow: View {
                 Text(user.email)
                     .font(.system(size: 14, design: .rounded))
                     .foregroundColor(Color.text(for: colorScheme).opacity(0.7))
-                Text("Library ID: \(user.library_id)")
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .foregroundColor(Color.accent(for: colorScheme).opacity(0.8))
+//                Text("Library ID: \(user.library_id)")
+//                    .font(.system(size: 12, weight: .medium, design: .rounded))
+//                    .foregroundColor(Color.accent(for: colorScheme).opacity(0.8))
             }
 
             Spacer()
@@ -83,5 +83,6 @@ struct MemberRow: View {
             }
             .tint(user.is_active ?? false ? .red : .green)
         }
+        .id(user.id.uuidString + (user.is_active ?? false ? "-active" : "-inactive"))
     }
 }
