@@ -811,7 +811,7 @@ struct NewArrivalCard: View {
                             color: Color.primary(for: colorScheme).opacity(0.3),
                             radius: 12, x: 0, y: 6)
                 } else {
-                    RoundedRectangle(cornerRadius: 8)
+                    RoundedRectangle(cornerRadius: 10)
                         .fill(
                             LinearGradient(
                                 gradient: Gradient(colors: [
@@ -821,6 +821,7 @@ struct NewArrivalCard: View {
                                 endPoint: .bottomTrailing
                             )
                         )
+                        .frame(width: 130,height: 180)
 
                     Image(systemName: "book.fill")
                         .font(.system(size: 20))

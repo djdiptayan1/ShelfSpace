@@ -40,6 +40,9 @@ struct BookCollectionuser: View {
     @State private var expandedTab: Bool = true
     
     // Sample books data
+    @State private var requestedBooks: [BookModel] = []
+    @State private var wishlistBooks: [BookModel] = []
+
     @State private var demoBooks: [BookModel] = [
         BookModel(
             id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
@@ -78,6 +81,16 @@ struct BookCollectionuser: View {
             coverImageData: nil
         )
     ]
+    private var finalBooks: [BookModel] {
+        switch(selectedTab){
+        case .request:
+            return requestedBooks
+        case .wishlist:
+            return wishlistBooks
+        default :
+            return demoBooks
+        }
+    }
     
     // MARK: - Body
     var body: some View {
@@ -103,7 +116,7 @@ struct BookCollectionuser: View {
                 ScrollView {
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
                         // Filter books based on the selected tab
-                        ForEach(demoBooks.prefix(6)) { book in
+                        ForEach(finalBooks.prefix(6)) { book in
                             BookCardView(book: book, tab: selectedTab, colorScheme: colorScheme)
                         }
                     }
@@ -116,7 +129,14 @@ struct BookCollectionuser: View {
         }
         .onAppear(){
             Task{
-                self.demoBooks = try await getWishList()
+                self.wishlistBooks = try await getWishList()
+            }
+        }
+        .onAppear(){
+            Task{
+                let borrows = try await BorrowHandler.shared.getBorrows()
+                //get books from borrows
+                requestedBooks = borrows.compactMap(\.book)
             }
         }
         .background(ReusableBackground(colorScheme: colorScheme))
