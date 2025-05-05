@@ -1188,3 +1188,164 @@ class ReviewHandler{
     }
 
 }
+
+class BorrowHandler{
+    static let shared = BorrowHandler()
+    var borrowCache:[BorrowModel] = []
+    
+    func borrow(bookId:UUID)async throws -> BorrowModel?{
+        guard let token = try? KeychainManager.shared.getToken() else {
+            throw URLError(.userAuthenticationRequired)
+        }
+        guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/borrow-transactions") else {
+            throw URLError(.badURL)
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = ["bookId": bookId.uuidString]
+        let jsonData = try JSONSerialization.data(withJSONObject: body, options: [])
+        
+        request.httpBody = jsonData
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+
+        print("\u{1F4E5} Server response status code: \(httpResponse.statusCode)")
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("\u{1F4E5} Server response body: \(responseString)")
+        }
+        let booksResponse = try JSONUtility.shared.decode(BorrowModel.self, from: data)
+
+        if (200...299).contains(httpResponse.statusCode) {
+            print("✅ Created Review")
+            return booksResponse
+        } else {
+            do {
+                let errorResponse = try JSONUtility.shared.decode(ErrorResponse.self, from: data)
+                print("❌ Error creating review: \(errorResponse.errorMessage)")
+                throw NSError(domain: "CreateReviewError", code: httpResponse.statusCode,
+                              userInfo: [NSLocalizedDescriptionKey: errorResponse.errorMessage])
+            } catch {
+                let rawErrorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+                print("❌ Error creating review (raw): \(rawErrorMessage)")
+                print("Underlying decoding error (if any):")
+                error.logDetails()
+                throw NSError(domain: "CreateReviewError", code: httpResponse.statusCode,
+                              userInfo: [NSLocalizedDescriptionKey: rawErrorMessage])
+            }
+        }
+
+    }
+    func getBorrows()async throws -> [BorrowModel]{
+        do {
+            // Get authentication token and library ID
+            guard let token = try? KeychainManager.shared.getToken() else {
+                throw BookFetchError.tokenMissing
+            }
+            
+            
+            // Create URL request
+            guard let url = URL(string: "http://localhost:3000/api/v1/borrow-transactions?page=1&limit=10&sortBy=borrow_date&sortOrder=asc") else {
+                throw BookFetchError.invalidURL
+            }
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "GET"
+            request.addValue("application/json", forHTTPHeaderField: "accept")
+            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            
+            // Make the network request
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            // Check response status
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw BookFetchError.unknown
+            }
+            
+            guard (200 ... 299).contains(httpResponse.statusCode) else {
+                throw BookFetchError.serverError(httpResponse.statusCode)
+            }
+            
+            // Use the JSON utility to decode the response
+            let booksResponse = try JSONUtility.shared.decode(PaginatedResponse<[BorrowModel]>.self, from: data)
+            
+            // Process books if needed
+            let processedBooks = booksResponse.data.map { res in
+                return res
+            }
+            if (200...299).contains(httpResponse.statusCode) {
+                print("✅ got review")
+                borrowCache = processedBooks
+                return processedBooks
+            } else {
+                do {
+                    let errorResponse = try JSONUtility.shared.decode(ErrorResponse.self, from: data)
+                    print("❌ Error getting review: \(errorResponse.errorMessage)")
+                    throw NSError(domain: "ReviewFetchError", code: httpResponse.statusCode,
+                                  userInfo: [NSLocalizedDescriptionKey: errorResponse.errorMessage])
+                } catch {
+                    let rawErrorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+                    print("❌ Error fetching review (raw): \(rawErrorMessage)")
+                    print("Underlying decoding error (if any):")
+                    error.logDetails()
+                    throw NSError(domain: "ReviewFetchError", code: httpResponse.statusCode,
+                                  userInfo: [NSLocalizedDescriptionKey: rawErrorMessage])
+                }
+            }
+        }
+    }
+    func cancelBorrow(_ borrowId: UUID) async throws {
+        guard let token = try? KeychainManager.shared.getToken() else {
+            throw URLError(.userAuthenticationRequired)
+        }
+        guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/borrow-transactions/\(borrowId.uuidString)/cancel") else {
+            throw URLError(.badURL)
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+
+        print("\u{1F4E5} Server response status code: \(httpResponse.statusCode)")
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("\u{1F4E5} Server response body: \(responseString)")
+        }
+
+        if (200...299).contains(httpResponse.statusCode) {
+            print("✅ Book removed from wishlist")
+        } else {
+            do {
+                let errorResponse = try JSONUtility.shared.decode(ErrorResponse.self, from: data)
+                print("❌ Error removing from wishlist: \(errorResponse.errorMessage)")
+                throw NSError(domain: "RemoveFromWishlistError", code: httpResponse.statusCode,
+                              userInfo: [NSLocalizedDescriptionKey: errorResponse.errorMessage])
+            } catch {
+                let rawErrorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+                print("❌ Error removing from wishlist (raw): \(rawErrorMessage)")
+                print("Underlying decoding error (if any):")
+                error.logDetails()
+                throw NSError(domain: "RemoveFromWishlistError", code: httpResponse.statusCode,
+                              userInfo: [NSLocalizedDescriptionKey: rawErrorMessage])
+            }
+        }
+    }
+    func getBorrowForBookId(_ bookId: UUID)async throws -> BorrowModel? {
+        if !borrowCache.isEmpty {
+            return borrowCache.first { $0.book_id == bookId }
+        }
+        let borrows = try await getBorrows()
+        return borrows.first { $0.book_id == bookId }
+    }
+
+}
