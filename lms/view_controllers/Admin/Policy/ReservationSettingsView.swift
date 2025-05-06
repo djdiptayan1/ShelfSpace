@@ -5,9 +5,9 @@
 //  Created by Diptayan Jash on 26/04/25.
 //
 
+import DotLottie
 import Foundation
 import SwiftUI
-import DotLottie
 
 struct ReservationSettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
@@ -69,15 +69,15 @@ struct ReservationSettingsView: View {
                     .padding(.top, 16)
                     .padding(.bottom, 10)
 
-                    if policyViewModel.isLoading {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle())
-                            .scaleEffect(1.5)
-                            .padding(.vertical, 30)
-                    } else {
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 30) {
-                                // Maximum Books Reservable Card
+                    // if policyViewModel.isLoading {
+                    //     ProgressView()
+                    //         .progressViewStyle(CircularProgressViewStyle())
+                    //         .scaleEffect(1.5)
+                    //         .padding(.vertical, 30)
+                    // } else {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 30) {
+                            // Maximum Books Reservable Card
 //                                VStack(alignment: .leading, spacing: 15) {
 //                                    Text("Maximum Books Reservable")
 //                                        .font(.system(size: 18, weight: .semibold, design: .rounded))
@@ -115,73 +115,59 @@ struct ReservationSettingsView: View {
 //                                        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
 //                                )
 
-                                // Hold Duration Card
-                                VStack(alignment: .leading, spacing: 15) {
-                                    Text("Hold Duration")
-                                        .font(.system(size: 18, weight: .semibold, design: .rounded))
-                                        .foregroundColor(Color.text(for: colorScheme))
+                            // Hold Duration Card
+                            VStack(alignment: .leading, spacing: 15) {
+                                Text("Hold Duration")
+                                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                                    .foregroundColor(Color.text(for: colorScheme))
 
-                                    Text("\(Int(holdDurationHours)) Hours")
-                                        .font(.system(size: 36, weight: .bold, design: .rounded))
-                                        .foregroundColor(Color.primary(for: colorScheme))
-                                        .frame(maxWidth: .infinity, alignment: .center)
-                                        .padding(.vertical, 10)
+                                Text("\(Int(holdDurationHours)) Hours")
+                                    .font(.system(size: 36, weight: .bold, design: .rounded))
+                                    .foregroundColor(Color.primary(for: colorScheme))
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                                    .padding(.vertical, 10)
 
-                                    // iOS-style slider
-                                    Slider(value: $holdDurationHours, in: 1 ... 48, step: 1)
-                                        .accentColor(Color.primary(for: colorScheme))
-                                        .padding(.vertical, 10)
+                                // iOS-style slider
+                                Slider(value: $holdDurationHours, in: 1 ... 48, step: 1)
+                                    .accentColor(Color.primary(for: colorScheme))
+                                    .padding(.vertical, 10)
 
-                                    HStack {
-                                        Text("1 Hour")
-                                            .font(.system(size: 14))
-                                            .foregroundColor(Color.text(for: colorScheme).opacity(0.6))
+                                HStack {
+                                    Text("1 Hour")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(Color.text(for: colorScheme).opacity(0.6))
 
-                                        Spacer()
+                                    Spacer()
 
-                                        Text("48 Hours")
-                                            .font(.system(size: 14))
-                                            .foregroundColor(Color.text(for: colorScheme).opacity(0.6))
-                                    }
+                                    Text("48 Hours")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(Color.text(for: colorScheme).opacity(0.6))
                                 }
-                                .padding(20)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 15)
-                                        .fill(colorScheme == .dark ?
-                                            Color(hex: ColorConstants.darkBackground).opacity(0.7) :
-                                            Color.white.opacity(0.9))
-                                        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
-                                )
                             }
-                            .padding(.horizontal, 20)
-                            .padding(.bottom, 40)
+                            .padding(20)
+                            .background(
+                                RoundedRectangle(cornerRadius: 15)
+                                    .fill(colorScheme == .dark ?
+                                        Color(hex: ColorConstants.darkBackground).opacity(0.7) :
+                                        Color.white.opacity(0.9))
+                                    .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+                            )
                         }
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 40)
                     }
                 }
             }
-            .navigationBarHidden(true) // Hide the navigation bar completely
-            .onAppear {
-                // Load current policy values when the view appears
-                if let policy = policyViewModel.currentPolicy {
-                    // Update state variables from the loaded policy
-                    self.holdDurationHours = policyDaysToSliderHours(policy.reservation_expiry_days)
-                    self.maxBooksReservable = Double(policy.max_books_per_user) // Assuming max_books_per_user is Int
-                } else {
-                    // If no policy exists yet, maybe load defaults or trigger a fetch
-                    // The ViewModel's loadPolicy should handle fetching
-                    print("Policy not loaded yet or doesn't exist.")
-                    // You might want to ensure loadPolicy is called if currentPolicy is nil
-                    // policyViewModel.loadPolicy() // Or ensure it's called before presenting this view
-                }
-            }.alert(isPresented: $showingSaveAlert) {
-                // Use the separate error message from ViewModel for better detail
+            // }
+            .navigationBarHidden(true)
+            .alert(isPresented: $showingSaveAlert) {
                 if let error = policyViewModel.errorMessage {
                     return Alert(
                         title: Text("Error"),
                         message: Text(error),
                         dismissButton: .default(Text("OK"))
                     )
-                } else { // Assuming success if no error message
+                } else {
                     return Alert(
                         title: Text("Success"),
                         message: Text("Reservation settings saved successfully."),
@@ -209,36 +195,47 @@ struct ReservationSettingsView: View {
                     }
                 }
             )
+            .onAppear {
+                // Load current policy values when the view appears
+                if let policy = policyViewModel.currentPolicy {
+                    holdDurationHours = policyDaysToSliderHours(policy.reservation_expiry_days)
+                    holdDurationHours = Double(truncating: policy.reservation_expiry_days as NSNumber)
+                    self.maxBooksReservable = Double(policy.max_books_per_user)
+                } else {
+                    print("Policy not loaded yet or doesn't exist.")
+                }
+            }
         }
     }
 
     // Save the settings using PolicyViewModel
     private func saveSettings() {
-        // Convert hours to days (rounding up to ensure at least 1 day)
-        let expiryDays = max(1, Int(ceil(holdDurationHours / 24.0)))
+        // Store expiry in hours directly
+        let expiryHours = Int(holdDurationHours)
         let maxBooks = Int(maxBooksReservable)
 
-        // Check if we are updating an existing policy or creating a new one
-        if var policyToSave = policyViewModel.currentPolicy {
-            // Update the policy copy with the new values from the sliders
-            policyToSave.reservation_expiry_days = expiryDays
-            policyToSave.max_books_per_user = maxBooks
+        if let currentPolicy = policyViewModel.currentPolicy {
+            var updatedPolicy = currentPolicy
+            updatedPolicy.reservation_expiry_days = expiryHours
+            updatedPolicy.max_books_per_user = maxBooks
 
-            // Now pass the *modified* policy to the view model
-            policyViewModel.savePolicy(policy: policyToSave) { _ in
-                self.showingSaveAlert = true
+            policyViewModel.savePolicy(policy: updatedPolicy) { success in
+                if success {
+                    showingSaveAlert = true
+                }
             }
         } else {
-            // Create a new policy if one doesn't exist
             let newPolicy = Policy(
                 library_id: policyViewModel.libraryId,
                 max_borrow_days: 30,
                 fine_per_day: Decimal(1.0),
                 max_books_per_user: maxBooks,
-                reservation_expiry_days: expiryDays
+                reservation_expiry_days: expiryHours
             )
-            policyViewModel.savePolicy(policy: newPolicy) { _ in
-                self.showingSaveAlert = true
+            policyViewModel.savePolicy(policy: newPolicy) { success in
+                if success {
+                    showingSaveAlert = true
+                }
             }
         }
     }

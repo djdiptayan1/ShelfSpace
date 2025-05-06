@@ -45,8 +45,8 @@ struct ProfileView: View {
                                     VStack(spacing: 8) {
                                         DetailRow(title: "Full Name", value: user.name)
                                         DetailRow(title: "Email", value: user.email)
-                                        DetailRow(title: "Role", value: user.role.rawValue.capitalized)
-                                        DetailRow(title: "User ID", value: user.id.uuidString.prefix(8) + "...")
+//                                        DetailRow(title: "Role", value: user.role.rawValue.capitalized)
+//                                        DetailRow(title: "User ID", value: user.id.uuidString.prefix(8) + "...")
                                     }
                                 }
                             )
@@ -85,7 +85,7 @@ struct ProfileView: View {
                                         if let interests = user.interests, !interests.isEmpty {
                                             DetailRow(title: "Interests", value: interests.joined(separator: ", "))
                                         }
-                                        DetailRow(title: "Member Since", value: formatDate(user.created_at))
+//                                        DetailRow(title: "Member Since", value: formatDate(user.created_at))
                                     }
                                 }
                             )
@@ -305,16 +305,16 @@ struct ProfileHeaderView: View {
                         .foregroundColor(.blue)
                         .cornerRadius(20)
                     
-                    if user.is_active {
-                        Text("Active")
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 5)
-                            .background(Color.green.opacity(0.2))
-                            .foregroundColor(.green)
-                            .cornerRadius(20)
-                    }
+//                    if user.is_active {
+//                        Text("Active")
+//                            .font(.caption)
+//                            .fontWeight(.medium)
+//                            .padding(.horizontal, 12)
+//                            .padding(.vertical, 5)
+//                            .background(Color.green.opacity(0.2))
+//                            .foregroundColor(.green)
+//                            .cornerRadius(20)
+//                    }
                 }
                 .padding(.top, 4)
             }
