@@ -377,8 +377,8 @@ struct StatsCardView: View {
             
             StatItem(
                 value: user.wishlist_book_ids.count,
-                label: "Wishlist",
-                iconName: "heart",
+                label: "Bookmarked",
+                iconName: "bookmark",
                 color: .red
             )
         }

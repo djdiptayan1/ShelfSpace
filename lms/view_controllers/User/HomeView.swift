@@ -17,12 +17,6 @@ struct Book: Identifiable {
     let description: String
 }
 
-struct Author: Identifiable {
-    let id = UUID()
-    let imageName: String
-    let name: String
-}
-
 // MARK: - Main View
 struct HomeView: View {
     // MARK: - Properties
@@ -82,12 +76,6 @@ struct HomeView: View {
             return  matchesGenre
         }
     }
-
-    let authors = [
-        Author(imageName: "author1", name: "Stephen King"),
-        Author(imageName: "author2", name: "J.K. Rowling"),
-        Author(imageName: "author3", name: "Agatha Christie"),
-    ]
 
     // MARK: - MAIN BODY
 
@@ -184,7 +172,6 @@ struct HomeView: View {
                                     newArrivalsSection(geometry: geometry)
                                     recommendationsSection(geometry: geometry)
                                     topSellingSection(geometry: geometry)
-                                    authorsSection(geometry: geometry)
                                     Spacer(minLength: 80)
                                 }
                                 .padding(.vertical)
@@ -480,7 +467,7 @@ struct HomeView: View {
     // MARK: - SECTION FOR TOP SELLING
     private func topSellingSection(geometry: GeometryProxy) -> some View {
         VStack(alignment: .leading) {
-            sectionHeader(title: "Top Selling", seeMoreAction: {})
+            sectionHeader(title: "Top Borrowing", seeMoreAction: {})
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack {
@@ -502,24 +489,6 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - SECTION FOR AUTHOR
-
-    private func authorsSection(geometry: GeometryProxy) -> some View {
-        VStack(alignment: .leading) {
-            sectionHeader(title: "Author's", seeMoreAction: {})
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 20) {
-                    ForEach(authors) { author in
-                        AuthorCard(author: author, colorScheme: colorScheme)
-                            .frame(width: (geometry.size.width - 100) / 2)
-                    }
-                }
-                .padding([.bottom, .top, .horizontal])
-            }
-        }
-    }
-
     // MARK: - HELPER FUNCTION
     private func sectionHeader(
         title: String, seeMoreAction: @escaping () -> Void
@@ -531,9 +500,6 @@ struct HomeView: View {
                 .foregroundColor(Color.text(for: colorScheme))
 
             Spacer()
-
-            Button("See more", action: seeMoreAction)
-                .foregroundColor(Color.secondary(for: colorScheme))
         }
         .padding(.horizontal)
     }
@@ -1258,42 +1224,6 @@ struct TopSellingCard: View {
         }.resume()
     }
 
-}
-
-// MARK: - CARD STRUCTURES FOR AUTHOR CARD
-
-struct AuthorCard: View {
-    let author: Author
-    let colorScheme: ColorScheme
-
-    var body: some View {
-        VStack(spacing: 10) {
-            Image(author.imageName)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 130, height: 130)
-                .clipShape(Circle())
-                .overlay(
-                    Circle()
-                        .stroke(Color.primary(for: colorScheme), lineWidth: 2)
-                )
-                .shadow(
-                    color: Color.primary(for: colorScheme).opacity(0.3),
-                    radius: 8, x: 0, y: 4)
-
-            Text(author.name)
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .lineLimit(2)
-                .foregroundColor(Color.text(for: colorScheme))
-        }
-        .padding(12)
-        .background(Color.TabbarBackground(for: colorScheme))
-        .cornerRadius(16)
-        .shadow(
-            color: Color.primary(for: colorScheme).opacity(0.1), radius: 8,
-            x: 0, y: 4)
-    }
 }
 
 // MARK: - Search Bar
