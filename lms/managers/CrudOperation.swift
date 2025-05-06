@@ -438,8 +438,8 @@ func createBook(book: BookModel) async throws -> BookModel {
         isbn: book.isbn ?? "",
         description: book.description?.replacingOccurrences(of: "'", with: "") ?? "", // Escape single quotes
         total_copies: book.totalCopies,
-        available_copies: book.availableCopies,
-        reserved_copies: book.reservedCopies,
+        available_copies: book.totalCopies,
+        reserved_copies: 0,
         published_date: publishedDateString,
         author_ids: book.authorIds.map { $0.uuidString.lowercased() },
         genre_ids: book.genreIds.isEmpty ? nil : book.genreIds,
