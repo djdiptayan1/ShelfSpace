@@ -5,7 +5,8 @@ struct CheckInOutModalView: View {
     enum Mode {
         case checkOut, checkIn
     }
-    let borrow: BorrowModel
+    let borrow: BorrowModel?
+    let reservation:ReservationModel?
     let mode: Mode
     let onComplete: (Bool) -> Void
     @Environment(\.dismiss) private var dismiss
@@ -19,12 +20,18 @@ struct CheckInOutModalView: View {
     
     // Check if the book has an ISBN
     private var bookHasISBN: Bool {
-        return borrow.book?.isbn != nil && !(borrow.book?.isbn?.isEmpty ?? true)
+        if(mode == .checkOut){
+            return reservation?.book?.isbn != nil && !(reservation?.book?.isbn?.isEmpty ?? true)
+        }
+        return borrow?.book?.isbn != nil && !(borrow?.book?.isbn?.isEmpty ?? true)
     }
     
     // Get the book title for display
     private var bookTitle: String {
-        return borrow.book?.title ?? "Book ID: \(borrow.book_id)"
+        if(mode == .checkOut){
+            return reservation?.book?.title ?? "Book ID: \(reservation?.book_id)"  
+        }
+        return borrow?.book?.title ?? "Book ID: \(borrow?.book_id)"
     }
     
     var body: some View {
@@ -156,7 +163,7 @@ struct CheckInOutModalView: View {
     }
     
     private func process(isbn: String) {
-        guard let book = borrow.book else {
+        guard let book = mode == .checkOut ? reservation?.book : borrow?.book else {
             errorMessage = "Book data missing."; showError = true; return
         }
         
@@ -170,16 +177,23 @@ struct CheckInOutModalView: View {
         Task {
             do {
                 if mode == .checkOut {
-                    _ = try await BorrowHandler.shared.borrow(bookId: borrow.book_id)
-                    await MainActor.run {
-                        resultMessage = "Book successfully checked out!"
-                        isProcessing = false
+                    if let borrow = reservation {
+                        _ = try await BorrowHandler.shared.borrow(bookId: borrow.book_id,userId: borrow.user_id)
+
+                        await MainActor.run {
+                            resultMessage = "Book successfully checked out!"
+                            isProcessing = false
+                        }
                     }
                 } else {
                     // TODO: Implement check-in API call
-                    await MainActor.run {
-                        resultMessage = "Check-in not implemented."
-                        isProcessing = false
+                    if let borrow = borrow {
+                        _ = try await BorrowHandler.shared.returnBorrow(borrow.id)
+                        
+                        await MainActor.run {
+                            resultMessage = "Book successfully checked in!"
+                            isProcessing = false
+                        }
                     }
                 }
             } catch {
@@ -196,16 +210,25 @@ struct CheckInOutModalView: View {
         Task {
             do {
                 if mode == .checkOut {
-                    _ = try await BorrowHandler.shared.borrow(bookId: borrow.book_id)
-                    await MainActor.run {
-                        resultMessage = "Book successfully checked out!"
-                        isProcessing = false
+                    if let borrow = reservation {
+                        
+                        
+                        _ = try await BorrowHandler.shared.borrow(bookId: borrow.book_id,userId: borrow.user_id)
+
+                        await MainActor.run {
+                            resultMessage = "Book successfully checked out!"
+                            isProcessing = false
+                        }
                     }
                 } else {
                     // TODO: Implement check-in API call
-                    await MainActor.run {
-                        resultMessage = "Check-in not implemented."
-                        isProcessing = false
+                    if let borrow = borrow {
+                        _ = try await BorrowHandler.shared.returnBorrow(borrow.id)
+                        
+                        await MainActor.run {
+                            resultMessage = "Book successfully checked in!"
+                            isProcessing = false
+                        }
                     }
                 }
             } catch {
@@ -218,7 +241,7 @@ struct CheckInOutModalView: View {
     }
     
     private func processAsync(isbn: String) async {
-        guard let book = borrow.book else {
+        guard let book = mode == .checkOut ? reservation?.book : borrow?.book else {
             await MainActor.run { errorMessage = "Book data missing."; showError = true }
             return
         }
@@ -233,16 +256,22 @@ struct CheckInOutModalView: View {
         isProcessing = true
         do {
             if mode == .checkOut {
-                _ = try await BorrowHandler.shared.borrow(bookId: borrow.book_id)
-                await MainActor.run {
-                    resultMessage = "Book successfully checked out!"
-                    isProcessing = false
+                if let borrow = reservation{
+                    _ = try await BorrowHandler.shared.borrow(bookId: borrow.book_id,userId: borrow.user_id)
+                    await MainActor.run {
+                        resultMessage = "Book successfully checked out!"
+                        isProcessing = false
+                    }
                 }
             } else {
                 // TODO: Implement check-in API call
-                await MainActor.run {
-                    resultMessage = "Check-in not implemented."
-                    isProcessing = false
+                if let borrow = borrow {
+                    _ = try await BorrowHandler.shared.returnBorrow(borrow.id)
+                    
+                    await MainActor.run {
+                        resultMessage = "Book successfully checked in!"
+                        isProcessing = false
+                    }
                 }
             }
         } catch {
