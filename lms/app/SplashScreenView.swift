@@ -30,6 +30,7 @@ class AppState: ObservableObject {
 struct SplashScreenView: View {
     @StateObject private var appState = AppState()
     @State private var animationDone = false
+    @State private var analyticsLoaded = false
     @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
@@ -51,6 +52,16 @@ struct SplashScreenView: View {
                         )
                         .view()
                         .frame(width: 400, height: 400)
+                        
+                        // Loading indicator with status message
+                        HStack(spacing: 10) {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle())
+                            Text(analyticsLoaded ? "Finalizing..." : "Loading library data...")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.top, 20)
                         
 //                        if let error = appState.prefetchError {
 //                            Text(error)
@@ -92,8 +103,8 @@ struct SplashScreenView: View {
     }
     
     private func checkLoginStatus() {
-        // Minimum display time for splash
-        let minSplashTime = 1.0 // seconds
+        // Minimum display time for splash - increased to ensure user doesn't see loading screens
+        let minSplashTime = 2.0 // seconds
         let startTime = Date()
         
         Task {
@@ -102,6 +113,7 @@ struct SplashScreenView: View {
             
             if isSessionValid {
                 do {
+                    // Start a task group to prefetch data in parallel
                     // Get current user and role
                     if let user = try await LoginManager.shared.getCurrentUser() {
                         // Cache the user data immediately
@@ -109,6 +121,13 @@ struct SplashScreenView: View {
                         
                         // Prefetch library data
                         let libraryData = try await LoginManager.shared.fetchLibraryData(libraryId: user.library_id)
+                        
+                        // Prefetch analytics data with await to ensure it's fully loaded
+                        // This is a blocking call, but it's ok during splash screen
+                        print("Loading analytics data during splash screen...")
+                        let _ = try await AnalyticsHandler.shared.fetchLibraryAnalytics()
+                        analyticsLoaded = true
+                        print("Analytics data loaded!")
                         
                         await MainActor.run {
                             appState.currentUser = user

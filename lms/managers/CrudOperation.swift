@@ -1515,3 +1515,200 @@ class ReservationHandler{
 
 }
 
+class AnalyticsHandler {
+    static let shared = AnalyticsHandler()
+    
+    private var analyticsCache: LibraryAnalytics?
+    private var lastFetchTime: Date?
+    private var isFetching = false
+    
+    // Cache expiration time - 10 minutes
+    private let cacheExpirationInterval: TimeInterval = 600
+    
+    // UserDefaults keys for persistence
+    private let analyticsKey = "cached_analytics_data"
+    private let timestampKey = "analytics_fetch_timestamp"
+    
+    init() {
+        // Load cached data from disk on startup
+        loadCacheFromDisk()
+    }
+    
+    // Check if cache is valid (exists and not expired)
+    private var isCacheValid: Bool {
+        guard let cache = analyticsCache, let fetchTime = lastFetchTime else {
+            return false
+        }
+        
+        let cacheAge = Date().timeIntervalSince(fetchTime)
+        return cacheAge < cacheExpirationInterval
+    }
+    
+    // Load cache from disk (UserDefaults)
+    private func loadCacheFromDisk() {
+        let defaults = UserDefaults.standard
+        
+        // Try to load timestamp first
+        if let timestamp = defaults.object(forKey: timestampKey) as? Date {
+            lastFetchTime = timestamp
+            
+            // Only load analytics data if timestamp is valid (not expired)
+            let cacheAge = Date().timeIntervalSince(timestamp)
+            if cacheAge < cacheExpirationInterval {
+                if let cachedData = defaults.data(forKey: analyticsKey) {
+                    do {
+                        let decoder = JSONDecoder()
+                        analyticsCache = try decoder.decode(LibraryAnalytics.self, from: cachedData)
+                        print("📊 Loaded analytics cache from disk, age: \(Int(cacheAge)) seconds")
+                    } catch {
+                        print("📊 Error decoding cached analytics: \(error.localizedDescription)")
+                        // If decode fails, clear the cache
+                        defaults.removeObject(forKey: analyticsKey)
+                        defaults.removeObject(forKey: timestampKey)
+                    }
+                }
+            } else {
+                print("📊 Cached analytics on disk is expired")
+            }
+        }
+    }
+    
+    // Save cache to disk (UserDefaults)
+    private func saveCacheToDisk() {
+        guard let cache = analyticsCache, let timestamp = lastFetchTime else {
+            return
+        }
+        
+        let defaults = UserDefaults.standard
+        
+        // Save timestamp
+        defaults.set(timestamp, forKey: timestampKey)
+        
+        // Save analytics data
+        do {
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(cache)
+            defaults.set(data, forKey: analyticsKey)
+            print("📊 Saved analytics cache to disk")
+        } catch {
+            print("📊 Error encoding analytics for cache: \(error.localizedDescription)")
+        }
+    }
+    
+    // Fetch data, using cache if available and not expired
+    func fetchLibraryAnalytics() async throws -> LibraryAnalytics {
+        // Return cached data if available and not expired
+        if isCacheValid {
+            print("📊 Using cached analytics data")
+            return analyticsCache!
+        }
+        
+        // If already fetching, wait for the result
+        if isFetching {
+            // Wait a bit and check if cache is available
+            for _ in 0..<10 {
+                try await Task.sleep(nanoseconds: 500_000_000) // 0.5 second
+                if let cache = analyticsCache {
+                    return cache
+                }
+            }
+        }
+        
+        // No valid cache, fetch from network
+        return try await fetchFreshAnalytics()
+    }
+    
+    // Force refresh data from network
+    func refreshAnalytics() async throws -> LibraryAnalytics {
+        return try await fetchFreshAnalytics()
+    }
+    
+    // Internal method to fetch fresh data from network
+    private func fetchFreshAnalytics() async throws -> LibraryAnalytics {
+        isFetching = true
+        
+        do {
+            // Get authentication token and library ID
+            guard let token = try? KeychainManager.shared.getToken() else {
+                throw URLError(.userAuthenticationRequired)
+            }
+            
+            let libraryIdString = try KeychainManager.shared.getLibraryId()
+            print("📊 Fetching fresh analytics for library ID: \(libraryIdString)")
+            
+            // Create URL request
+            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/analytics?library_id=\(libraryIdString)") else {
+                throw URLError(.badURL)
+            }
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "GET"
+            request.addValue("application/json", forHTTPHeaderField: "accept")
+            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            
+            // Make the network request
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            // Check response status
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw URLError(.badServerResponse)
+            }
+            
+            guard (200 ... 299).contains(httpResponse.statusCode) else {
+                throw URLError(.badServerResponse)
+            }
+            
+            // Decode the response
+            let analyticsResponse = try JSONUtility.shared.decode(AnalyticsResponse.self, from: data)
+            
+            // Cache the result
+            self.analyticsCache = analyticsResponse.data
+            self.lastFetchTime = Date()
+            
+            // Save to disk
+            saveCacheToDisk()
+            
+            print("📊 Analytics data fetched and cached successfully")
+            isFetching = false
+            
+            return analyticsResponse.data
+        } catch {
+            isFetching = false
+            print("Error fetching library analytics:")
+            error.logDetails()
+            throw error
+        }
+    }
+    
+    // Prefetch data in background
+    func prefetchAnalyticsInBackground() {
+        Task {
+            do {
+                _ = try await fetchLibraryAnalytics()
+            } catch {
+                print("Background prefetch of analytics failed: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    // Return cached analytics if valid
+    func getCachedAnalytics() -> LibraryAnalytics? {
+        if isCacheValid {
+            return analyticsCache
+        }
+        return nil
+    }
+    
+    // Clear the cache (useful for testing or logout)
+    func clearCache() {
+        analyticsCache = nil
+        lastFetchTime = nil
+        
+        // Clear disk cache
+        let defaults = UserDefaults.standard
+        defaults.removeObject(forKey: analyticsKey)
+        defaults.removeObject(forKey: timestampKey)
+        print("📊 Analytics cache cleared")
+    }
+}
+
