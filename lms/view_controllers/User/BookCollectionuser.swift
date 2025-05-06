@@ -10,7 +10,7 @@ import SwiftUI
 
 /// Tab options for the book collection view
 enum BookCollectionTab: String, CaseIterable {
-    case wishlist = "Wishlist"
+    case wishlist = "Bookmarked"
     case current = "Current"
     case returned = "Returned"
     case request = "Requests"
@@ -19,7 +19,7 @@ enum BookCollectionTab: String, CaseIterable {
     var icon: String {
         switch self {
         case .wishlist:
-            return "heart"
+            return "bookmark"
         case .current:
             return "book"
         case .returned:
@@ -187,7 +187,7 @@ struct BookCollectionuser: View {
                         }
                     }
                     .padding(.vertical, 15)
-                    .padding(.horizontal, 18)
+                    .padding(.horizontal, 15)
                     .background(
                         ZStack {
                             if selectedTab == tab {
