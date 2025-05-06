@@ -52,6 +52,7 @@ struct BookCollectionuser: View {
         return filtered.compactMap(\.book)
     }
 
+
     @State private var demoBooks: [BookModel] = [
         BookModel(
             id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
@@ -145,6 +146,7 @@ struct BookCollectionuser: View {
         }
         .onAppear(){
             Task{
+
                 self.wishlistBooks = try await getWishList()
             }
         }

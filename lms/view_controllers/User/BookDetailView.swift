@@ -473,6 +473,7 @@ struct BookDetailView: View {
             return "Cancel Request"
         case .completed:
             return "Completed"
+
         case .notAvailable:
             return "Not Available"
         case .loading:
@@ -490,6 +491,7 @@ struct BookDetailView: View {
             return .gray
         case .completed:
             return .yellow
+
         }
     }
 }
@@ -517,6 +519,7 @@ enum BookStatus {
             return "Not Available"
         case .completed(let dueDate):
            return "Completed"
+
         }
     }
 }
