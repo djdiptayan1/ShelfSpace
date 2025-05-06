@@ -42,6 +42,16 @@ struct BookCollectionuser: View {
     // Sample books data
     @State private var requestedBooks: [BookModel] = []
     @State private var wishlistBooks: [BookModel] = []
+    @State private var borrows: [BorrowModel] = []
+    private var currentBooks:[BookModel]{
+        let filtered = borrows.filter{$0.status == .borrowed}
+        return filtered.compactMap(\.book)
+    }
+    private var returnedBooks:[BookModel]{
+        let filtered = borrows.filter{$0.status == .returned}
+        return filtered.compactMap(\.book)
+    }
+
 
     @State private var demoBooks: [BookModel] = [
         BookModel(
@@ -87,8 +97,10 @@ struct BookCollectionuser: View {
             return requestedBooks
         case .wishlist:
             return wishlistBooks
-        default :
-            return demoBooks
+        case .current:
+            return currentBooks
+        case .returned:
+            return returnedBooks
         }
     }
     
@@ -129,6 +141,12 @@ struct BookCollectionuser: View {
         }
         .onAppear(){
             Task{
+                borrows = try await BorrowHandler.shared.getBorrows()
+            }
+        }
+        .onAppear(){
+            Task{
+
                 self.wishlistBooks = try await getWishList()
             }
         }

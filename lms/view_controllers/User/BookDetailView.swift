@@ -472,7 +472,8 @@ struct BookDetailView: View {
         case .requested:
             return "Cancel Request"
         case .completed:
-            return "Return Now"
+            return "Completed"
+
         case .notAvailable:
             return "Not Available"
         case .loading:
@@ -489,7 +490,8 @@ struct BookDetailView: View {
         case .requested,.notAvailable:
             return .gray
         case .completed:
-            return .red
+            return .yellow
+
         }
     }
 }
@@ -516,11 +518,8 @@ enum BookStatus {
         case .notAvailable:
             return "Not Available"
         case .completed(let dueDate):
-            if dueDate < Date() {
-                return "Overdue"
-            } else {
-                return "Due \(dueDate.formatted(.dateTime.day().month()))"
-            }
+           return "Completed"
+
         }
     }
 }

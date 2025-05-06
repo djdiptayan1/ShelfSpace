@@ -21,30 +21,30 @@ struct RequestViewLibrarian: View {
     @State private var selectedSegment: BorrowRequestType = .checkOut
     @State private var showCamera = false
     @State private var selectedBorrow: BorrowModel?
+    @State private var selectedReservation: ReservationModel?
     @State private var scannedBarcode: String = ""
     @State private var searchText = ""
     @State private var showAlert = false
     @State private var alertMessage = ""
     @State private var cameraPermissionGranted = false
     @State private var borrowToDelete: BorrowModel?
+    @State private var reservationToDelete: ReservationModel?
     @State private var showDeleteConfirmation = false
     @State private var isLoading = false
     @State private var borrowRequests: [BorrowModel] = []
+    @State private var reservation:[ReservationModel] = []
     @State private var fetchError: String?
     @State private var showCheckInOutModal = false
     @State private var checkInOutMode: CheckInOutModalView.Mode = .checkOut
     @State private var isProcessingCheckout = false
     @State private var checkoutResultMessage: String? = nil
+    
+    var filteredReservations: [ReservationModel] {
+        reservation
+    }
 
     var filteredBorrowRequests: [BorrowModel] {
-        let filtered: [BorrowModel]
-        switch selectedSegment {
-        case .checkOut:
-            filtered = borrowRequests.filter { $0.status == .requested }
-        case .checkIn:
-            filtered = borrowRequests.filter { $0.status == .borrowed || $0.status == .overdue }
-        }
-        
+        let filtered: [BorrowModel] = borrowRequests
         if searchText.isEmpty {
             return filtered
         }
@@ -81,13 +81,14 @@ struct RequestViewLibrarian: View {
                 .padding(.top)
                 // --- Check In/Out Modal ---
                 .sheet(isPresented: $showCheckInOutModal, onDismiss: { selectedBorrow = nil }) {
-                    if let borrow = selectedBorrow {
+                    if true {
                         CheckInOutModalView(
-                            borrow: borrow,
+                            borrow: selectedBorrow,
+                            reservation: selectedReservation,
                             mode: checkInOutMode,
                             onComplete: { success in
                                 if success {
-                                    borrowRequests.removeAll { $0.id == borrow.id }
+                                    borrowRequests.removeAll { $0.id == selectedBorrow?.id ?? nil }
                                 }
                                 showCheckInOutModal = false
                                 selectedBorrow = nil
@@ -189,7 +190,7 @@ struct RequestViewLibrarian: View {
     
     private var requestCountView: some View {
         HStack {
-            Text("\(filteredBorrowRequests.count) \(filteredBorrowRequests.count == 1 ? "request" : "requests") found")
+            Text("\(reservation.count) \(reservation.count == 1 ? "request" : "requests") found")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
             Spacer()
@@ -226,7 +227,7 @@ struct RequestViewLibrarian: View {
                     .padding()
                     Spacer()
                 }
-            } else if filteredBorrowRequests.isEmpty {
+            } else if (filteredReservations.isEmpty && selectedSegment == .checkOut) || (filteredBorrowRequests.isEmpty && selectedSegment == .checkIn) {
                 VStack {
                     Spacer()
                     VStack(spacing: 12) {
@@ -246,21 +247,43 @@ struct RequestViewLibrarian: View {
             } else {
                 ScrollView {
                     LazyVStack(spacing: 16) {
-                        ForEach(filteredBorrowRequests) { borrow in
-                            BorrowRequestCardView(
-                                borrow: borrow,
-                                type: selectedSegment,
-                                onProcess: {
-                                    selectedBorrow = borrow
-                                    checkInOutMode = (selectedSegment == .checkOut ? .checkOut : .checkIn)
-                                    showCheckInOutModal = true
-                                },
-                                onReject: {
-                                    borrowToDelete = borrow
-                                    showDeleteConfirmation = true
-                                }
-                            )
-                            .padding(.horizontal)
+                        if(selectedSegment == .checkOut){
+                            ForEach(filteredReservations) { borrow in
+                                BorrowRequestCardView(
+                                    borrow: nil,
+                                    reservation: borrow,
+                                    type: selectedSegment,
+                                    onProcess: {
+                                        selectedReservation = borrow
+                                        checkInOutMode = (selectedSegment == .checkOut ? .checkOut : .checkIn)
+                                        showCheckInOutModal = true
+                                    },
+                                    onReject: {
+                                        reservationToDelete = borrow
+                                        showDeleteConfirmation = true
+                                    }
+                                )
+                                .padding(.horizontal)
+                            }
+                        }else{
+                            ForEach(filteredBorrowRequests) { borrow in
+                                BorrowRequestCardView(
+                                    borrow: borrow,
+                                    reservation: nil,
+                                    type: selectedSegment,
+                                    onProcess: {
+                                        selectedBorrow = borrow
+                                        checkInOutMode = (selectedSegment == .checkOut ? .checkOut : .checkIn)
+                                        showCheckInOutModal = true
+                                    },
+                                    onReject: {
+                                        borrowToDelete = borrow
+                                        showDeleteConfirmation = true
+                                    }
+                                )
+                                .padding(.horizontal)
+                            }
+
                         }
                     }
                     .padding(.vertical)
@@ -333,6 +356,7 @@ struct RequestViewLibrarian: View {
         Task {
             do {
                 let borrows = try await BorrowHandler.shared.getBorrows()
+                reservation = try await ReservationHandler.shared.getReservations()
                 // Debug print to verify book object
                 if let first = borrows.first {
                     print("DEBUG: First borrow: \(first)")
@@ -355,10 +379,35 @@ struct RequestViewLibrarian: View {
 // MARK: - Borrow Request Card View
 
 struct BorrowRequestCardView: View {
-    let borrow: BorrowModel
+    let borrow: BorrowModel?
+    let reservation: ReservationModel?
     let type: BorrowRequestType
     let onProcess: () -> Void
     let onReject: () -> Void
+    var book:BookModel{
+        if(type == .checkOut){
+            return reservation!.book!
+        }
+        return borrow!.book!
+    }
+    var borrowId:UUID{
+        if(type == .checkOut){
+            return reservation!.id
+        }
+        return borrow!.id
+    }
+    var reservationTime:Date{
+        if(type == .checkOut){
+            return reservation!.reserved_at
+        }
+        return borrow!.borrow_date
+    }
+    var dueTime:Date?{
+        if(type == .checkOut){
+            return reservation!.expires_at
+        }
+        return borrow?.return_date
+    }
     
     @Environment(\.colorScheme) private var colorScheme
     
@@ -387,7 +436,7 @@ struct BorrowRequestCardView: View {
             // User & Status Header
             HStack {
                 // We're not using user.name directly to avoid UserModel decoding issues
-                Text("Request ID: \(borrow.id.uuidString.prefix(8))...")
+                Text("Request ID: \(borrowId.uuidString.prefix(8))...")
                     .font(.system(size: 14, weight: .medium))
                 
                 Spacer()
@@ -404,11 +453,11 @@ struct BorrowRequestCardView: View {
                 
                 // Book Details
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(borrow.book?.title ?? "Unknown Title")
+                    Text(book.title ?? "Unknown Title")
                         .font(.headline)
                         .lineLimit(2)
                     
-                    if let isbn = borrow.book?.isbn {
+                    if let isbn = book.isbn {
                         HStack {
                             Image(systemName: "barcode")
                                 .font(.caption)
@@ -419,17 +468,15 @@ struct BorrowRequestCardView: View {
                         }
                     }
                     
-                    if let availableCopies = borrow.book?.availableCopies,
-                       let totalCopies = borrow.book?.totalCopies {
                         HStack {
                             Image(systemName: "books.vertical")
                             .font(.caption)
                             .foregroundColor(.secondary)
-                            Text("\(availableCopies) of \(totalCopies) available")
+                            Text("\(book.availableCopies) of \(book.totalCopies) available")
                                 .font(.caption)
-                                .foregroundColor(availableCopies > 0 ? .green : .red)
+                                .foregroundColor(book.availableCopies > 0 ? .green : .red)
                         }
-                    }
+                    
                     
                     // Request Dates
                     dateView
@@ -451,7 +498,7 @@ struct BorrowRequestCardView: View {
             
             Text(statusText)
                 .font(.subheadline.bold())
-                .foregroundColor(borrow.status == .overdue ? .red : (borrow.status == .requested ? .orange : .blue))
+                .foregroundColor(.orange)
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
@@ -489,7 +536,7 @@ struct BorrowRequestCardView: View {
     
     private var bookCover: some View {
         Group {
-            if let coverUrl = borrow.book?.coverImageUrl, let url = URL(string: coverUrl) {
+            if let coverUrl = book.coverImageUrl, let url = URL(string: coverUrl) {
                 AsyncImage(url: url) { image in
                     image
                         .resizable()
@@ -533,27 +580,27 @@ struct BorrowRequestCardView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                 
-                Text("Requested: \(borrow.borrow_date.formatted(date: .numeric, time: .shortened))")
+                Text("Requested: \(reservationTime.formatted(date: .numeric, time: .shortened))")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
             
-            if let returnDate = borrow.return_date {
                 HStack {
                     Image(systemName: "calendar.badge.clock")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
-                    Text("Due: \(returnDate.formatted(date: .numeric, time: .omitted))")
-                        .font(.caption)
-                        .foregroundColor(borrow.status == .overdue ? .red : .secondary)
+                    if let dueTime = dueTime{
+                        Text("Due: \(dueTime.formatted(date: .numeric, time: .omitted))")
+                            .font(.caption)
+                            .foregroundColor(dueTime < Date() ? .red : .secondary)
+                    }
                 }
-            }
+            
         }
     }
     
     private var statusBadge: some View {
-        Text(borrow.status.rawValue.capitalized)
+        Text("Reserved")
             .font(.system(size: 12, weight: .medium))
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
@@ -567,34 +614,17 @@ struct BorrowRequestCardView: View {
     // MARK: - Helper Properties
     
     private var statusColor: Color {
-        switch borrow.status {
-        case .requested:
-            return .orange
-        case .borrowed:
-            return .blue
-        case .overdue:
-            return .red
-        case .returned:
-            return .green
-        }
+        .orange
     }
     
     private var statusText: String {
-        switch borrow.status {
-        case .requested:
             return "Waiting for Approval"
-        case .borrowed:
-            return "Currently Borrowed"
-        case .overdue:
-            return "Overdue"
-        case .returned:
-            return "Returned"
-        }
+        
     }
     
     // Add a simple helper to get book ISBN safely
     private var bookIsbn: String {
-        return borrow.book?.isbn ?? "No ISBN"
+        return book.isbn ?? "No ISBN"
     }
 }
 
