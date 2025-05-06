@@ -9,26 +9,44 @@ import Charts
 import NavigationBarLargeTitleItems
 import SwiftUI
 
+extension OverdueBooks {
+    init(total: Int, byDuration: OverdueDuration, byCategory: [String: Int]) {
+        self.total = total
+        self.byDuration = byDuration
+        self.byCategory = byCategory
+    }
+}
+
+extension NewBooksDetail {
+    init(total: Int, recent: [AnalyticsBookModel], byCategory: [String: Int]) {
+        self.total = total
+        self.recent = recent
+        self.byCategory = byCategory
+    }
+}
+
 struct HomeViewAdmin: View {
     @Environment(\.colorScheme) private var colorScheme
-    @State private var lastHostingView: UIView!
-    @State private var isShowingProfile = false
+    @State private var lastHostingView: UIView! // This seems unused, consider removing if not needed
+    @State private var isShowingProfile = false // This seems unused, consider removing if not needed
     @State private var prefetchedUser: User?
     @State private var prefetchedLibrary: Library?
     @State private var isPrefetchingProfile = false
     @State private var prefetchError: String? = nil
     @State private var library: Library?
-    @State private var libraryName: String = "Library loading..."
+    @State private var libraryName: String = "Library loading..." // This might be redundant if prefetchedLibrary.name is used for navigation title
     @State private var showProfileSheet = false
 
     init(prefetchedUser: User? = nil, prefetchedLibrary: Library? = nil) {
         self.prefetchedUser = prefetchedUser
         self.prefetchedLibrary = prefetchedLibrary
-        library = prefetchedLibrary
+        self.library = prefetchedLibrary
 
-        // Try to get library name from keychain
-        if let name = try? KeychainManager.shared.getLibraryName() {
+        // Try to get library name from keychain, for initial display if prefetchedLibrary is nil
+        if prefetchedLibrary == nil, let name = try? KeychainManager.shared.getLibraryName() {
             _libraryName = State(initialValue: name)
+        } else if let prefetchedName = prefetchedLibrary?.name {
+            _libraryName = State(initialValue: prefetchedName)
         }
     }
 
@@ -40,7 +58,8 @@ struct HomeViewAdmin: View {
                 ScrollView {
                     AdminAnalyticsView()
                 }
-                .navigationTitle((prefetchedLibrary?.name ?? "loading..."))
+                // Use prefetchedLibrary.name if available, otherwise the state variable, then fallback
+                .navigationTitle(prefetchedLibrary?.name ?? libraryName)
                 .navigationBarLargeTitleItems(trailing: ProfileIcon(showProfileSheet: $showProfileSheet))
             }
             .task {
@@ -52,8 +71,8 @@ struct HomeViewAdmin: View {
                 if isPrefetchingProfile {
                     ProgressView("Loading Profile...")
                         .padding()
-                } else if let user = prefetchedUser {
-                    ProfileView()
+                } else if let _ = prefetchedUser { // Check if user is fetched, ProfileView likely uses its own data or environment
+                    ProfileView() // Assuming ProfileView can access the user data via LoginManager or environment
                         .navigationBarItems(
                             trailing: Button("Done") {
                                 showProfileSheet = false
@@ -83,29 +102,33 @@ struct HomeViewAdmin: View {
     }
 
     private func prefetchProfileData() async {
+        // Guard against multiple simultaneous fetches if already prefetching or if data is already there
         guard !isPrefetchingProfile else { return }
+        if prefetchedUser != nil && prefetchedLibrary != nil {
+            // If data is already prefetched and valid, update navigation title if needed and exit
+            if let name = prefetchedLibrary?.name {
+                self.libraryName = name
+            }
+            return
+        }
 
         isPrefetchingProfile = true
         prefetchError = nil
 
         do {
-            guard
-                let currentUser = try await LoginManager.shared.getCurrentUser()
-            else {
+            guard let currentUser = try await LoginManager.shared.getCurrentUser() else {
                 throw NSError(
                     domain: "HomeView", code: 404,
-                    userInfo: [
-                        NSLocalizedDescriptionKey:
-                            "No current user session found.",
-                    ])
+                    userInfo: [NSLocalizedDescriptionKey: "No current user session found."])
             }
 
-            let libraryData = try await fetchLibraryData(
-                libraryId: currentUser.library_id)
+            let libraryData = try await fetchLibraryData(libraryId: currentUser.library_id)
 
             await MainActor.run {
                 self.prefetchedUser = currentUser
                 self.prefetchedLibrary = libraryData
+                self.libraryName = libraryData.name
+                self.library = libraryData // also update the local library state
                 self.isPrefetchingProfile = false
             }
         } catch {
@@ -114,16 +137,15 @@ struct HomeViewAdmin: View {
                 self.isPrefetchingProfile = false
                 self.prefetchedUser = nil
                 self.prefetchedLibrary = nil
+                // Potentially set libraryName to an error state or keep "loading..."
+                // self.libraryName = "Error loading library"
             }
         }
     }
 
     private func fetchLibraryData(libraryId: String) async throws -> Library {
         guard let token = try? LoginManager.shared.getCurrentToken(),
-              let url = URL(
-                  string:
-                  "https://lms-temp-be.vercel.app/api/v1/libraries/\(libraryId)"
-              )
+              let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/libraries/\(libraryId)")
         else {
             throw URLError(.badURL)
         }
@@ -139,21 +161,20 @@ struct HomeViewAdmin: View {
               httpResponse.statusCode == 200
         else {
             let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+            let errorBody = String(data: data, encoding: .utf8) ?? "No error body"
+            print("Failed to fetch library data. Status: \(statusCode). Body: \(errorBody)")
             throw NSError(
                 domain: "APIError", code: statusCode,
-                userInfo: [
-                    NSLocalizedDescriptionKey:
-                        "Failed to fetch library data. Status code: \(statusCode)",
-                ])
+                userInfo: [NSLocalizedDescriptionKey: "Failed to fetch library data. Status code: \(statusCode)."])
         }
 
         do {
-            return try JSONDecoder().decode(Library.self, from: data)
+            let decoder = JSONDecoder()
+            // Add any specific date decoding strategy if needed for Library model
+            return try decoder.decode(Library.self, from: data)
         } catch {
             print("JSON Decoding Error for Library: \(error)")
-            print(
-                "Raw data: \(String(data: data, encoding: .utf8) ?? "Invalid data")"
-            )
+            print("Raw data: \(String(data: data, encoding: .utf8) ?? "Invalid data")")
             throw error
         }
     }
@@ -173,7 +194,7 @@ struct ProfileIcon: View {
                 .frame(width: 36, height: 36)
         }
         .padding([.trailing], 20)
-        .padding([.top], 5)
+        .padding([.top], 5) // Consider if this top padding is needed with large titles
     }
 }
 
@@ -185,281 +206,582 @@ struct AdminAnalyticsView: View {
         var percentage: String? = nil
     }
 
-    let circulationStats = [
-        CirculationData(day: "Mon", value: 9, percentage: "19.6%"),
-        CirculationData(day: "Tue", value: 10, percentage: "21.7%"),
-        CirculationData(day: "Wed", value: 15, percentage: "32.6%"),
-        CirculationData(day: "Thu", value: 12, percentage: "26.1%"),
-    ]
-
-    // Sample most borrowed book data
-    let mostBorrowedBook = (
-        title: "Computer Science Fundamentals",
-        author: "David Lee",
-        borrowCount: 42,
-        category: "Science"
-    )
-
+    // Always initialize with cached data from disk (now guaranteed to be loaded during splash)
+    @State private var analyticsData: LibraryAnalytics? = AnalyticsHandler.shared.getCachedAnalytics()
+    // Never show loading state on first display - data should be prefetched
+    @State private var isLoading = false 
+    @State private var error: Error?
+    @State private var hasAttemptedInitialLoad = false
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Fine Reports Section
-            Text("Fine reports")
-                .font(.headline)
-
-            HStack(spacing: 16) {
-                NavigationLink(destination: TotalFinesDetailView()) {
-                    FineBox(title: "Total fines", value: "₹640")
-                        .foregroundColor(.teal)
+            // Never show loading indicator on initial view - either use cache or placeholder
+            if let error = error, analyticsData == nil {
+                // Show error view only if there's no data to display and an error occurred during refresh
+                HStack {
+                    Spacer()
+                    VStack(spacing: 10) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 32))
+                            .foregroundColor(.orange)
+                        Text("Failed to refresh analytics")
+                            .font(.headline)
+                        Text(error.localizedDescription)
+                            .font(.caption)
+                            .multilineTextAlignment(.center)
+                        Button("Retry") {
+                            fetchAnalytics()
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Color.teal)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                    }
+                    Spacer()
                 }
-                NavigationLink(destination: OverdueBooksDetailView()) {
-                    FineBox(title: "Overdue books", value: "60")
-                        .foregroundColor(.teal)
-                }
-            }
-
-            // Circulation Statistics Section (now with most borrowed book)
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Circulation statistics")
+                .padding(.vertical, 30)
+            } else {
+                // Always show the analytics UI.
+                // Use `analyticsData` if available, otherwise fallback to `placeholderAnalytics`.
+                let analytics = analyticsData ?? placeholderAnalytics
+                
+                // Fine Reports Section
+                Text("Fine reports")
                     .font(.headline)
 
-                // Chart
-                NavigationLink(destination: CirculationStatsDetailView()) {
-                    Chart {
-                        ForEach(circulationStats) { stat in
-                            LineMark(
-                                x: .value("Day", stat.day),
-                                y: .value("Value", stat.value)
-                            )
-                            .foregroundStyle(Color.teal)
-
-                            PointMark(
-                                x: .value("Day", stat.day),
-                                y: .value("Value", stat.value)
-                            )
-                            .foregroundStyle(Color.teal)
-                        }
+                HStack(spacing: 16) {
+                    NavigationLink(destination: TotalFinesDetailView()) {
+                        FineBox(title: "Total fines", value: "₹\(analytics.dashboard.fineReports.totalFines)")
+                            .foregroundColor(.teal) // Consider if .foregroundColor is needed on FineBox itself or its content
                     }
-                    .frame(height: 150)
+                    NavigationLink(destination: OverdueBooksDetailView()) {
+                        FineBox(title: "Overdue books", value: "\(analytics.dashboard.fineReports.overdueBooks)")
+                            .foregroundColor(.teal) // Same as above
+                    }
                 }
 
-                // Most borrowed book info
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text("Most borrowed:")
-                            .font(.subheadline)
-//                            .foregroundColor(.black)
-                        Spacer()
-                        Text("\(mostBorrowedBook.borrowCount) borrows")
-                            .font(.subheadline)
+                // Circulation Statistics Section
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Circulation statistics")
+                        .font(.headline)
+
+                    NavigationLink(destination: CirculationStatsDetailView()) {
+                        Chart {
+                            // Ensure dailyCirculation is not empty to avoid chart errors
+                            if analytics.dashboard.circulationStatistics.dailyCirculation.isEmpty {
+                                // Provide a single data point or a message if you want to render something
+                                // For now, it will render an empty chart, which is fine.
+                            }
+                            ForEach(analytics.dashboard.circulationStatistics.dailyCirculation, id: \.date) { item in
+                                LineMark(
+                                    x: .value("Day", item.dayOfWeek),
+                                    y: .value("Value", item.count)
+                                )
+                                .foregroundStyle(Color.teal)
+
+                                PointMark(
+                                    x: .value("Day", item.dayOfWeek),
+                                    y: .value("Value", item.count)
+                                )
+                                .foregroundStyle(Color.teal)
+                            }
+                        }
+                        .frame(height: 150)
+                    }
+
+                    // Most borrowed book info
+                    if let mostBorrowedBook = analytics.dashboard.mostBorrowedBook {
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack {
+                                Text("Most borrowed:")
+                                    .font(.subheadline)
+                                Spacer()
+                                Text("\(mostBorrowedBook.borrowCount ?? 0) borrows")
+                                    .font(.subheadline)
+                                    .foregroundColor(.teal)
+                            }
+
+                            Text(mostBorrowedBook.title)
+                                .font(.headline)
+                                .foregroundColor(.teal)
+
+                            HStack {
+                                if !mostBorrowedBook.authorIds.isEmpty {
+                                     // Placeholder, ideally you'd fetch author names if needed for display
+                                     // For now, this is a simple placeholder.
+                                    Text("by Author") // You'd need to resolve author names for a better display
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
+
+                                Spacer()
+
+                                if let genre = mostBorrowedBook.genreNames?.first {
+                                    Text(genre)
+                                        .font(.caption)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(Color.teal.opacity(0.2))
+                                        .cornerRadius(8)
+                                }
+                            }
+                        }
+                        .padding(12) // Consider if this padding should be inside or outside the conditional block
+                    }
+                }
+                .padding()
+                .background(Color(.systemBackground)) // Adapts to light/dark mode
+                .cornerRadius(12)
+                .shadow(color: .black.opacity(0.05), radius: 4)
+
+                // Catalog Insights Section
+                Text("Catalog insights")
+                    .font(.headline)
+
+                HStack(spacing: 16) {
+                    NavigationLink(destination: TotalBooksDetailView()) {
+                        CatalogInsightBox(title: "Total Books", value: "\(analytics.dashboard.catalogInsights.totalBooks)")
                             .foregroundColor(.teal)
                     }
-
-                    Text(mostBorrowedBook.title)
-                        .font(.headline)
-                        .foregroundColor(.teal)
-
-                    HStack {
-                        Text("by \(mostBorrowedBook.author)")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-
-                        Spacer()
-
-                        Text(mostBorrowedBook.category)
-                            .font(.caption)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.teal.opacity(0.2))
-                            .cornerRadius(8)
+                    NavigationLink(destination: NewBooksDetailView()) {
+                        CatalogInsightBox(title: "New books", value: "\(analytics.dashboard.catalogInsights.newBooks)")
+                            .foregroundColor(.teal)
+                    }
+                    NavigationLink(destination: BorrowedBooksDetailView()) {
+                        CatalogInsightBox(title: "Borrowed", value: "\(analytics.dashboard.catalogInsights.borrowedBooks)")
+                            .foregroundColor(.teal)
                     }
                 }
-                .padding(12)
+
+                Spacer() // Pushes content to the top
             }
-            .padding()
-            .background(Color(.systemBackground))
-            .cornerRadius(12)
-            .shadow(color: .black.opacity(0.05), radius: 4)
-
-            // Catalog Insights Section
-            Text("Catalog insights")
-                .font(.headline)
-
-            HStack(spacing: 16) {
-                NavigationLink(destination: TotalBooksDetailView()) {
-                    CatalogInsightBox(title: "Total Books", value: "2000")
-                        .foregroundColor(.teal)
-                }
-                NavigationLink(destination: NewBooksDetailView()) {
-                    CatalogInsightBox(title: "New books", value: "5")
-                        .foregroundColor(.teal)
-                }
-                NavigationLink(destination: BorrowedBooksDetailView()) {
-                    CatalogInsightBox(title: "Borrowed", value: "350")
-                        .foregroundColor(.teal)
-                }
-            }
-
-            Spacer()
         }
-        .padding()
+        .padding() // Overall padding for the VStack
+        .onAppear {
+            if !hasAttemptedInitialLoad {
+                hasAttemptedInitialLoad = true
+                
+                // Silently refresh analytics in the background
+                // Note: We don't need to show loading indicator since we should already have cached data
+                fetchAnalytics()
+            }
+        }
+    }
+    
+    private func fetchAnalytics() {
+        error = nil // Clear previous errors for a new fetch attempt
+        
+        Task {
+            do {
+                // Force a network refresh to get the latest data
+                let freshAnalytics = try await AnalyticsHandler.shared.refreshAnalytics()
+                await MainActor.run {
+                    self.analyticsData = freshAnalytics
+                }
+            } catch {
+                // Only show error if we have no data at all
+                await MainActor.run {
+                    self.error = error
+                    print("Error fetching analytics: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    // Provide a placeholder analytics object for initial UI if cache is empty
+    // and before network fetch completes.
+    private var placeholderAnalytics: LibraryAnalytics {
+        LibraryAnalytics(
+            dashboard: DashboardData(
+                fineReports: FineReports(totalFines: 0, overdueBooks: 0),
+                circulationStatistics: CirculationStatistics(dailyCirculation: [], totalCirculation: 0),
+                mostBorrowedBook: nil,
+                catalogInsights: CatalogInsights(totalBooks: 0, newBooks: 0, borrowedBooks: 0)
+            ),
+            details: DetailsData(
+                fines: FinesDetail(
+                    totalFines: 0,
+                    breakdown: FineBreakdown(collected: 0, pending: 0),
+                    monthlyTrend: FineMonthlyTrend(currentMonth: 0, lastMonth: 0, twoMonthsAgo: 0, threeMonthsAgo: 0)
+                ),
+                overdueBooks: OverdueBooks(
+                    total: 0,
+                    byDuration: OverdueDuration(days1to7: 0, days8to14: 0, days15Plus: 0),
+                    byCategory: [:]
+                ),
+                circulation: CirculationDetail(
+                    total: 0,
+                    daily: [],
+                    mostBorrowedBook: nil,
+                    monthlyTrends: MonthlyTrend(currentMonth: 0, lastMonth: 0, growthRate: "0%")
+                ),
+                books: BooksDetail(
+                    total: 0,
+                    byGenre: [:],
+                    byStatus: BookStatusCounts(available: 0, borrowed: 0, reserved: 0),
+                    growthTrend: GrowthTrend(currentMonth: 0, lastMonth: 0, twoMonthsAgo: 0, threeMonthsAgo: 0)
+                ),
+                newBooks: NewBooksDetail(
+                    total: 0,
+                    recent: [],
+                    byCategory: [:]
+                ),
+                borrowedBooks: BorrowedBooksDetail(
+                    total: 0,
+                    dueDates: DueDates(overdue: 0, today: 0, thisWeek: 0, nextWeek: 0),
+                    popularCategories: [:],
+                    trend: BorrowTrend(currentMonth: 0, lastMonth: 0, twoMonthsAgo: 0, threeMonthsAgo: 0)
+                )
+            )
+        )
     }
 }
 
 // MARK: - Reusable Components
 
 struct CirculationStatsDetailView: View {
-    // Sample most borrowed book data
-    let mostBorrowedBook = (
-        title: "Computer Science Fundamentals",
-        author: "David Lee",
-        borrowCount: 42,
-        category: "Science",
-        description: "Comprehensive guide to core computer science concepts including algorithms, data structures, and computational theory."
-    )
-
+    @State private var analyticsData: LibraryAnalytics?
+    @State private var isLoading = true
+    @State private var error: Error?
+    
     var body: some View {
-        DetailViewTemplate(title: "Circulation Stats", value: "46") {
-            SectionHeaderView(title: "Daily Circulation")
-
-            let circulationData: [AdminAnalyticsView.CirculationData] = [
-                AdminAnalyticsView.CirculationData(day: "Mon", value: 9),
-                AdminAnalyticsView.CirculationData(day: "Tue", value: 10),
-                AdminAnalyticsView.CirculationData(day: "Wed", value: 15),
-                AdminAnalyticsView.CirculationData(day: "Thu", value: 12),
-            ]
-
-            Chart {
-                ForEach(circulationData) { data in
-                    BarMark(
-                        x: .value("Day", data.day),
-                        y: .value("Books", data.value)
-                    )
-                    .foregroundStyle(Color.teal)
+        Group {
+            if isLoading {
+                ProgressView("Loading details...")
+                    .onAppear {
+                        fetchAnalytics()
+                    }
+            } else if let error = error {
+                VStack {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 32))
+                        .foregroundColor(.orange)
+                    Text("Error loading data")
+                        .font(.headline)
+                    Text(error.localizedDescription)
+                        .font(.caption)
+                    Button("Retry") {
+                        fetchAnalytics()
+                    }
+                    .padding()
                 }
-            }
-            .frame(height: 200)
+            } else if let analytics = analyticsData {
+                DetailViewTemplate(title: "Circulation Stats", value: "\(analytics.details.circulation.total)") {
+                    SectionHeaderView(title: "Daily Circulation")
 
-            // Most Borrowed Book Section
-            SectionHeaderView(title: "Most Borrowed Book")
+                    Chart {
+                        ForEach(analytics.details.circulation.daily, id: \.date) { data in
+                            BarMark(
+                                x: .value("Day", data.dayOfWeek),
+                                y: .value("Books", data.count)
+                            )
+                            .foregroundStyle(Color.teal)
+                        }
+                    }
+                    .frame(height: 200)
 
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(mostBorrowedBook.title)
-                            .font(.title3)
-                            .bold()
-                            .foregroundColor(.teal)
+                    // Most Borrowed Book Section
+                    if let mostBorrowedBook = analytics.details.circulation.mostBorrowedBook {
+                        SectionHeaderView(title: "Most Borrowed Book")
 
-                        Text("by \(mostBorrowedBook.author)")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack(alignment: .top) {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(mostBorrowedBook.title)
+                                        .font(.title3)
+                                        .bold()
+                                        .foregroundColor(.teal)
+                                    
+                                    if let isbn = mostBorrowedBook.isbn {
+                                        Text("ISBN: \(isbn)")
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                    }
 
-                        Text(mostBorrowedBook.description)
-                            .font(.body)
-                            .foregroundColor(.primary)
-                            .padding(.top, 4)
+                                    if let description = mostBorrowedBook.description {
+                                        Text(description)
+                                            .font(.body)
+                                            .foregroundColor(.primary)
+                                            .padding(.top, 4)
+                                            .lineLimit(4)
+                                    }
+                                }
+
+                                Spacer()
+
+                                VStack(alignment: .trailing, spacing: 8) {
+                                    Text("\(mostBorrowedBook.borrowCount ?? 0) borrows")
+                                        .font(.headline)
+                                        .foregroundColor(.teal)
+
+                                    if let genres = mostBorrowedBook.genreNames, !genres.isEmpty {
+                                        ForEach(genres.prefix(2), id: \.self) { genre in
+                                            Text(genre)
+                                                .font(.caption)
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 4)
+                                                .background(Color.teal.opacity(0.2))
+                                                .cornerRadius(8)
+                                        }
+                                    }
+                                }
+                            }
+                            .padding()
+                            .background(Color(.secondarySystemBackground))
+                            .cornerRadius(12)
+                        }
                     }
 
-                    Spacer()
+                    SectionHeaderView(title: "Weekly Breakdown")
 
-                    VStack(alignment: .trailing, spacing: 8) {
-                        Text("\(mostBorrowedBook.borrowCount) borrows")
-                            .font(.headline)
-                            .foregroundColor(.teal)
+                    VStack(spacing: 12) {
+                        ForEach(analytics.details.circulation.daily, id: \.date) { item in
+                            DetailItemView(title: item.dayOfWeek, value: "\(item.count)")
+                        }
+                    }
 
-                        Text(mostBorrowedBook.category)
-                            .font(.caption)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.teal.opacity(0.2))
-                            .cornerRadius(8)
+                    SectionHeaderView(title: "Monthly Trends")
+
+                    VStack(spacing: 12) {
+                        DetailItemView(title: "This Month", value: "\(analytics.details.circulation.monthlyTrends.currentMonth)")
+                        DetailItemView(title: "Last Month", value: "\(analytics.details.circulation.monthlyTrends.lastMonth)")
+                        DetailItemView(title: "Growth", value: "\(analytics.details.circulation.monthlyTrends.growthRate)")
                     }
                 }
-                .padding()
-                .background(Color(.secondarySystemBackground))
-                .cornerRadius(12)
+            } else {
+                Text("No data available") // Should ideally not be reached if placeholder logic is robust
+                    .onAppear {
+                        fetchAnalytics() // Fetch if we somehow land here with no data
+                    }
             }
-
-            SectionHeaderView(title: "Weekly Breakdown")
-
-            VStack(spacing: 12) {
-                DetailItemView(title: "Monday", value: "9")
-                DetailItemView(title: "Tuesday", value: "10")
-                DetailItemView(title: "Wednesday", value: "15")
-                DetailItemView(title: "Thursday", value: "12")
-            }
-
-            SectionHeaderView(title: "Monthly Trends")
-
-            VStack(spacing: 12) {
-                DetailItemView(title: "This Month", value: "120")
-                DetailItemView(title: "Last Month", value: "150")
-                DetailItemView(title: "Growth", value: "-20%")
+        }
+        .navigationTitle("Circulation Details") // Example title
+        .navigationBarTitleDisplayMode(.inline)
+    }
+    
+    private func fetchAnalytics() {
+        isLoading = true
+        error = nil
+        
+        Task {
+            do {
+                // For detail views, it's okay to use fetchLibraryAnalytics which might return cache first
+                // if the data is very fresh, or if you prefer them to always hit network, use refreshAnalytics.
+                let analytics = try await AnalyticsHandler.shared.fetchLibraryAnalytics()
+                await MainActor.run {
+                    self.analyticsData = analytics
+                    self.isLoading = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.error = error
+                    self.isLoading = false
+                }
             }
         }
     }
 }
 
 struct TotalBooksDetailView: View {
+    @State private var analyticsData: LibraryAnalytics?
+    @State private var isLoading = true
+    @State private var error: Error?
+    
     var body: some View {
-        DetailViewTemplate(title: "Total Books", value: "2000") {
-            SectionHeaderView(title: "Collection Breakdown")
+        Group {
+            if isLoading {
+                ProgressView("Loading book details...")
+                    .onAppear {
+                        fetchAnalytics()
+                    }
+            } else if let error = error {
+                VStack {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 32))
+                        .foregroundColor(.orange)
+                    Text("Error loading data")
+                        .font(.headline)
+                    Text(error.localizedDescription)
+                        .font(.caption)
+                    Button("Retry") {
+                        fetchAnalytics()
+                    }
+                    .padding()
+                }
+            } else if let analytics = analyticsData {
+                DetailViewTemplate(title: "Total Books", value: "\(analytics.details.books.total)") {
+                    SectionHeaderView(title: "Collection Breakdown")
 
-            VStack(spacing: 12) {
-                DetailItemView(title: "Fiction", value: "800")
-                DetailItemView(title: "Non-Fiction", value: "1000")
-                DetailItemView(title: "Reference", value: "200")
+                    VStack(spacing: 12) {
+                        // Ensure byGenre is not nil and handle empty case
+                        let sortedGenres = Array(analytics.details.books.byGenre.prefix(5)).sorted(by: { $0.value > $1.value })
+                        if sortedGenres.isEmpty {
+                            Text("No genre data available.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        } else {
+                            ForEach(sortedGenres, id: \.key) { genre, count in
+                                DetailItemView(title: genre, value: "\(count)")
+                            }
+                        }
+                    }
+
+                    SectionHeaderView(title: "Book Status")
+
+                    VStack(spacing: 12) {
+                        DetailItemView(title: "Available", value: "\(analytics.details.books.byStatus.available)")
+                        DetailItemView(title: "Checked Out", value: "\(analytics.details.books.byStatus.borrowed)")
+                        DetailItemView(title: "Reserved", value: "\(analytics.details.books.byStatus.reserved)")
+                    }
+
+                    SectionHeaderView(title: "Collection Growth")
+
+                    let growthData = [
+                        AdminAnalyticsView.CirculationData(day: "Current", value: analytics.details.books.growthTrend.currentMonth),
+                        AdminAnalyticsView.CirculationData(day: "Last", value: analytics.details.books.growthTrend.lastMonth),
+                        AdminAnalyticsView.CirculationData(day: "2 mo ago", value: analytics.details.books.growthTrend.twoMonthsAgo),
+                        AdminAnalyticsView.CirculationData(day: "3 mo ago", value: analytics.details.books.growthTrend.threeMonthsAgo)
+                    ].filter { $0.value >= 0 } // Filter out potential negative placeholder if not applicable
+
+                    if growthData.isEmpty {
+                        Text("No growth data available for chart.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Chart {
+                            ForEach(growthData) { data in
+                                LineMark(
+                                    x: .value("Month", data.day),
+                                    y: .value("Books", data.value)
+                                )
+                                .foregroundStyle(Color.teal)
+                            }
+                        }
+                        .frame(height: 200)
+                    }
+                }
+            } else {
+                Text("No data available")
+                    .onAppear {
+                        fetchAnalytics()
+                    }
             }
-
-            SectionHeaderView(title: "Book Status")
-
-            VStack(spacing: 12) {
-                DetailItemView(title: "Available", value: "1650")
-                DetailItemView(title: "Checked Out", value: "350")
-                DetailItemView(title: "Reserved", value: "50")
-            }
-
-            SectionHeaderView(title: "Collection Growth")
-
-            let growthData: [AdminAnalyticsView.CirculationData] = [
-                AdminAnalyticsView.CirculationData(day: "Jan", value: 1850),
-                AdminAnalyticsView.CirculationData(day: "Feb", value: 1900),
-                AdminAnalyticsView.CirculationData(day: "Mar", value: 1950),
-                AdminAnalyticsView.CirculationData(day: "Apr", value: 2000),
-            ]
-
-            Chart {
-                ForEach(growthData) { data in
-                    LineMark(
-                        x: .value("Month", data.day),
-                        y: .value("Books", data.value)
-                    )
-                    .foregroundStyle(Color.teal)
+        }
+        .navigationTitle("Total Books Details")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+    
+    private func fetchAnalytics() {
+        isLoading = true
+        error = nil
+        Task {
+            do {
+                let analytics = try await AnalyticsHandler.shared.fetchLibraryAnalytics()
+                await MainActor.run {
+                    self.analyticsData = analytics
+                    self.isLoading = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.error = error
+                    self.isLoading = false
                 }
             }
-            .frame(height: 200)
         }
     }
 }
 
 struct NewBooksDetailView: View {
+    @State private var analyticsData: LibraryAnalytics?
+    @State private var isLoading = true
+    @State private var error: Error?
+    
     var body: some View {
-        DetailViewTemplate(title: "New Books", value: "5") {
-            SectionHeaderView(title: "Recent Additions")
+        Group {
+            if isLoading {
+                ProgressView("Loading new books...")
+                    .onAppear {
+                        fetchAnalytics()
+                    }
+            } else if let error = error {
+                VStack {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 32))
+                        .foregroundColor(.orange)
+                    Text("Error loading data")
+                        .font(.headline)
+                    Text(error.localizedDescription)
+                        .font(.caption)
+                    Button("Retry") {
+                        fetchAnalytics()
+                    }
+                    .padding()
+                }
+            } else if let analytics = analyticsData {
+                DetailViewTemplate(title: "New Books", value: "\(analytics.details.newBooks.total)") {
+                    SectionHeaderView(title: "Recent Additions")
+                    
+                    if analytics.details.newBooks.recent.isEmpty {
+                        Text("No recent additions found.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding()
+                    } else {
+                        VStack(spacing: 12) {
+                            ForEach(analytics.details.newBooks.recent.prefix(5), id: \.bookId) { book in
+                                NewBookItemView(
+                                    title: book.title,
+                                    // Consider fetching actual author names if IDs are not user-friendly
+                                    author: book.authorIds.first.map { "Author ID: \($0.uuidString.prefix(8))" } ?? "N/A",
+                                    category: book.genreNames?.first ?? "Uncategorized"
+                                )
+                            }
+                        }
+                    }
 
-            VStack(spacing: 12) {
-                NewBookItemView(title: "Computer Science Fundamentals", author: "David Lee", category: "Science")
-                NewBookItemView(title: "Modern History", author: "Sarah Johnson", category: "Humanities")
-                NewBookItemView(title: "Advanced Mathematics", author: "Michael Chen", category: "Science")
-                NewBookItemView(title: "Classic Literature", author: "Emma Roberts", category: "Humanities")
-                NewBookItemView(title: "Physics Made Simple", author: "Robert Adams", category: "Science")
+                    SectionHeaderView(title: "Categories")
+                    
+                    let sortedCategories = Array(analytics.details.newBooks.byCategory.prefix(5)).sorted(by: { $0.value > $1.value })
+                    if sortedCategories.isEmpty {
+                         Text("No category data for new books.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding()
+                    } else {
+                        VStack(spacing: 12) {
+                            ForEach(sortedCategories, id: \.key) { category, count in
+                                DetailItemView(title: category.isEmpty ? "Uncategorized" : category, value: "\(count)")
+                            }
+                        }
+                    }
+                }
+            } else {
+                Text("No data available")
+                    .onAppear {
+                        fetchAnalytics()
+                    }
             }
-
-            SectionHeaderView(title: "Categories")
-
-            VStack(spacing: 12) {
-                DetailItemView(title: "Science", value: "3")
-                DetailItemView(title: "Humanities", value: "2")
+        }
+        .navigationTitle("New Books Details")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+    
+    private func fetchAnalytics() {
+        isLoading = true
+        error = nil
+        Task {
+            do {
+                let analytics = try await AnalyticsHandler.shared.fetchLibraryAnalytics()
+                await MainActor.run {
+                    self.analyticsData = analytics
+                    self.isLoading = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.error = error
+                    self.isLoading = false
+                }
             }
         }
     }
@@ -475,11 +797,13 @@ struct NewBookItemView: View {
             Text(title)
                 .font(.headline)
                 .foregroundColor(.teal)
+                .lineLimit(2) // Ensure title doesn't take too much space
 
             HStack {
-                Text("Author: \(author)")
+                Text(author) // Changed from "Author: \(author)" as author string might already be formatted
                     .font(.subheadline)
                     .foregroundColor(.secondary)
+                    .lineLimit(1)
 
                 Spacer()
 
@@ -494,83 +818,290 @@ struct NewBookItemView: View {
         .padding()
         .background(Color(.systemBackground))
         .cornerRadius(12)
-        .shadow(color: .black.opacity(0.05), radius: 2)
+        .shadow(color: Color.black.opacity(0.05), radius: 2)
     }
 }
 
 struct BorrowedBooksDetailView: View {
+    @State private var analyticsData: LibraryAnalytics?
+    @State private var isLoading = true
+    @State private var error: Error?
+    
     var body: some View {
-        DetailViewTemplate(title: "Borrowed Books", value: "350") {
-            SectionHeaderView(title: "Due Date Breakdown")
+        Group {
+            if isLoading {
+                ProgressView("Loading borrowed books...")
+                    .onAppear {
+                        fetchAnalytics()
+                    }
+            } else if let error = error {
+                VStack {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 32))
+                        .foregroundColor(.orange)
+                    Text("Error loading data")
+                        .font(.headline)
+                    Text(error.localizedDescription)
+                        .font(.caption)
+                    Button("Retry") {
+                        fetchAnalytics()
+                    }
+                    .padding()
+                }
+            } else if let analytics = analyticsData {
+                DetailViewTemplate(title: "Borrowed Books", value: "\(analytics.details.borrowedBooks.total)") {
+                    SectionHeaderView(title: "Due Date Breakdown")
 
-            VStack(spacing: 12) {
-                DetailItemView(title: "Overdue", value: "60")
-                DetailItemView(title: "Due Today", value: "15")
-                DetailItemView(title: "Due This Week", value: "120")
-                DetailItemView(title: "Due Next Week", value: "155")
+                    VStack(spacing: 12) {
+                        DetailItemView(title: "Overdue", value: "\(analytics.details.borrowedBooks.dueDates.overdue)")
+                        DetailItemView(title: "Due Today", value: "\(analytics.details.borrowedBooks.dueDates.today)")
+                        DetailItemView(title: "Due This Week", value: "\(analytics.details.borrowedBooks.dueDates.thisWeek)")
+                        DetailItemView(title: "Due Next Week", value: "\(analytics.details.borrowedBooks.dueDates.nextWeek)")
+                    }
+
+                    SectionHeaderView(title: "Popular Categories")
+                    let sortedPopularCategories = Array(analytics.details.borrowedBooks.popularCategories.prefix(5)).sorted(by: { $0.value > $1.value })
+                    if sortedPopularCategories.isEmpty {
+                        Text("No popular categories for borrowed books.")
+                           .font(.caption)
+                           .foregroundColor(.secondary)
+                           .padding()
+                    } else {
+                        VStack(spacing: 12) {
+                            ForEach(sortedPopularCategories, id: \.key) { category, count in
+                                DetailItemView(title: category, value: "\(count)")
+                            }
+                        }
+                    }
+
+
+                    SectionHeaderView(title: "Borrowing Trend")
+
+                    let trendData = [
+                        AdminAnalyticsView.CirculationData(day: "Current", value: analytics.details.borrowedBooks.trend.currentMonth),
+                        AdminAnalyticsView.CirculationData(day: "Last", value: analytics.details.borrowedBooks.trend.lastMonth),
+                        AdminAnalyticsView.CirculationData(day: "2 mo ago", value: analytics.details.borrowedBooks.trend.twoMonthsAgo),
+                        AdminAnalyticsView.CirculationData(day: "3 mo ago", value: analytics.details.borrowedBooks.trend.threeMonthsAgo)
+                    ].filter { $0.value >= 0 }
+
+                    if trendData.isEmpty {
+                        Text("No borrowing trend data for chart.")
+                           .font(.caption)
+                           .foregroundColor(.secondary)
+                    } else {
+                        Chart {
+                            ForEach(trendData) { data in
+                                LineMark(
+                                    x: .value("Month", data.day),
+                                    y: .value("Books", data.value)
+                                )
+                                .foregroundStyle(Color.teal)
+                            }
+                        }
+                        .frame(height: 200)
+                    }
+                }
+            } else {
+                Text("No data available")
+                    .onAppear {
+                        fetchAnalytics()
+                    }
             }
-
-            SectionHeaderView(title: "Popular Categories")
-
-            VStack(spacing: 12) {
-                DetailItemView(title: "Fiction", value: "158")
-                DetailItemView(title: "Science", value: "105")
-                DetailItemView(title: "History", value: "52")
-                DetailItemView(title: "Other", value: "35")
-            }
-
-            SectionHeaderView(title: "Borrowing Trend")
-
-            let trendData: [AdminAnalyticsView.CirculationData] = [
-                AdminAnalyticsView.CirculationData(day: "Jan", value: 280),
-                AdminAnalyticsView.CirculationData(day: "Feb", value: 310),
-                AdminAnalyticsView.CirculationData(day: "Mar", value: 330),
-                AdminAnalyticsView.CirculationData(day: "Apr", value: 350),
-            ]
-
-            Chart {
-                ForEach(trendData) { data in
-                    LineMark(
-                        x: .value("Month", data.day),
-                        y: .value("Books", data.value)
-                    )
-                    .foregroundStyle(Color.teal)
+        }
+        .navigationTitle("Borrowed Books Details")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+    
+    private func fetchAnalytics() {
+        isLoading = true
+        error = nil
+        Task {
+            do {
+                let analytics = try await AnalyticsHandler.shared.fetchLibraryAnalytics()
+                await MainActor.run {
+                    self.analyticsData = analytics
+                    self.isLoading = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.error = error
+                    self.isLoading = false
                 }
             }
-            .frame(height: 200)
         }
     }
 }
 
 struct TotalFinesDetailView: View {
+    @State private var analyticsData: LibraryAnalytics?
+    @State private var isLoading = true
+    @State private var error: Error?
+    
     var body: some View {
-        DetailViewTemplate(title: "Total Fines", value: "₹640", color: .teal) {
-            SectionHeaderView(title: "Fine Breakdown")
+        Group {
+            if isLoading {
+                ProgressView("Loading fine details...")
+                    .onAppear {
+                        fetchAnalytics()
+                    }
+            } else if let error = error {
+                VStack {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 32))
+                        .foregroundColor(.orange)
+                    Text("Error loading data")
+                        .font(.headline)
+                    Text(error.localizedDescription)
+                        .font(.caption)
+                    Button("Retry") {
+                        fetchAnalytics()
+                    }
+                    .padding()
+                }
+            } else if let analytics = analyticsData {
+                DetailViewTemplate(title: "Total Fines", value: "₹\(analytics.details.fines.totalFines)", color: .teal) {
+                    SectionHeaderView(title: "Fine Breakdown")
 
-            VStack(spacing: 12) {
-                DetailItemView(title: "Collected", value: "₹540")
-                DetailItemView(title: "Pending", value: "₹100")
+                    VStack(spacing: 12) {
+                        DetailItemView(title: "Collected", value: "₹\(analytics.details.fines.breakdown.collected)")
+                        DetailItemView(title: "Pending", value: "₹\(analytics.details.fines.breakdown.pending)")
+                    }
+
+                    SectionHeaderView(title: "Monthly Collection")
+
+                    let fineData = [
+                        AdminAnalyticsView.CirculationData(day: "Current", value: analytics.details.fines.monthlyTrend.currentMonth),
+                        AdminAnalyticsView.CirculationData(day: "Last", value: analytics.details.fines.monthlyTrend.lastMonth),
+                        AdminAnalyticsView.CirculationData(day: "2 mo ago", value: analytics.details.fines.monthlyTrend.twoMonthsAgo),
+                        AdminAnalyticsView.CirculationData(day: "3 mo ago", value: analytics.details.fines.monthlyTrend.threeMonthsAgo)
+                    ].filter { $0.value >= 0 } // Assuming fines cannot be negative
+
+                    if fineData.isEmpty {
+                        Text("No monthly collection data for chart.")
+                           .font(.caption)
+                           .foregroundColor(.secondary)
+                    } else {
+                        Chart {
+                            ForEach(fineData) { data in
+                                BarMark(
+                                    x: .value("Month", data.day),
+                                    y: .value("Fines (₹)", data.value)
+                                )
+                                .foregroundStyle(Color.teal)
+                            }
+                        }
+                        .frame(height: 200)
+                    }
+                }
+            } else {
+                Text("No data available")
+                    .onAppear {
+                        fetchAnalytics()
+                    }
             }
-
-            SectionHeaderView(title: "Monthly Collection")
-
-            let fineData: [AdminAnalyticsView.CirculationData] = [
-                AdminAnalyticsView.CirculationData(day: "Jan", value: 580),
-                AdminAnalyticsView.CirculationData(day: "Feb", value: 620),
-                AdminAnalyticsView.CirculationData(day: "Mar", value: 590),
-                AdminAnalyticsView.CirculationData(day: "Apr", value: 640),
-            ]
-
-            Chart {
-                ForEach(fineData) { data in
-                    BarMark(
-                        x: .value("Month", data.day),
-                        y: .value("Fines (₹)", data.value)
-                    )
-                    .foregroundStyle(Color.teal)
+        }
+        .navigationTitle("Total Fines Details")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+    
+    private func fetchAnalytics() {
+        isLoading = true
+        error = nil
+        Task {
+            do {
+                let analytics = try await AnalyticsHandler.shared.fetchLibraryAnalytics()
+                await MainActor.run {
+                    self.analyticsData = analytics
+                    self.isLoading = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.error = error
+                    self.isLoading = false
                 }
             }
-            .frame(height: 200)
+        }
+    }
+}
+
+struct OverdueBooksDetailView: View {
+    @State private var analyticsData: LibraryAnalytics?
+    @State private var isLoading = true
+    @State private var error: Error?
+    
+    var body: some View {
+        Group {
+            if isLoading {
+                ProgressView("Loading overdue books...")
+                    .onAppear {
+                        fetchAnalytics()
+                    }
+            } else if let error = error {
+                VStack {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 32))
+                        .foregroundColor(.orange)
+                    Text("Error loading data")
+                        .font(.headline)
+                    Text(error.localizedDescription)
+                        .font(.caption)
+                    Button("Retry") {
+                        fetchAnalytics()
+                    }
+                    .padding()
+                }
+            } else if let analytics = analyticsData {
+                DetailViewTemplate(title: "Overdue Books", value: "\(analytics.details.overdueBooks.total)", color: .teal) {
+                    SectionHeaderView(title: "Overdue Breakdown")
+
+                    VStack(spacing: 12) {
+                        DetailItemView(title: "1-7 days", value: "\(analytics.details.overdueBooks.byDuration.days1to7)")
+                        DetailItemView(title: "8-14 days", value: "\(analytics.details.overdueBooks.byDuration.days8to14)")
+                        DetailItemView(title: "15+ days", value: "\(analytics.details.overdueBooks.byDuration.days15Plus)")
+                    }
+
+                    SectionHeaderView(title: "Overdue By Category")
+                    let sortedOverdueCategories = Array(analytics.details.overdueBooks.byCategory.prefix(5)).sorted(by: { $0.value > $1.value })
+                    if sortedOverdueCategories.isEmpty {
+                        Text("No overdue books by category.")
+                           .font(.caption)
+                           .foregroundColor(.secondary)
+                           .padding()
+                    } else {
+                        VStack(spacing: 12) {
+                            ForEach(sortedOverdueCategories, id: \.key) { category, count in
+                                DetailItemView(title: category.isEmpty ? "Uncategorized" : category, value: "\(count)")
+                            }
+                        }
+                    }
+                }
+            } else {
+                Text("No data available")
+                    .onAppear {
+                        fetchAnalytics()
+                    }
+            }
+        }
+        .navigationTitle("Overdue Books Details")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+    
+    private func fetchAnalytics() {
+        isLoading = true
+        error = nil
+        Task {
+            do {
+                let analytics = try await AnalyticsHandler.shared.fetchLibraryAnalytics()
+                await MainActor.run {
+                    self.analyticsData = analytics
+                    self.isLoading = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.error = error
+                    self.isLoading = false
+                }
+            }
         }
     }
 }
@@ -590,7 +1121,7 @@ struct CatalogInsightBox: View {
         .padding()
         .background(Color(.systemBackground))
         .cornerRadius(12)
-        .shadow(color: .black.opacity(0.05), radius: 4)
+        .shadow(color: Color.black.opacity(0.05), radius: 4)
     }
 }
 
@@ -609,6 +1140,8 @@ struct FineBox: View {
         .padding()
         .background(Color(.systemBackground))
         .cornerRadius(12)
+        // Removed shadow from original FineBox to match CatalogInsightBox if desired, or add shadow to CatalogInsightBox
+        // .shadow(color: .black.opacity(0.05), radius: 4)
     }
 }
 
@@ -626,20 +1159,28 @@ struct DetailViewTemplate<Content: View>: View {
     }
 
     var body: some View {
+        // Using a Group to avoid ZStack if Color is not always needed, or use ZStack conditionally
+        // For simplicity, sticking to ZStack as per original.
         ZStack {
-            Color(.systemGray6)
+            Color(.systemGray6) // Background for the whole scrollable area
                 .ignoresSafeArea()
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 20) { // Increased spacing for sections
                     DetailHeaderBox(title: title, value: value, color: color)
-                    content()
+                    
+                    // Group content to apply consistent padding or background if needed
+                    VStack(alignment: .leading, spacing: 16) {
+                        content()
+                    }
+                    .padding(.horizontal) // Horizontal padding for content sections
+                    
                 }
-                .padding()
+                .padding(.vertical) // Vertical padding for the entire scroll content
             }
         }
-        .navigationTitle(title)
-        .navigationBarTitleDisplayMode(.inline)
+        // .navigationTitle(title) // This is already set by the caller view
+        // .navigationBarTitleDisplayMode(.inline)
     }
 }
 
@@ -668,7 +1209,8 @@ struct DetailHeaderBox: View {
         .padding(.vertical, 24)
         .background(Color(.systemBackground))
         .cornerRadius(12)
-        .shadow(color: .black.opacity(0.05), radius: 4)
+        .shadow(color: Color.black.opacity(0.05), radius: 4)
+        .padding(.horizontal) // Added horizontal padding to the header box
     }
 }
 
@@ -677,9 +1219,8 @@ struct SectionHeaderView: View {
 
     var body: some View {
         Text(title)
-            .font(.headline)
-            .padding(.top, 16)
-            .padding(.bottom, 8)
+            .font(.title2.weight(.semibold)) // Made it a bit more prominent
+            .padding(.vertical, 8) // Adjusted padding
     }
 }
 
@@ -698,6 +1239,7 @@ struct DetailItemView: View {
         HStack {
             Text(title)
                 .font(.body)
+                .foregroundColor(.primary)
 
             Spacer()
 
@@ -714,40 +1256,8 @@ struct DetailItemView: View {
             }
         }
         .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(color: .black.opacity(0.05), radius: 2)
-    }
-}
-
-struct OverdueBooksDetailView: View {
-    var body: some View {
-        DetailViewTemplate(title: "Overdue Books", value: "60", color: .teal) {
-            SectionHeaderView(title: "Overdue Breakdown")
-
-            VStack(spacing: 12) {
-                DetailItemView(title: "1-7 days", value: "35")
-                DetailItemView(title: "8-14 days", value: "15")
-                DetailItemView(title: "15+ days", value: "10")
-            }
-
-            SectionHeaderView(title: "Overdue By Category")
-
-            VStack(spacing: 12) {
-                DetailItemView(title: "Fiction", value: "40")
-                DetailItemView(title: "Non-Fiction", value: "15")
-                DetailItemView(title: "Reference", value: "5")
-            }
-        }
-    }
-}
-
-// MARK: - Detail View Components (keep all existing detail views)
-
-// ... [Keep all the existing Detail View implementations] ...
-
-struct HomeViewAdmin_Previews: PreviewProvider {
-    static var previews: some View {
-        HomeViewAdmin()
+        .background(Color(.secondarySystemBackground)) // Slightly different background for items
+        .cornerRadius(10) // Slightly different corner radius
+        // .shadow(color: .black.opacity(0.05), radius: 2) // Shadow can be optional
     }
 }
