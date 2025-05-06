@@ -65,6 +65,7 @@ class SignupModel: ObservableObject {
     }
     
     @Published var destination: LoginDestination?
+    @Published var showTwoFactorAuth: Bool = false
     
     func nextStep() {
         if currentStep < 4 {
@@ -157,8 +158,7 @@ class SignupModel: ObservableObject {
             DispatchQueue.main.async {
                 self.isLoading = false
                 if success {
-                    // Set the destination based on the role
-                    self.destination = .member
+                    // Do not set destination here. Instead, showTwoFactorAuth will be set in LibrarySelectionView.
                 } else {
                     self.showError = true
                     self.errorMessage = "Failed to save user data"
