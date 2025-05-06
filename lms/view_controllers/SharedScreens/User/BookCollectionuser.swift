@@ -134,9 +134,9 @@ struct BookCollectionuser: View {
         }
         .onAppear(){
             Task{
-                let borrows = try await BorrowHandler.shared.getBorrows()
+                let reservations = try await ReservationHandler.shared.getReservations()
                 //get books from borrows
-                requestedBooks = borrows.compactMap(\.book)
+                requestedBooks = reservations.compactMap(\.book)
             }
         }
         .background(ReusableBackground(colorScheme: colorScheme))
