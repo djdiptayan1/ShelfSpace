@@ -1,5 +1,5 @@
 //
-//  ManageViewLibrarian.swift
+//  RequestViewLibrarian.swift
 //  lms
 //
 //  Created by admin16 on 01/05/25.
@@ -7,139 +7,53 @@
 
 import SwiftUI
 import AVFoundation
+import UIKit
 
-// MARK: - Data Models
+// MARK: - Main View
 
-enum RequestType: String {
+enum BorrowRequestType: String, CaseIterable {
     case checkOut = "Check Out"
     case checkIn = "Check In"
 }
 
-struct BookRequest: Identifiable, Equatable {
-    let id: UUID
-    let type: RequestType
-    let book: BookModel
-    let user: User
-    let requestDate: Date
-    let dueDate: Date?
-    
-    static func == (lhs: BookRequest, rhs: BookRequest) -> Bool {
-        return lhs.id == rhs.id
-    }
-}
-
-// MARK: - Main View
-
 struct RequestViewLibrarian: View {
     @Environment(\.colorScheme) private var colorScheme
-    @State private var selectedSegment: RequestType = .checkOut
+    @State private var selectedSegment: BorrowRequestType = .checkOut
     @State private var showCamera = false
-    @State private var selectedRequest: BookRequest?
+    @State private var selectedBorrow: BorrowModel?
     @State private var scannedBarcode: String = ""
     @State private var searchText = ""
     @State private var showAlert = false
     @State private var alertMessage = ""
     @State private var cameraPermissionGranted = false
-    @State private var requestToDelete: BookRequest?
+    @State private var borrowToDelete: BorrowModel?
     @State private var showDeleteConfirmation = false
-    
-    // Dummy data
-    @State private var allRequests: [BookRequest] = [
-        // Sample check-out request
-        BookRequest(
-            id: UUID(),
-            type: .checkOut,
-            book: BookModel(
-                id: UUID(),
-                libraryId: UUID(),
-                title: "The Great Gatsby",
-                isbn: "9781907308000",
-                description: "Classic novel",
-                totalCopies: 5,
-                availableCopies: 3,
-                reservedCopies: 2,
-                authorIds: [UUID()],
-                authorNames: ["F. Scott Fitzgerald"],
-                genreIds: [UUID()],
-                genreNames: ["Classics"],
-                publishedDate: Date(),
-                addedOn: Date(),
-                updatedAt: Date(),
-                coverImageUrl: nil,
-                coverImageData: nil
-            ),
-            user: User(
-                id: UUID(),
-                email: "john@example.com",
-                role: .member,
-                name: "John Doe",
-                is_active: true,
-                library_id: "LIB123",
-                borrowed_book_ids: [],
-                reserved_book_ids: [],
-                wishlist_book_ids: [],
-                created_at: "2023-01-01",
-                updated_at: "2023-01-01",
-                profileImage: nil
-            ),
-            requestDate: Date(),
-            dueDate: Calendar.current.date(byAdding: .day, value: 14, to: Date())
-        ),
-        
-        // Sample check-in request
-        BookRequest(
-            id: UUID(),
-            type: .checkIn,
-            book: BookModel(
-                id: UUID(),
-                libraryId: UUID(),
-                title: "To Kill a Mockingbird",
-                isbn: "9780061120084",
-                description: "American classic",
-                totalCopies: 7,
-                availableCopies: 4,
-                reservedCopies: 3,
-                authorIds: [UUID()],
-                authorNames: ["Harper Lee"],
-                genreIds: [UUID()],
-                genreNames: ["Classics"],
-                publishedDate: Date(),
-                addedOn: Date(),
-                updatedAt: Date(),
-                coverImageUrl: nil,
-                coverImageData: nil
-            ),
-            user: User(
-                id: UUID(),
-                email: "jane@example.com",
-                role: .member,
-                name: "Jane Smith",
-                is_active: true,
-                library_id: "LIB123",
-                borrowed_book_ids: [],
-                reserved_book_ids: [],
-                wishlist_book_ids: [],
-                created_at: "2023-01-01",
-                updated_at: "2023-01-01",
-                profileImage: nil
-            ),
-            requestDate: Date(timeIntervalSinceNow: -86400 * 7),
-            dueDate: Date(timeIntervalSinceNow: -86400) // Overdue by 1 day
-        )
-    ]
-    
-    var filteredRequests: [BookRequest] {
-        let segmentFiltered = allRequests.filter { $0.type == selectedSegment }
+    @State private var isLoading = false
+    @State private var borrowRequests: [BorrowModel] = []
+    @State private var fetchError: String?
+    @State private var showCheckInOutModal = false
+    @State private var checkInOutMode: CheckInOutModalView.Mode = .checkOut
+    @State private var isProcessingCheckout = false
+    @State private var checkoutResultMessage: String? = nil
+
+    var filteredBorrowRequests: [BorrowModel] {
+        let filtered: [BorrowModel]
+        switch selectedSegment {
+        case .checkOut:
+            filtered = borrowRequests.filter { $0.status == .requested }
+        case .checkIn:
+            filtered = borrowRequests.filter { $0.status == .borrowed || $0.status == .overdue }
+        }
         
         if searchText.isEmpty {
-            return segmentFiltered
+            return filtered
         }
         
         let lowercasedSearch = searchText.lowercased()
-        return segmentFiltered.filter {
-            $0.user.name.lowercased().contains(lowercasedSearch) ||
-            $0.book.title.lowercased().contains(lowercasedSearch) ||
-            ($0.book.isbn?.lowercased().contains(lowercasedSearch) ?? false)
+        return filtered.filter {
+            ($0.book?.title.lowercased().contains(lowercasedSearch) ?? false) ||
+            ($0.book?.isbn?.lowercased().contains(lowercasedSearch) ?? false) ||
+            ($0.book?.description?.lowercased().contains(lowercasedSearch) ?? false)
         }
     }
     
@@ -148,59 +62,54 @@ struct RequestViewLibrarian: View {
             ZStack {
                 ReusableBackground(colorScheme: colorScheme)
                 
-                VStack(spacing: 0) {
+                VStack(spacing: 16) {
                     // Search Bar
-                    HStack {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundColor(.gray)
-                        TextField("Search users or books...", text: $searchText)
-                            .autocapitalization(.none)
-                            .disableAutocorrection(true)
-                        if !searchText.isEmpty {
-                            Button(action: { searchText = "" }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.gray)
-                            }
-                        }
-                    }
-                    .padding(10)
-                    .background(Color(.systemBackground))
-                    .cornerRadius(10)
-                    .padding(.horizontal)
+                    searchBar
                     
                     // Segmented Control
-                    Picker("Request Type", selection: $selectedSegment) {
-                        ForEach([RequestType.checkOut, RequestType.checkIn], id: \.self) { type in
-                            Text(type.rawValue).tag(type)
-                        }
-                    }
-                    .pickerStyle(SegmentedPickerStyle())
+                    segmentedControl
+                        .padding(.horizontal)
+                        .padding(.bottom, 8)
+                    
+                    // Request Count
+                    requestCountView
                     .padding(.horizontal)
                     
                     // Request List
-                    List {
-                        ForEach(filteredRequests) { request in
-                            RequestCardView(request: request) {
-                                selectedRequest = request
-                            }
-                            .swipeActions(edge: .trailing) {
-                                Button(role: .destructive) {
-                                    requestToDelete = request
-                                    showDeleteConfirmation = true
-                                } label: {
-                                    Label("Reject", systemImage: "trash")
+                    requestList
+                }
+                .padding(.top)
+                // --- Check In/Out Modal ---
+                .sheet(isPresented: $showCheckInOutModal, onDismiss: { selectedBorrow = nil }) {
+                    if let borrow = selectedBorrow {
+                        CheckInOutModalView(
+                            borrow: borrow,
+                            mode: checkInOutMode,
+                            onComplete: { success in
+                                if success {
+                                    borrowRequests.removeAll { $0.id == borrow.id }
                                 }
+                                showCheckInOutModal = false
+                                selectedBorrow = nil
                             }
-                        }
+                        )
                     }
-                    .listStyle(PlainListStyle())
                 }
             }
             .navigationTitle("Book Requests")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: fetchBorrowRequests) {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 16, weight: .medium))
+                    }
+                }
+            }
             .sheet(isPresented: $showCamera) {
-                if let request = selectedRequest {
+                if let borrow = selectedBorrow {
                     BarcodeScannerView(scannedCode: $scannedBarcode) { barcode in
-                        handleScannedBarcode(barcode, for: request)
+                        handleScannedBarcode(barcode, for: borrow)
                     }
                 }
             }
@@ -212,48 +121,178 @@ struct RequestViewLibrarian: View {
             .alert("Confirm Rejection", isPresented: $showDeleteConfirmation) {
                 Button("Cancel", role: .cancel) {}
                 Button("Reject", role: .destructive) {
-                    if let request = requestToDelete {
-                        withAnimation {
-                            allRequests.removeAll { $0.id == request.id }
+                    if let borrow = borrowToDelete {
+                        Task {
+                            do {
+                                try await BorrowHandler.shared.cancelBorrow(borrow.id)
+                                await MainActor.run {
+                                    borrowRequests.removeAll { $0.id == borrow.id }
+                                }
+                            } catch {
+                                await MainActor.run {
+                                    alertMessage = "Failed to reject request: \(error.localizedDescription)"
+                                    showAlert = true
+                                }
+                            }
                         }
                     }
                 }
             } message: {
                 Text("Are you sure you want to reject this request? This action cannot be undone.")
             }
-            .onChange(of: selectedRequest) { newValue in
+            .onChange(of: selectedBorrow) { newValue in
                 if newValue != nil {
                     checkCameraPermission()
                 }
             }
+            .onAppear {
+                fetchBorrowRequests()
+            }
         }
     }
     
-    private func handleScannedBarcode(_ barcode: String, for request: BookRequest) {
-        if barcode == request.book.isbn {
-            withAnimation {
-                // Remove the original request
-                allRequests.removeAll { $0.id == request.id }
-                
-                // If it was a check-out, create a check-in request
-                if request.type == .checkOut {
-                    let newRequest = BookRequest(
-                        id: UUID(),
-                        type: .checkIn,
-                        book: request.book,
-                        user: request.user,
-                        requestDate: Date(),
-                        dueDate: request.dueDate
-                    )
-                    allRequests.append(newRequest)
+    // MARK: - View Components
+    
+    private var searchBar: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.gray)
+                .padding(.leading, 8)
+            
+            TextField("Search by title, ISBN or description...", text: $searchText)
+                .autocapitalization(.none)
+                .disableAutocorrection(true)
+            
+            if !searchText.isEmpty {
+                Button(action: { searchText = "" }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.gray)
+                        .padding(.trailing, 8)
                 }
             }
-            alertMessage = "Book successfully \(request.type == .checkOut ? "checked out" : "checked in")"
+        }
+        .padding(10)
+        .background(Color(.systemBackground))
+        .cornerRadius(10)
+        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+        .padding(.horizontal)
+    }
+    
+    private var segmentedControl: some View {
+        Picker("Request Type", selection: $selectedSegment) {
+            ForEach(BorrowRequestType.allCases, id: \.self) { type in
+                Text(type.rawValue).tag(type)
+            }
+        }
+        .pickerStyle(SegmentedPickerStyle())
+    }
+    
+    private var requestCountView: some View {
+        HStack {
+            Text("\(filteredBorrowRequests.count) \(filteredBorrowRequests.count == 1 ? "request" : "requests") found")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            Spacer()
+        }
+    }
+    
+    private var requestList: some View {
+        Group {
+            if isLoading {
+                VStack {
+                    Spacer()
+                    ProgressView("Loading requests...")
+                    Spacer()
+                }
+            } else if let error = fetchError {
+                VStack {
+                    Spacer()
+                    VStack(spacing: 12) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.largeTitle)
+                            .foregroundColor(.red)
+                        Text("Error")
+                            .font(.headline)
+                        Text(error)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                        Button("Try Again") {
+                            fetchBorrowRequests()
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .padding(.top)
+                    }
+                    .padding()
+                    Spacer()
+                }
+            } else if filteredBorrowRequests.isEmpty {
+                VStack {
+                    Spacer()
+                    VStack(spacing: 12) {
+                        Image(systemName: selectedSegment == .checkOut ? "tray" : "book.closed")
+                            .font(.system(size: 50))
+                            .foregroundColor(.gray)
+                        Text("No \(selectedSegment.rawValue) Requests")
+                            .font(.headline)
+                        Text("There are no \(selectedSegment == .checkOut ? "check out" : "check in") requests at this time.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding()
+                    Spacer()
+                }
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 16) {
+                        ForEach(filteredBorrowRequests) { borrow in
+                            BorrowRequestCardView(
+                                borrow: borrow,
+                                type: selectedSegment,
+                                onProcess: {
+                                    selectedBorrow = borrow
+                                    checkInOutMode = (selectedSegment == .checkOut ? .checkOut : .checkIn)
+                                    showCheckInOutModal = true
+                                },
+                                onReject: {
+                                    borrowToDelete = borrow
+                                    showDeleteConfirmation = true
+                                }
+                            )
+                            .padding(.horizontal)
+                        }
+                    }
+                    .padding(.vertical)
+                }
+                .scrollIndicators(.hidden)
+            }
+        }
+    }
+
+    // MARK: - Helper Methods
+    
+    private func handleScannedBarcode(_ barcode: String, for borrow: BorrowModel) {
+        guard let book = borrow.book else {
+            alertMessage = "Book data missing."
+            showAlert = true
+            return
+        }
+        
+        let bookIsbn = book.isbn ?? ""
+        
+        if barcode == bookIsbn {
+            // Here you would call the API to process the check out/in
+            // For now, just remove from the list and show success
+            withAnimation {
+                borrowRequests.removeAll { $0.id == borrow.id }
+            }
+            alertMessage = selectedSegment == .checkOut ? "Book successfully checked out" : "Book successfully checked in"
             showAlert = true
             showCamera = false
-            selectedRequest = nil
+            selectedBorrow = nil
         } else {
-            alertMessage = "Wrong book scanned. Expected ISBN: \(request.book.isbn ?? "")"
+            alertMessage = "Wrong book scanned. Expected ISBN: \(bookIsbn)"
             showAlert = true
         }
     }
@@ -265,7 +304,6 @@ struct RequestViewLibrarian: View {
             DispatchQueue.main.async {
                 showCamera = true
             }
-            
         case .notDetermined:
             AVCaptureDevice.requestAccess(for: .video) { granted in
                 DispatchQueue.main.async {
@@ -275,123 +313,292 @@ struct RequestViewLibrarian: View {
                     } else {
                         alertMessage = "Camera access required for scanning"
                         showAlert = true
-                        selectedRequest = nil
+                        selectedBorrow = nil
                     }
                 }
             }
-            
         default:
             DispatchQueue.main.async {
                 alertMessage = "Please enable camera access in Settings"
                 showAlert = true
-                selectedRequest = nil
+                selectedBorrow = nil
+            }
+        }
+    }
+
+    private func fetchBorrowRequests() {
+        isLoading = true
+        fetchError = nil
+        
+        Task {
+            do {
+                let borrows = try await BorrowHandler.shared.getBorrows()
+                // Debug print to verify book object
+                if let first = borrows.first {
+                    print("DEBUG: First borrow: \(first)")
+                    print("DEBUG: First borrow.book: \(String(describing: first.book))")
+                }
+                await MainActor.run {
+                    self.borrowRequests = borrows
+                    self.isLoading = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.fetchError = error.localizedDescription
+                    self.isLoading = false
+                }
             }
         }
     }
 }
 
-// MARK: - Request Card View (unchanged)
+// MARK: - Borrow Request Card View
 
-struct RequestCardView: View {
-    let request: BookRequest
-    let action: () -> Void
+struct BorrowRequestCardView: View {
+    let borrow: BorrowModel
+    let type: BorrowRequestType
+    let onProcess: () -> Void
+    let onReject: () -> Void
+    
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Book Info
-            HStack(alignment: .top) {
-                if let coverData = request.book.coverImageData,
-                   let uiImage = UIImage(data: coverData) {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 60, height: 90)
-                        .cornerRadius(4)
-                } else {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.gray.opacity(0.3))
-                        .frame(width: 60, height: 90)
-                        .overlay(
-                            Image(systemName: "book.closed")
-                                .foregroundColor(.gray)
-                        )
-                }
+        VStack(alignment: .leading, spacing: 0) {
+            // Book Info Section (No User Info Bar to avoid UserModel issues)
+            bookInfoSection
+            
+            // Status Bar
+            statusBar
+            
+            // Action Buttons
+            buttonSection
+        }
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+    }
+    
+    // MARK: - Component Views
+    
+    // Removed userInfoBar to avoid UserModel decoding issues
+    
+    private var bookInfoSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // User & Status Header
+            HStack {
+                // We're not using user.name directly to avoid UserModel decoding issues
+                Text("Request ID: \(borrow.id.uuidString.prefix(8))...")
+                    .font(.system(size: 14, weight: .medium))
                 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(request.book.title)
+                Spacer()
+                
+                statusBadge
+            }
+            .padding()
+            
+            Divider()
+            
+            HStack(alignment: .top, spacing: 16) {
+                // Book Cover
+                bookCover
+                
+                // Book Details
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(borrow.book?.title ?? "Unknown Title")
                         .font(.headline)
                         .lineLimit(2)
                     
-                    if let authors = request.book.authorNames {
-                        Text("by \(authors.joined(separator: ", "))")
-                            .font(.subheadline)
+                    if let isbn = borrow.book?.isbn {
+                        HStack {
+                            Image(systemName: "barcode")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text(isbn)
+                                .font(.caption)
                             .foregroundColor(.secondary)
+                        }
                     }
                     
-                    if let isbn = request.book.isbn {
-                        Text("ISBN: \(isbn)")
+                    if let availableCopies = borrow.book?.availableCopies,
+                       let totalCopies = borrow.book?.totalCopies {
+                        HStack {
+                            Image(systemName: "books.vertical")
                             .font(.caption)
                             .foregroundColor(.secondary)
+                            Text("\(availableCopies) of \(totalCopies) available")
+                                .font(.caption)
+                                .foregroundColor(availableCopies > 0 ? .green : .red)
+                        }
                     }
+                    
+                    // Request Dates
+                    dateView
                 }
-                Spacer()
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .padding(.horizontal)
+            .padding(.vertical, 12)
+        }
+    }
+    
+    private var statusBar: some View {
+        HStack {
+            Text("Request Status:")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
             
-            // User Info
-            HStack {
-                if let userImageData = request.user.profileImage,
-                   let uiImage = UIImage(data: userImageData) {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 36, height: 36)
-                        .clipShape(Circle())
-                } else {
-                    Image(systemName: "person.crop.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(.blue)
-                }
-                
-                VStack(alignment: .leading) {
-                    Text(request.user.name)
-                        .font(.subheadline)
-                    Text("ID: \(request.user.id.uuidString.prefix(8))")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
                 Spacer()
-                
-                // Fine Indicator
-                VStack(alignment: .trailing) {
-                    Text("Fine").font(.caption2)
-                    Text("₹\(request.dueDate ?? Date() < Date() ? "50.00" : "0.00")")
-                        .foregroundColor(request.dueDate ?? Date() < Date() ? .red : .green)
-                }
-            }
             
-            // Dates
-            if let dueDate = request.dueDate {
+            Text(statusText)
+                .font(.subheadline.bold())
+                .foregroundColor(borrow.status == .overdue ? .red : (borrow.status == .requested ? .orange : .blue))
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 8)
+        .background(colorScheme == .dark ? Color.black.opacity(0.3) : Color.gray.opacity(0.1))
+    }
+    
+    private var buttonSection: some View {
+        HStack(spacing: 12) {
+            Button(action: onProcess) {
                 HStack {
-                    Text("Due Date:").font(.caption)
-                    Text(dueDate.formatted(date: .abbreviated, time: .omitted))
-                        .foregroundColor(dueDate < Date() ? .red : .primary)
+                    Image(systemName: type == .checkOut ? "arrow.right.doc.on.clipboard" : "arrow.left.doc.on.clipboard")
+                    Text(type == .checkOut ? "Check Out" : "Check In")
                 }
-            }
-            
-            // Action Button
-            Button(action: action) {
-                Text(request.type == .checkOut ? "Process Check Out" : "Process Check In")
-                    .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
             }
             .buttonStyle(.borderedProminent)
-            .tint(request.dueDate ?? Date() < Date() ? .orange : .blue)
+            .tint(.blue)
+            
+            Button(action: onReject) {
+            HStack {
+                    Image(systemName: "xmark")
+                    Text("Reject")
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+            }
+            .buttonStyle(.bordered)
+            .foregroundColor(.red)
         }
         .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(10)
-        .shadow(radius: 2)
+    }
+    
+    // MARK: - Supporting Views
+    
+    private var bookCover: some View {
+        Group {
+            if let coverUrl = borrow.book?.coverImageUrl, let url = URL(string: coverUrl) {
+                AsyncImage(url: url) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color.gray.opacity(0.2))
+                }
+                .frame(width: 80, height: 120)
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.gray.opacity(0.3), lineWidth: 0.5)
+                )
+                .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+            } else {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.gray.opacity(0.2))
+                    .frame(width: 80, height: 120)
+                    .overlay(
+                        Image(systemName: "book.closed")
+                            .font(.system(size: 30))
+                            .foregroundColor(.gray)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.gray.opacity(0.3), lineWidth: 0.5)
+                    )
+            }
+        }
+    }
+    
+    private var dateView: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Divider()
+                .padding(.vertical, 4)
+            
+            HStack {
+                Image(systemName: "calendar")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                
+                Text("Requested: \(borrow.borrow_date.formatted(date: .numeric, time: .shortened))")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            if let returnDate = borrow.return_date {
+                HStack {
+                    Image(systemName: "calendar.badge.clock")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    
+                    Text("Due: \(returnDate.formatted(date: .numeric, time: .omitted))")
+                        .font(.caption)
+                        .foregroundColor(borrow.status == .overdue ? .red : .secondary)
+                }
+            }
+        }
+    }
+    
+    private var statusBadge: some View {
+        Text(borrow.status.rawValue.capitalized)
+            .font(.system(size: 12, weight: .medium))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                Capsule()
+                    .fill(statusColor.opacity(0.2))
+            )
+            .foregroundColor(statusColor)
+    }
+    
+    // MARK: - Helper Properties
+    
+    private var statusColor: Color {
+        switch borrow.status {
+        case .requested:
+            return .orange
+        case .borrowed:
+            return .blue
+        case .overdue:
+            return .red
+        case .returned:
+            return .green
+        }
+    }
+    
+    private var statusText: String {
+        switch borrow.status {
+        case .requested:
+            return "Waiting for Approval"
+        case .borrowed:
+            return "Currently Borrowed"
+        case .overdue:
+            return "Overdue"
+        case .returned:
+            return "Returned"
+        }
+    }
+    
+    // Add a simple helper to get book ISBN safely
+    private var bookIsbn: String {
+        return borrow.book?.isbn ?? "No ISBN"
     }
 }
+
+// MARK: - Previews
 
 struct RequestViewLibrarian_Previews: PreviewProvider {
     static var previews: some View {
