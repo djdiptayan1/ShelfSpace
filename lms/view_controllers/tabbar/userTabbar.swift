@@ -12,6 +12,7 @@ struct UserTabbar: View {
     @State private var selectedTab = 0
     @Environment(\.colorScheme) private var colorScheme
     @StateObject private var themeManager = ThemeManager()
+    @EnvironmentObject private var appState: AppState
     var body: some View {
         TabView(selection: $selectedTab) {
             HomeView()
@@ -43,5 +44,5 @@ struct UserTabbar: View {
     }
 }
 #Preview {
-    UserTabbar()
+    UserTabbar().environmentObject(AppState())
 }
