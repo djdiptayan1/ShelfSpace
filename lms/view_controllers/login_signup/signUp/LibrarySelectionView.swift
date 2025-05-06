@@ -161,6 +161,7 @@ struct LibrarySelectionView: View {
                 if viewModel.isStep4Valid {
                     viewModel.completeSignup { success in
                         if success {
+                            viewModel.showTwoFactorAuth = true
                         }
                     }
                 } else {
