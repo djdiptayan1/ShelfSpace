@@ -13,7 +13,7 @@ struct TwoFactorAuthView: View {
     @State private var isVerifying: Bool = false
     @State private var showError: Bool = false
     @State private var errorMessage: String = ""
-    @State private var remainingTime: Int = 60
+    @State private var remainingTime: Int = 30
     @State private var isResending: Bool = false
     @State private var isGeneratingOTP: Bool = false
     
