@@ -375,6 +375,15 @@ struct CopyManagementStepper: View {
     @Binding var value: Int
     let range: ClosedRange<Int>
     @Environment(\.colorScheme) private var colorScheme
+    @State private var textInput: String = ""
+    @FocusState private var isTextFieldFocused: Bool
+
+    init(title: String, value: Binding<Int>, range: ClosedRange<Int>) {
+        self.title = title
+        self._value = value
+        self.range = range
+        self._textInput = State(initialValue: "\(value.wrappedValue)")
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -384,11 +393,10 @@ struct CopyManagementStepper: View {
                 .foregroundColor(Color.text(for: colorScheme))
 
             HStack {
-                Spacer()
-                
                 Button(action: {
                     if value > range.lowerBound {
                         value -= 1
+                        textInput = "\(value)"
                     }
                 }) {
                     Image(systemName: "minus")
@@ -403,12 +411,15 @@ struct CopyManagementStepper: View {
                 }
                 .disabled(value <= range.lowerBound)
                 
-                Text("\(value)")
+                TextField("\(value)", text: $textInput)
+                    .focused($isTextFieldFocused)
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.center)
                     .font(.title3)
                     .fontWeight(.semibold)
-                    .frame(minWidth: 50)
+                    .frame(minWidth: 60)
                     .frame(height: 40)
-                    .padding(.horizontal, 15)
+                    .padding(.horizontal, 10)
                     .background(
                         RoundedRectangle(cornerRadius: 10)
                             .fill(Color.gray.opacity(0.08))
@@ -417,10 +428,43 @@ struct CopyManagementStepper: View {
                         RoundedRectangle(cornerRadius: 10)
                             .stroke(Color.gray.opacity(0.2), lineWidth: 1)
                     )
+                    .onChange(of: textInput) { newValue in
+                        // Only allow numeric input
+                        let filtered = newValue.filter { "0123456789".contains($0) }
+                        if filtered != newValue {
+                            textInput = filtered
+                        }
+                        
+                        // Update the value if the input is valid
+                        if let newIntValue = Int(filtered), range.contains(newIntValue) {
+                            value = newIntValue
+                        } else if filtered.isEmpty {
+                            // Leave the text field empty but don't update value
+                        } else if let newIntValue = Int(filtered) {
+                            // If number is out of range, clamp it
+                            value = max(min(newIntValue, range.upperBound), range.lowerBound)
+                            
+                            // Update the text field to match the clamped value
+                            if !isTextFieldFocused {
+                                textInput = "\(value)"
+                            }
+                        }
+                    }
+                    .onSubmit {
+                        // Make sure the textfield shows the current value when submitted
+                        if textInput.isEmpty {
+                            textInput = "\(value)"
+                        } else if let inputValue = Int(textInput) {
+                            let clampedValue = max(min(inputValue, range.upperBound), range.lowerBound)
+                            value = clampedValue
+                            textInput = "\(clampedValue)"
+                        }
+                    }
 
                 Button(action: {
                     if value < range.upperBound {
                         value += 1
+                        textInput = "\(value)"
                     }
                 }) {
                     Image(systemName: "plus")
@@ -434,8 +478,6 @@ struct CopyManagementStepper: View {
                         )
                 }
                 .disabled(value >= range.upperBound)
-                
-                Spacer()
             }
             .padding(.vertical, 6)
         }
@@ -446,6 +488,10 @@ struct CopyManagementStepper: View {
                 .fill(Color.gray.opacity(0.03))
         )
         .padding(.vertical, 4)
+        .onAppear {
+            // Ensure the text input is synchronized with the value on first appearance
+            textInput = "\(value)"
+        }
     }
 }
 
@@ -513,7 +559,7 @@ struct FormDatePicker: View {
                 .padding()
                 .background(
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.gray.opacity(0.08)) 
+                        .fill(Color.gray.opacity(0.08))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
