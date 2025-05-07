@@ -338,6 +338,9 @@ struct HomeViewLibrarian: View {
     @State private var prefetchedLibrary: Library? = nil
     @State private var isPrefetchingProfile = false
     @State private var prefetchError: String? = nil
+    @State private var isEditingBook = false
+    @State private var editingBookId: UUID? = nil
+    @State private var showImagePicker = false
     
     @State private var showProfileSheet = false
 
@@ -384,25 +387,6 @@ struct HomeViewLibrarian: View {
             ZStack {
                 ReusableBackground(colorScheme: colorScheme)
                 VStack(spacing: 0) {
-                    // Custom header with "Infosys Library" title and profile button
-//                    HStack {
-//                        Text((prefetchedLibrary?.name ?? "loading..."))
-//                            .font(.largeTitle)
-//                            .fontWeight(.bold)
-//                            .foregroundColor(Color(UIColor.label))
-//                        Spacer()
-//                        Button(action: {
-//                            isShowingProfile = true
-//                        }) {
-//                            Image(systemName: "person.circle.fill")
-//                                .resizable()
-//                                .frame(width: 36, height: 36)
-//                                .foregroundColor(.red)
-//                        }
-//                    }
-//                    .padding(.horizontal)
-//                    .padding(.top, 10)
-//                    .padding(.bottom, 8)
                     headerSection
                         .padding(.bottom, 12)
 
@@ -423,12 +407,34 @@ struct HomeViewLibrarian: View {
                                         books: filteredBooks,
                                         colorScheme: colorScheme,
                                         onEdit: { book in
-                                            bookToEdit = book
-                                            showingAddBookSheet = true
+                                            bookData = BookAddViewAdmin.bookData(from: book)
+                                            // Load cover image from URL if needed
+                                            if bookData.bookCover == nil, let urlStringRaw = book.coverImageUrl {
+                                                let urlString = urlStringRaw.hasPrefix("http://") ? urlStringRaw.replacingOccurrences(of: "http://", with: "https://") : urlStringRaw
+                                                if let url = URL(string: urlString) {
+                                                    print("[DEBUG] (BookViewAdmin) Attempting to load cover image from URL: \(urlString)")
+                                                    Task {
+                                                        do {
+                                                            let (data, _) = try await URLSession.shared.data(from: url)
+                                                            if let image = UIImage(data: data) {
+                                                                print("[DEBUG] (BookViewAdmin) Successfully loaded cover image from URL")
+                                                                await MainActor.run {
+                                                                    bookData.bookCover = image
+                                                                }
+                                                            } else {
+                                                                print("[DEBUG] (BookViewAdmin) Failed to create UIImage from data")
+                                                            }
+                                                        } catch {
+                                                            print("[DEBUG] (BookViewAdmin) Failed to load cover image from URL: \(error)")
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            editingBookId = book.id
+                                            isEditingBook = true
                                         },
                                         onDelete: deleteBook
-                                    )
-                                }
+                                    )                            }
                             }
                         }
                         .padding(.top)
@@ -463,16 +469,73 @@ struct HomeViewLibrarian: View {
             .task {
                 await prefetchProfileData()
             }
+//            .sheet(isPresented: $showingAddBookSheet) {
+//                NavigationView {
+//                    if let book = bookToEdit {
+//                        // Use the same BookAddViewAdmin but pass the book to edit
+//                        BookAddViewAdmin(bookToEdit: book, onSave: { updatedBook in
+//                            updateBook(updatedBook)
+//                        })
+//                        .navigationTitle("Edit Book")
+//                        .navigationBarItems(trailing: Button("Cancel") {
+//                            showingAddBookSheet = false
+//                        })
+//                    } else {
+//                        BookAddViewAdmin(onSave: { newBook in
+//                            addNewBook(newBook)
+//                        })
+//                        .navigationTitle("Add New Book")
+//                        .navigationBarItems(trailing: Button("Cancel") {
+//                            showingAddBookSheet = false
+//                        })
+//                    }
+//                }
+//            }
             .sheet(isPresented: $showingAddBookSheet) {
-                if let bookToEdit = bookToEdit {
-                    Text("Edit Book")
-                        .font(.headline)
-                        .padding()
-                } else {
-                    BookAddViewAdmin(onSave: { newBook in
-                        addNewBook(newBook)
-                    })
-                }
+                BookAddViewLibrarian(onSave: { newBook in
+                    addNewBook(newBook)
+                })
+            }
+            .sheet(isPresented: $isEditingBook) {
+                BookDetailsStep(
+                    bookData: $bookData,
+                    showImagePicker: $showImagePicker,
+                    isLoading: $isLoading,
+                    onSave: {
+                        Task {
+                            isLoading = true
+                            defer { isLoading = false }
+                            
+                            let updatedBook = BookModel(
+                                id: editingBookId ?? UUID(),
+                                libraryId: bookData.libraryId ?? UUID(),
+                                title: bookData.bookTitle,
+                                isbn: bookData.isbn,
+                                description: bookData.description,
+                                totalCopies: bookData.totalCopies,
+                                availableCopies: bookData.availableCopies,
+                                reservedCopies: bookData.reservedCopies,
+                                authorIds: bookData.authorIds,
+                                authorNames: bookData.authorNames,
+                                genreIds: bookData.genreIds,
+                                genreNames: bookData.genreNames,
+                                publishedDate: bookData.publishedDate,
+                                coverImageUrl: bookData.bookCoverUrl,
+                                coverImageData: bookData.bookCover?.jpegData(compressionQuality: 0.8)
+                            )
+                            
+                            do {
+                                let apiBook = try await updateBookAPI(book: updatedBook)
+                                updateBook(apiBook)
+                                isEditingBook = false
+                                editingBookId = nil
+                            } catch {
+                                errorMessage = error.localizedDescription
+                                showError = true
+                            }
+                        }
+                    }
+                )
             }
             .sheet(isPresented: $isShowingProfile) {
                 Group {
@@ -630,6 +693,14 @@ struct HomeViewLibrarian: View {
     private func addNewBook(_ book: BookModel) {
         withAnimation {
             books.append(book)
+        }
+    }
+    
+    private func updateBook(_ updatedBook: BookModel) {
+        if let index = books.firstIndex(where: { $0.id == updatedBook.id }) {
+            withAnimation {
+                books[index] = updatedBook
+            }
         }
     }
 

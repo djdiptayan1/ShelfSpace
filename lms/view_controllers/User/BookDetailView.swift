@@ -6,20 +6,7 @@ struct BookDetailView: View {
     @Environment(\.presentationMode) var presentationMode
 
     // State to track book status (you might want to move this to your Book model)
-    private var bookStatus: BookStatus {
-        if isBorrowed{
-            return .reading
-        }
-        if isReserved{
-            return .requested
-        }
-        if book.availableCopies == 0{
-            return .notAvailable
-        }else{
-            return .available
-        }
-        return .loading
-    }
+    @State private var bookStatus: BookStatus = .loading
     // Add rating state
     @State private var userRating: Int = 0
 
@@ -41,14 +28,8 @@ struct BookDetailView: View {
     @State private var isBorrowLoading: Bool = false
     @State private var borrow:BorrowModel?
     @State private var reservation:ReservationModel?
-    private var isBorrowed:Bool{
-        if user == nil{ return false}
-        return user!.borrowed_book_ids.contains(book.id)
-    }
-    private var isReserved:Bool{
-        if user == nil{ return false}
-        return user!.reserved_book_ids.contains(book.id)
-    }
+    @State private var isBorrowed = false
+    @State private var isReserved = false
 
     var body: some View {
         
@@ -236,16 +217,45 @@ struct BookDetailView: View {
                 }
             }
             .onAppear {
-                if let cachedUser = UserCacheManager.shared.getCachedUser() {
-                    self.isBookmarked = cachedUser.wishlist_book_ids.contains(book.id)
-                }
                 loadCoverImage()
             }
             .onAppear(){
                 Task{
                     self.isBorrowLoading = true
                     user = try await LoginManager.shared.getCurrentUser()
+                    if let user = user{
+                        self.isBookmarked = user.wishlist_book_ids.contains(book.id)
+                        isReserved = user.reserved_book_ids.contains(book.id)
+                        isBorrowed = user.borrowed_book_ids.contains(book.id)
+                        if isBorrowed{
+                            bookStatus =  .reading
+                        }
+                        if isReserved{
+                            bookStatus =  .requested
+                        }
+                    }
                     self.isBorrowLoading = false
+                    if !isReserved && !isBorrowed{
+                        
+                        
+                        if book.availableCopies == 0{
+                            bookStatus =  .notAvailable
+                        }else{
+                            bookStatus = .available
+                        }
+                    }
+                }
+            }
+            .onAppear(){
+                Task{
+                    if let borrow = try await BorrowHandler.shared.getBorrowForBookId(book.id){
+                        if borrow.status == .borrowed{
+                            bookStatus = .reading
+                        }
+                        else{
+                            bookStatus = .completed(dueDate: Date())
+                        }
+                    }
                 }
             }
             .navigationBarHidden(true)
@@ -377,10 +387,13 @@ struct BookDetailView: View {
                     }
                     do {
                         reservation = try await ReservationHandler.shared.reserve(bookId: book.id)
-                        if user != nil {
-                            user?.reserved_book_ids.append(book.id)
-                            UserCacheManager.shared.cacheUser(user!)
+                        if var user  = user {
+                            user.reserved_book_ids.append(book.id)
+                            UserCacheManager.shared.cacheUser(user)
+                            self.user = user
                         }
+                        isReserved = true
+                        bookStatus = .requested
                         withAnimation(.easeOut(duration: 0.3)) {
                             isBorrowLoading = false
                         }
@@ -397,13 +410,18 @@ struct BookDetailView: View {
                         isBorrowLoading = true
                     }
                     do {
-                        try await ReservationHandler.shared.cancelReservation(reservation!.id)
+                        let reservation = try await ReservationHandler.shared.getReservationForBookId(book.id)
+                        if reservation != nil {
+                            try await ReservationHandler.shared.cancelReservation(reservation!.id)
+                        }
                         if user != nil {
                             if let index = user!.reserved_book_ids.firstIndex(of: book.id) {
                                 user!.reserved_book_ids.remove(at: index)
                             }
                             UserCacheManager.shared.cacheUser(user!)
                         }
+                        isReserved = false
+                        bookStatus = .available
                         withAnimation(.easeOut(duration: 0.3)) {
                             isBorrowLoading = false
                         }

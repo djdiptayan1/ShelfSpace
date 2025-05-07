@@ -243,6 +243,8 @@ struct HomeView: View {
     // Header Section
     private func loadBooks() async {
         isLoading = true
+        self.newArrivals = BookHandler.shared.getCachedData() ?? []
+        self.topSelling = BookHandler.shared.getCachedData() ?? []
         fetchBooks { result in
             defer { isLoading = false }
 
@@ -253,7 +255,7 @@ struct HomeView: View {
                 for book in fetchedBooks where book.coverImageUrl != nil {
                     self.preloadBookCover(for: book)
                 }
-            case let .failure(_):
+            case .failure(_):
                 //                    self.errorMessage = error.localizedDescription
                 //                    self.showError = true
                 break
@@ -315,8 +317,31 @@ struct HomeView: View {
                         Color.primary(for: colorScheme).opacity(0.8))
             }
         }
-        .task{
-            await prefetchProfileData()
+        .onAppear(){
+            Task{
+                await prefetchProfileData()
+            }
+        }
+        .onAppear(){
+            Task{
+                guard
+                    let currentUser = try await LoginManager.shared.getCurrentUser()
+                        
+                else {
+                    throw NSError(
+                        domain: "HomeView", code: 404,
+                        userInfo: [
+                            NSLocalizedDescriptionKey:
+                                "No current user session found."
+                        ])
+                }
+                self.prefetchedUser = currentUser
+                if let newUser = await LoginManager.shared.FetchUser(){
+                    self.prefetchedUser = newUser
+                    UserCacheManager.shared.cacheUser(newUser)
+                }
+            }
+
         }
         .padding(.horizontal)
         .sheet(isPresented: $showProfileSheet) {
@@ -363,6 +388,7 @@ struct HomeView: View {
         do {
             guard
                 let currentUser = try await LoginManager.shared.getCurrentUser()
+                    
             else {
                 throw NSError(
                     domain: "HomeView", code: 404,
@@ -371,12 +397,10 @@ struct HomeView: View {
                             "No current user session found."
                     ])
             }
-
             let libraryData = try await fetchLibraryData(
                 libraryId: currentUser.library_id)
 
             await MainActor.run {
-                self.prefetchedUser = currentUser
                 self.prefetchedLibrary = libraryData
                 self.isPrefetchingProfile = false
             }

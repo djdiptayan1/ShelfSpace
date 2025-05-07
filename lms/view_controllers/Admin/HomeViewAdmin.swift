@@ -36,6 +36,7 @@ struct HomeViewAdmin: View {
     @State private var library: Library?
     @State private var libraryName: String = "Library loading..." // This might be redundant if prefetchedLibrary.name is used for navigation title
     @State private var showProfileSheet = false
+    @State private var analyticsRefreshID = UUID() // Used to trigger refresh in AdminAnalyticsView
 
     init(prefetchedUser: User? = nil, prefetchedLibrary: Library? = nil) {
         self.prefetchedUser = prefetchedUser
@@ -56,7 +57,11 @@ struct HomeViewAdmin: View {
                 ReusableBackground(colorScheme: colorScheme)
 
                 ScrollView {
-                    AdminAnalyticsView()
+                    AdminAnalyticsView(refreshID: analyticsRefreshID)
+                }
+                .refreshable {
+                    // Pull to refresh: update the refreshID to trigger a refresh in AdminAnalyticsView
+                    analyticsRefreshID = UUID()
                 }
                 // Use prefetchedLibrary.name if available, otherwise the state variable, then fallback
                 .navigationTitle(prefetchedLibrary?.name ?? libraryName)
@@ -194,7 +199,10 @@ struct ProfileIcon: View {
                 .frame(width: 36, height: 36)
         }
         .padding([.trailing], 20)
-        .padding([.top], 5) // Consider if this top padding is needed with large titles
+        .padding([.top], 5)
+        .accessibilityLabel("Profile")
+        .accessibilityHint("Opens the profile sheet")
+        .accessibilityAddTraits(.isButton)
     }
 }
 
@@ -212,6 +220,7 @@ struct AdminAnalyticsView: View {
     @State private var isLoading = false 
     @State private var error: Error?
     @State private var hasAttemptedInitialLoad = false
+    let refreshID: UUID // Add this property to trigger refresh
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -224,19 +233,22 @@ struct AdminAnalyticsView: View {
                         Image(systemName: "exclamationmark.triangle")
                             .font(.system(size: 32))
                             .foregroundColor(.orange)
+                            .accessibilityHidden(true)
                         Text("Failed to refresh analytics")
                             .font(.headline)
                         Text(error.localizedDescription)
                             .font(.caption)
                             .multilineTextAlignment(.center)
                         Button("Retry") {
-                            fetchAnalytics()
+                            fetchAnalytics(forceRefresh: true)
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
                         .background(Color.teal)
                         .foregroundColor(.white)
                         .cornerRadius(8)
+                        .accessibilityLabel("Retry")
+                        .accessibilityHint("Attempts to reload the data")
                     }
                     Spacer()
                 }
@@ -253,11 +265,15 @@ struct AdminAnalyticsView: View {
                 HStack(spacing: 16) {
                     NavigationLink(destination: TotalFinesDetailView()) {
                         FineBox(title: "Total fines", value: "₹\(analytics.dashboard.fineReports.totalFines)")
-                            .foregroundColor(.teal) // Consider if .foregroundColor is needed on FineBox itself or its content
+                            .foregroundColor(.teal)
+                            .accessibilityLabel("Total fines, ₹\(analytics.dashboard.fineReports.totalFines)")
+                            .accessibilityHint("View details about total fines")
                     }
                     NavigationLink(destination: OverdueBooksDetailView()) {
                         FineBox(title: "Overdue books", value: "\(analytics.dashboard.fineReports.overdueBooks)")
-                            .foregroundColor(.teal) // Same as above
+                            .foregroundColor(.teal)
+                            .accessibilityLabel("Overdue books, \(analytics.dashboard.fineReports.overdueBooks) books")
+                            .accessibilityHint("View details about overdue books")
                     }
                 }
 
@@ -288,6 +304,8 @@ struct AdminAnalyticsView: View {
                             }
                         }
                         .frame(height: 150)
+                        .accessibilityLabel("Circulation statistics chart")
+                        .accessibilityValue("Shows daily circulation for the past week")
                     }
 
                     // Most borrowed book info
@@ -343,14 +361,20 @@ struct AdminAnalyticsView: View {
                     NavigationLink(destination: TotalBooksDetailView()) {
                         CatalogInsightBox(title: "Total Books", value: "\(analytics.dashboard.catalogInsights.totalBooks)")
                             .foregroundColor(.teal)
+                            .accessibilityLabel("Total books, \(analytics.dashboard.catalogInsights.totalBooks) books")
+                            .accessibilityHint("View details about total books")
                     }
                     NavigationLink(destination: NewBooksDetailView()) {
                         CatalogInsightBox(title: "New books", value: "\(analytics.dashboard.catalogInsights.newBooks)")
                             .foregroundColor(.teal)
+                            .accessibilityLabel("New books, \(analytics.dashboard.catalogInsights.newBooks) books")
+                            .accessibilityHint("View details about new books")
                     }
                     NavigationLink(destination: BorrowedBooksDetailView()) {
                         CatalogInsightBox(title: "Borrowed", value: "\(analytics.dashboard.catalogInsights.borrowedBooks)")
                             .foregroundColor(.teal)
+                            .accessibilityLabel("Borrowed books, \(analytics.dashboard.catalogInsights.borrowedBooks) books")
+                            .accessibilityHint("View details about borrowed books")
                     }
                 }
 
@@ -361,26 +385,29 @@ struct AdminAnalyticsView: View {
         .onAppear {
             if !hasAttemptedInitialLoad {
                 hasAttemptedInitialLoad = true
-                
-                // Silently refresh analytics in the background
-                // Note: We don't need to show loading indicator since we should already have cached data
                 fetchAnalytics()
             }
         }
+        .onChange(of: refreshID) { _ in
+            // When refreshID changes, force a refresh from the API
+            fetchAnalytics(forceRefresh: true)
+        }
     }
     
-    private func fetchAnalytics() {
+    private func fetchAnalytics(forceRefresh: Bool = false) {
         error = nil // Clear previous errors for a new fetch attempt
-        
         Task {
             do {
-                // Force a network refresh to get the latest data
-                let freshAnalytics = try await AnalyticsHandler.shared.refreshAnalytics()
+                let freshAnalytics: LibraryAnalytics
+                if forceRefresh {
+                    freshAnalytics = try await AnalyticsHandler.shared.refreshAnalytics()
+                } else {
+                    freshAnalytics = try await AnalyticsHandler.shared.fetchLibraryAnalytics()
+                }
                 await MainActor.run {
                     self.analyticsData = freshAnalytics
                 }
             } catch {
-                // Only show error if we have no data at all
                 await MainActor.run {
                     self.error = error
                     print("Error fetching analytics: \(error.localizedDescription)")
@@ -457,6 +484,7 @@ struct CirculationStatsDetailView: View {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.system(size: 32))
                         .foregroundColor(.orange)
+                        .accessibilityHidden(true)
                     Text("Error loading data")
                         .font(.headline)
                     Text(error.localizedDescription)
@@ -465,6 +493,8 @@ struct CirculationStatsDetailView: View {
                         fetchAnalytics()
                     }
                     .padding()
+                    .accessibilityLabel("Retry")
+                    .accessibilityHint("Attempts to reload the data")
                 }
             } else if let analytics = analyticsData {
                 DetailViewTemplate(title: "Circulation Stats", value: "\(analytics.details.circulation.total)") {
@@ -480,6 +510,8 @@ struct CirculationStatsDetailView: View {
                         }
                     }
                     .frame(height: 200)
+                    .accessibilityLabel("Circulation statistics chart")
+                    .accessibilityValue("Shows daily circulation for the past week")
 
                     // Most Borrowed Book Section
                     if let mostBorrowedBook = analytics.details.circulation.mostBorrowedBook {
@@ -600,6 +632,7 @@ struct TotalBooksDetailView: View {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.system(size: 32))
                         .foregroundColor(.orange)
+                        .accessibilityHidden(true)
                     Text("Error loading data")
                         .font(.headline)
                     Text(error.localizedDescription)
@@ -608,6 +641,8 @@ struct TotalBooksDetailView: View {
                         fetchAnalytics()
                     }
                     .padding()
+                    .accessibilityLabel("Retry")
+                    .accessibilityHint("Attempts to reload the data")
                 }
             } else if let analytics = analyticsData {
                 DetailViewTemplate(title: "Total Books", value: "\(analytics.details.books.total)") {
@@ -709,6 +744,7 @@ struct NewBooksDetailView: View {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.system(size: 32))
                         .foregroundColor(.orange)
+                        .accessibilityHidden(true)
                     Text("Error loading data")
                         .font(.headline)
                     Text(error.localizedDescription)
@@ -717,6 +753,8 @@ struct NewBooksDetailView: View {
                         fetchAnalytics()
                     }
                     .padding()
+                    .accessibilityLabel("Retry")
+                    .accessibilityHint("Attempts to reload the data")
                 }
             } else if let analytics = analyticsData {
                 DetailViewTemplate(title: "New Books", value: "\(analytics.details.newBooks.total)") {
@@ -797,10 +835,10 @@ struct NewBookItemView: View {
             Text(title)
                 .font(.headline)
                 .foregroundColor(.teal)
-                .lineLimit(2) // Ensure title doesn't take too much space
+                .lineLimit(2)
 
             HStack {
-                Text(author) // Changed from "Author: \(author)" as author string might already be formatted
+                Text(author)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
@@ -819,6 +857,8 @@ struct NewBookItemView: View {
         .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.05), radius: 2)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Book: \(title), Author: \(author), Category: \(category)")
     }
 }
 
@@ -839,6 +879,7 @@ struct BorrowedBooksDetailView: View {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.system(size: 32))
                         .foregroundColor(.orange)
+                        .accessibilityHidden(true)
                     Text("Error loading data")
                         .font(.headline)
                     Text(error.localizedDescription)
@@ -847,6 +888,8 @@ struct BorrowedBooksDetailView: View {
                         fetchAnalytics()
                     }
                     .padding()
+                    .accessibilityLabel("Retry")
+                    .accessibilityHint("Attempts to reload the data")
                 }
             } else if let analytics = analyticsData {
                 DetailViewTemplate(title: "Borrowed Books", value: "\(analytics.details.borrowedBooks.total)") {
@@ -949,6 +992,7 @@ struct TotalFinesDetailView: View {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.system(size: 32))
                         .foregroundColor(.orange)
+                        .accessibilityHidden(true)
                     Text("Error loading data")
                         .font(.headline)
                     Text(error.localizedDescription)
@@ -957,6 +1001,8 @@ struct TotalFinesDetailView: View {
                         fetchAnalytics()
                     }
                     .padding()
+                    .accessibilityLabel("Retry")
+                    .accessibilityHint("Attempts to reload the data")
                 }
             } else if let analytics = analyticsData {
                 DetailViewTemplate(title: "Total Fines", value: "₹\(analytics.details.fines.totalFines)", color: .teal) {
@@ -1041,6 +1087,7 @@ struct OverdueBooksDetailView: View {
                     Image(systemName: "exclamationmark.triangle")
                         .font(.system(size: 32))
                         .foregroundColor(.orange)
+                        .accessibilityHidden(true)
                     Text("Error loading data")
                         .font(.headline)
                     Text(error.localizedDescription)
@@ -1049,6 +1096,8 @@ struct OverdueBooksDetailView: View {
                         fetchAnalytics()
                     }
                     .padding()
+                    .accessibilityLabel("Retry")
+                    .accessibilityHint("Attempts to reload the data")
                 }
             } else if let analytics = analyticsData {
                 DetailViewTemplate(title: "Overdue Books", value: "\(analytics.details.overdueBooks.total)", color: .teal) {
@@ -1122,6 +1171,8 @@ struct CatalogInsightBox: View {
         .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.05), radius: 4)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title), \(value)")
     }
 }
 
@@ -1140,8 +1191,8 @@ struct FineBox: View {
         .padding()
         .background(Color(.systemBackground))
         .cornerRadius(12)
-        // Removed shadow from original FineBox to match CatalogInsightBox if desired, or add shadow to CatalogInsightBox
-        // .shadow(color: .black.opacity(0.05), radius: 4)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title), \(value)")
     }
 }
 
@@ -1219,8 +1270,9 @@ struct SectionHeaderView: View {
 
     var body: some View {
         Text(title)
-            .font(.title2.weight(.semibold)) // Made it a bit more prominent
-            .padding(.vertical, 8) // Adjusted padding
+            .font(.title2.weight(.semibold))
+            .padding(.vertical, 8)
+            .accessibilityAddTraits(.isHeader)
     }
 }
 
@@ -1256,8 +1308,9 @@ struct DetailItemView: View {
             }
         }
         .padding()
-        .background(Color(.secondarySystemBackground)) // Slightly different background for items
-        .cornerRadius(10) // Slightly different corner radius
-        // .shadow(color: .black.opacity(0.05), radius: 2) // Shadow can be optional
+        .background(Color(.secondarySystemBackground))
+        .cornerRadius(10)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(percentage != nil ? "\(title), \(value), \(percentage!)" : "\(title), \(value)")
     }
 }
