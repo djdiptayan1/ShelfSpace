@@ -71,6 +71,28 @@ struct BookViewAdmin: View {
                                     colorScheme: colorScheme,
                                     onEdit: { book in
                                         bookData = BookAddViewAdmin.bookData(from: book)
+                                        // Load cover image from URL if needed
+                                        if bookData.bookCover == nil, let urlStringRaw = book.coverImageUrl {
+                                            let urlString = urlStringRaw.hasPrefix("http://") ? urlStringRaw.replacingOccurrences(of: "http://", with: "https://") : urlStringRaw
+                                            if let url = URL(string: urlString) {
+                                                print("[DEBUG] (BookViewAdmin) Attempting to load cover image from URL: \(urlString)")
+                                                Task {
+                                                    do {
+                                                        let (data, _) = try await URLSession.shared.data(from: url)
+                                                        if let image = UIImage(data: data) {
+                                                            print("[DEBUG] (BookViewAdmin) Successfully loaded cover image from URL")
+                                                            await MainActor.run {
+                                                                bookData.bookCover = image
+                                                            }
+                                                        } else {
+                                                            print("[DEBUG] (BookViewAdmin) Failed to create UIImage from data")
+                                                        }
+                                                    } catch {
+                                                        print("[DEBUG] (BookViewAdmin) Failed to load cover image from URL: \(error)")
+                                                    }
+                                                }
+                                            }
+                                        }
                                         editingBookId = book.id
                                         isEditingBook = true
                                     },
