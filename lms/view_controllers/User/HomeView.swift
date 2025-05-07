@@ -22,7 +22,7 @@ struct HomeView: View {
     // MARK: - Properties
     @State private var searchText = ""
     @State private var showSearchResults = false
-    @State private var selectedGenre: String? = nil
+    @State private var selectedGenres: Set<String> = []
     @State private var showProfileSheet = false
     @Environment(\.colorScheme) private var colorScheme
 
@@ -39,9 +39,9 @@ struct HomeView: View {
         return newArrivals
     }
 
-    // Filtered books based on search text or selected genre
+    // Filtered books based on search text or selected genres
     var filteredBooks: [BookModel] {
-        if searchText.isEmpty && selectedGenre == nil {
+        if searchText.isEmpty && selectedGenres.isEmpty {
             return allBooks
         }
 
@@ -51,8 +51,8 @@ struct HomeView: View {
                 || book.title.lowercased().contains(searchText.lowercased())
 
             let matchesGenre =
-                selectedGenre == nil
-                || book.genreNames!.contains { $0 == selectedGenre }
+                selectedGenres.isEmpty
+                || !selectedGenres.isDisjoint(with: book.genreNames ?? [])
 
             return matchesSearch && matchesGenre
         }
@@ -89,7 +89,7 @@ struct HomeView: View {
                     VStack(spacing: 0) {
                         // Sticky header with search
                         VStack(spacing: 16) {
-                            if !showSearchResults && selectedGenre == nil {
+                            if !showSearchResults && selectedGenres.isEmpty {
                                 headerSection
                             }
 
@@ -97,53 +97,38 @@ struct HomeView: View {
                                 text: $searchText,
                                 onCommit: {
                                     withAnimation {
-                                        showSearchResults = !searchText.isEmpty
+                                        showSearchResults = !searchText.isEmpty || !selectedGenres.isEmpty
                                     }
                                 },
                                 onClear: {
                                     withAnimation {
                                         searchText = ""
-                                        showSearchResults = false
-                                        selectedGenre = nil
+                                        showSearchResults = !selectedGenres.isEmpty
                                     }
                                 }
                             )
+                            .onChange(of: searchText) { _ in
+                                // Real-time search as user types
+                                withAnimation {
+                                    showSearchResults = !searchText.isEmpty || !selectedGenres.isEmpty
+                                }
+                            }
 
-                            // Display selected genre as chip if any
-                            if let genre = selectedGenre {
+                            // Remove the separate selected genres section and only show Clear All
+                            if !selectedGenres.isEmpty {
                                 HStack {
-                                    Text("Filtering by: ")
-                                        .foregroundColor(
-                                            Color.text(for: colorScheme))
-
-                                    Text(genre)
-                                        .font(.subheadline)
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 5)
-                                        .background(
-                                            Color.primary(for: colorScheme)
-                                                .opacity(0.2)
-                                        )
-                                        .foregroundColor(
-                                            Color.text(for: colorScheme)
-                                        )
-                                        .cornerRadius(8)
-
+                                    Spacer()
+                                    
                                     Button(action: {
                                         withAnimation {
-                                            selectedGenre = nil
-                                            showSearchResults = false
-                                            searchText = ""
+                                            selectedGenres = []
+                                            showSearchResults = !searchText.isEmpty
                                         }
                                     }) {
-                                        Image(systemName: "xmark.circle.fill")
-                                            .foregroundColor(
-                                                Color.secondary(
-                                                    for: colorScheme
-                                                ).opacity(0.7))
+                                        Text("Clear All")
+                                            .font(.system(size: 15))
+                                            .foregroundColor(Color.primary(for: colorScheme))
                                     }
-
-                                    Spacer()
                                 }
                                 .padding(.horizontal)
                             }
@@ -160,10 +145,72 @@ struct HomeView: View {
                         .zIndex(1)
 
                         // Content based on search/filter state
-                        if showSearchResults || selectedGenre != nil {
-                            SearchResultsView(
-                                books: filteredBooks, geometry: geometry,
-                                colorScheme: colorScheme)
+                        if showSearchResults || !selectedGenres.isEmpty {
+                            ScrollView {
+                                VStack(spacing: 0) {
+                                    // Always include the categories section in the scrollable area
+                                    categoriesSection.padding(.top)
+                                    
+                                    // Search results view
+                                    VStack {
+                                        if filteredBooks.isEmpty {
+                                            VStack(spacing: 16) {
+                                                Image(systemName: "magnifyingglass")
+                                                    .resizable()
+                                                    .scaledToFit()
+                                                    .frame(width: 60, height: 60)
+                                                    .foregroundColor(Color.secondary(for: colorScheme))
+
+                                                Text("No books found")
+                                                    .font(.headline)
+                                                    .foregroundColor(Color.text(for: colorScheme))
+
+                                                Text(
+                                                    "Try searching with different keywords or browse categories"
+                                                )
+                                                .font(.subheadline)
+                                                .multilineTextAlignment(.center)
+                                                .foregroundColor(Color.text(for: colorScheme).opacity(0.7))
+                                                .padding(.horizontal)
+                                            }
+                                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                            .padding()
+                                        } else {
+                                            VStack(alignment: .leading, spacing: 8) {
+                                                Text("Search Results")
+                                                    .font(.title2)
+                                                    .fontWeight(.bold)
+                                                    .padding(.horizontal)
+
+                                                Text(
+                                                    "Found \(filteredBooks.count) book\(filteredBooks.count > 1 ? "s" : "")"
+                                                )
+                                                .font(.subheadline)
+                                                .foregroundColor(
+                                                    Color.text(for: colorScheme).opacity(0.7)
+                                                )
+                                                .padding(.horizontal)
+
+                                                LazyVStack(spacing: 16) {
+                                                    ForEach(filteredBooks) { book in
+                                                        NavigationLink(
+                                                            destination: BookDetailView(book: book)
+                                                        ) {
+                                                            SearchResultCard(
+                                                                book: book, colorScheme: colorScheme
+                                                            )
+                                                            .padding(.horizontal)
+                                                        }
+                                                        .buttonStyle(PlainButtonStyle())
+                                                    }
+                                                }
+                                                .padding(.vertical)
+                                            }
+                                            .padding(.vertical)
+                                        }
+                                    }
+                                }
+                            }
                         } else {
                             // Regular home view content
                             ScrollView {
@@ -249,7 +296,7 @@ struct HomeView: View {
     private var headerSection: some View {
         HStack {
             VStack(alignment: .leading) {
-                Text("Welcome " + (prefetchedUser != nil ? prefetchedUser!.name : "loading..."))
+                Text("Welcome ," + (prefetchedUser != nil ? prefetchedUser!.name : "loading..."))
                     .font(.headline)
                     .foregroundColor(Color.text(for: colorScheme))
                 Text((prefetchedLibrary?.name ?? "loading..."))
@@ -386,33 +433,66 @@ struct HomeView: View {
     // MARK: - SECTION FOR CATEGORIES
 
     private var categoriesSection: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
-                ForEach(categories, id: \.self) { category in
-                    Button(action: {
-                        withAnimation {
-                            selectedGenre = category.displayName
-                            showSearchResults = true
-                        }
-                    }) {
-                        VStack(spacing: 5) {
-                            Image(systemName: category.iconName)
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: 25, height: 25)
-                                .foregroundColor(
-                                    Color.primary(for: colorScheme))
-
-                            Text(category.displayName)
-                                .font(.subheadline)
-                                .foregroundColor(Color.text(for: colorScheme))
-                        }
-                        .padding(.vertical, 12)
-                        .padding(.horizontal, 18)
+        VStack(alignment: .leading, spacing: 0) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    // First show selected genres
+                    ForEach(categories.filter { selectedGenres.contains($0.displayName) }, id: \.self) { category in
+                        genreButton(for: category)
+                    }
+                    
+                    // Then show unselected genres
+                    ForEach(categories.filter { !selectedGenres.contains($0.displayName) }, id: \.self) { category in
+                        genreButton(for: category)
                     }
                 }
+                .padding(.horizontal)
             }
-            .padding(.horizontal)
+            .scrollDisabled(false) // Ensure horizontal scroll is enabled
+            .frame(height: 80) // Fixed height to prevent vertical stretching
+        }
+    }
+    
+    // Helper method to create consistent genre buttons
+    private func genreButton(for category: BookGenre) -> some View {
+        Button(action: {
+            withAnimation {
+                if selectedGenres.contains(category.displayName) {
+                    selectedGenres.remove(category.displayName)
+                } else {
+                    selectedGenres.insert(category.displayName)
+                }
+                
+                // Don't change the view, just update the filter
+                // Only show search results if we have filters active
+                showSearchResults = !selectedGenres.isEmpty || !searchText.isEmpty
+            }
+        }) {
+            VStack(spacing: 5) {
+                Image(systemName: category.iconName)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 25, height: 25)
+                    .foregroundColor(
+                        selectedGenres.contains(category.displayName) ?
+                            Color.primary(for: colorScheme) :
+                            Color.primary(for: colorScheme).opacity(0.7))
+
+                Text(category.displayName)
+                    .font(.subheadline)
+                    .foregroundColor(
+                        selectedGenres.contains(category.displayName) ?
+                            Color.text(for: colorScheme) :
+                            Color.text(for: colorScheme).opacity(0.8))
+            }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 18)
+            .background(
+                selectedGenres.contains(category.displayName) ?
+                    Color.primary(for: colorScheme).opacity(0.15) :
+                    Color.clear
+            )
+            .cornerRadius(8)
         }
     }
 
@@ -523,6 +603,7 @@ struct SearchResultsView: View {
     let books: [BookModel]
     let geometry: GeometryProxy
     let colorScheme: ColorScheme
+    let showCategories: Bool
 
     var body: some View {
         VStack {
@@ -1290,3 +1371,4 @@ struct HomeView_Previews: PreviewProvider {
         }
     }
 }
+
