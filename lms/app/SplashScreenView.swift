@@ -118,16 +118,10 @@ struct SplashScreenView: View {
                     if let user = try await LoginManager.shared.getCurrentUser() {
                         // Cache the user data immediately
                         UserCacheManager.shared.cacheUser(user)
-                        
+                        let token = try KeychainManager.shared.getToken()
+                        print("fetching libraries with token: \(token)")
                         // Prefetch library data
                         let libraryData = try await LoginManager.shared.fetchLibraryData(libraryId: user.library_id)
-                        
-                        // Prefetch analytics data with await to ensure it's fully loaded
-                        // This is a blocking call, but it's ok during splash screen
-                        print("Loading analytics data during splash screen...")
-                        let _ = try await AnalyticsHandler.shared.fetchLibraryAnalytics()
-                        analyticsLoaded = true
-                        print("Analytics data loaded!")
                         
                         await MainActor.run {
                             appState.currentUser = user
@@ -135,6 +129,13 @@ struct SplashScreenView: View {
                             appState.currentLibrary = libraryData
                             appState.isLoggedIn = true
                         }
+                        // Prefetch analytics data with await to ensure it's fully loaded
+                        // This is a blocking call, but it's ok during splash screen
+                        print("Loading analytics data during splash screen...")
+                        let _ = try await AnalyticsHandler.shared.fetchLibraryAnalytics()
+                        analyticsLoaded = true
+                        print("Analytics data loaded!")
+                        
                     }
                 } catch {
                     await MainActor.run {
