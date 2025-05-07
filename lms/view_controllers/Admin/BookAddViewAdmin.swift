@@ -42,6 +42,25 @@ struct BookAddViewAdmin: View {
                 Color.clear.onAppear {
                     if let book = bookToEdit {
                         bookData = BookAddViewAdmin.bookData(from: book)
+                        if bookData.bookCover == nil, let urlString = book.coverImageUrl, let url = URL(string: urlString) {
+                            print("[DEBUG] Attempting to load cover image from URL: \(urlString)")
+                            // Load the image from URL if not present in coverImageData
+                            Task {
+                                do {
+                                    let (data, _) = try await URLSession.shared.data(from: url)
+                                    if let image = UIImage(data: data) {
+                                        print("[DEBUG] Successfully loaded cover image from URL")
+                                        await MainActor.run {
+                                            bookData.bookCover = image
+                                        }
+                                    } else {
+                                        print("[DEBUG] Failed to create UIImage from data")
+                                    }
+                                } catch {
+                                    print("[DEBUG] Failed to load cover image from URL: \(error)")
+                                }
+                            }
+                        }
                         if currentStep != .details {
                             currentStep = .details // Always jump to details step for editing
                         }

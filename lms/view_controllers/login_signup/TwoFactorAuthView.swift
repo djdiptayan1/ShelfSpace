@@ -215,7 +215,7 @@ struct TwoFactorAuthView: View {
                 let success = try await LoginManager.shared.generateOTP(email: email)
                 await MainActor.run {
                     if success {
-                        remainingTime = 60
+                        remainingTime = 30
                         otpText = ""
                     } else {
                         showError = true
