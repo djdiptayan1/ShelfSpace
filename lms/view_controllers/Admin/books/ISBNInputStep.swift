@@ -129,7 +129,7 @@ struct ISBNInputStep: View {
                             .disabled(bookData.isbn.isEmpty)
                         }
                         
-                        Text("Enter the 13-digit ISBN number")
+                        Text("Enter the 10 or 13-digit ISBN number")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
