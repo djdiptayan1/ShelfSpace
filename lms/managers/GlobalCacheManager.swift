@@ -18,7 +18,12 @@ class CacheHandler<T: Codable> {
     private let cacheFileName: String
     
     init(cacheFileName: String) {
-        self.cacheFileName = cacheFileName
+        do{
+            let libraryId = try KeychainManager.shared.getLibraryId()
+            self.cacheFileName = cacheFileName + libraryId
+        }catch{
+            self.cacheFileName = cacheFileName
+        }
     }
     private var cacheFileURL: URL {
         let documentDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
