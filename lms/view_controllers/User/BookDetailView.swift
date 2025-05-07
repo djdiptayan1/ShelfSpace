@@ -51,6 +51,7 @@ struct BookDetailView: View {
     }
 
     var body: some View {
+        
         ZStack(alignment: .top) {
             // Using the reusable background instead of hard-coded color
             ReusableBackground(colorScheme: colorScheme)
@@ -127,6 +128,7 @@ struct BookDetailView: View {
                                         color: Color.black.opacity(0.2),
                                         radius: 5, x: 0, y: 3
                                     )
+                                    .clipped()
                                     .padding(.leading)
                             } else {
                                 RoundedRectangle(cornerRadius: 8)
@@ -174,13 +176,13 @@ struct BookDetailView: View {
                         // Genre tags in a horizontal scroll - styling similar to the teal buttons in the image
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
-                                ForEach(book.genreNames!, id: \.self) { genre in
+                                ForEach(book.genreNames ?? [], id: \.self) { genre in
                                     Text(genre)
                                         .font(.system(size: 14))
                                         .padding(.horizontal,12)
                                         .padding(.vertical, 12)
                                         .background(
-                                            Color.gray.opacity(0.3)
+                                            Color.gray.opacity(0.2)
                                         )
                                         .foregroundColor(Color.text(for: colorScheme))
                                         .cornerRadius(8)
@@ -484,7 +486,7 @@ struct BookDetailView: View {
     private var actionButtonColor: Color {
         switch bookStatus {
         case .available,.loading:
-            return Color.accent(for: colorScheme)
+            return Color.secondary(for: colorScheme)
         case .reading:
             return .indigo
         case .requested,.notAvailable:
