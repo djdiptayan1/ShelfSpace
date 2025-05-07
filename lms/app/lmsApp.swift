@@ -11,6 +11,7 @@ import SwiftUI
 struct lmsApp: App {
     @StateObject private var themeManager = ThemeManager()
     @StateObject private var networkMonitor = NetworkMonitor.shared
+    @StateObject private var appState = AppState()
     @Environment(\.colorScheme) private var colorScheme
 
     init() {
@@ -22,6 +23,7 @@ struct lmsApp: App {
 //            ContentView()
             SplashScreenView()
                 .environmentObject(themeManager)
+                .environmentObject(appState)
                 .onChange(of: colorScheme) { newColorScheme in
                     themeManager.update(with: newColorScheme)
                 }
