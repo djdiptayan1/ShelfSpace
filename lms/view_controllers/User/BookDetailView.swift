@@ -84,7 +84,7 @@ struct BookDetailView: View {
                                 ? "bookmark.fill" : "bookmark"
                         )
                         .font(.system(size: 22))
-                        .foregroundColor(isBookmarked ? .black : .gray)
+                        .foregroundColor(isBookmarked ? .gray : .gray)
                     }
                 }
                 .padding(.horizontal)
@@ -93,7 +93,7 @@ struct BookDetailView: View {
 
                 // Main content
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
+                    VStack(alignment: .leading, spacing: 20) {
                         // Book cover and details layout similar to the provided image
                         HStack(alignment: .top, spacing: 20) {
                             // Book Cover Image
@@ -145,24 +145,24 @@ struct BookDetailView: View {
 //                        .padding(.vertical)
                         // Status badge - made to look like the blue button in the image
                         Text(bookStatus.displayText)
-                            .font(.system(size: 18))
-                            .foregroundColor(Color.green)
+                            .font(.system(size: 20).bold())
+                            .foregroundColor(Color.secondary(for: colorScheme))
 //                            .cornerRadius(20)
                             .padding(.leading,16)
 
                         // Genre tags in a horizontal scroll - styling similar to the teal buttons in the image
                         ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 10) {
+                            HStack(spacing: 8) {
                                 ForEach(book.genreNames!, id: \.self) { genre in
                                     Text(genre)
-                                        .font(.system(size: 16))
-                                        .padding(.horizontal, 20)
+                                        .font(.system(size: 14))
+                                        .padding(.horizontal,12)
                                         .padding(.vertical, 12)
                                         .background(
-                                            Color.secondary(for: colorScheme).opacity(0.5)
+                                            Color.gray.opacity(0.3)
                                         )
                                         .foregroundColor(Color.text(for: colorScheme))
-                                        .cornerRadius(20)
+                                        .cornerRadius(8)
                                 }
                             }
                             .padding(.horizontal)
@@ -440,7 +440,7 @@ struct BookDetailView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(actionButtonColor.opacity(0.8))
+                    .background(actionButtonColor)
                     .cornerRadius(10)
                     .transition(.opacity)
                 }
@@ -486,7 +486,7 @@ struct BookDetailView: View {
         case .available,.loading:
             return Color.accent(for: colorScheme)
         case .reading:
-            return .green
+            return .indigo
         case .requested,.notAvailable:
             return .gray
         case .completed:
