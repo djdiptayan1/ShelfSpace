@@ -240,10 +240,18 @@ struct ProfileView: View {
                 await MainActor.run {
                     appState.resetState()
                 }
-                
+
+                // Clear all persistent data
+                try? KeychainManager.shared.deleteToken()
+                try? KeychainManager.shared.deleteLibraryId()
+                UserCacheManager.shared.clearCache()
+                // Add any other cache or persistent storage clearing here
+                // For example, clear UserDefaults if used:
+                // UserDefaults.standard.removePersistentDomain(forName: Bundle.main.bundleIdentifier!)
+                // UserDefaults.standard.synchronize()
+
                 // Then perform the logout operations
                 try await LoginManager.shared.signOut()
-                UserCacheManager.shared.clearCache()
                 
                 // Finally dismiss the view
                 await MainActor.run {

@@ -38,6 +38,15 @@ struct SignupContainerView: View {
                 case .member: UserTabbar()
                 }
             }
+            .sheet(isPresented: $viewModel.showTwoFactorAuth) {
+                TwoFactorAuthView(email: viewModel.email) { verified in
+                    if verified {
+                        viewModel.destination = .member
+                        viewModel.showTwoFactorAuth = false
+                    }
+                }
+                .interactiveDismissDisabled(true)
+            }
         }
     }
 }
