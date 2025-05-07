@@ -28,7 +28,7 @@ class AppState: ObservableObject {
 }
 
 struct SplashScreenView: View {
-    @StateObject private var appState = AppState()
+    @EnvironmentObject private var appState: AppState
     @State private var animationDone = false
     @State private var analyticsLoaded = false
     @Environment(\.colorScheme) private var colorScheme
