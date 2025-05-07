@@ -55,6 +55,9 @@ class UserCacheManager {
             error.logDetails()
         }
     }
+    func deleteCacheUser(){
+        cache.removeObject(forKey: cacheKey as NSString)
+    }
     
     func getCachedUser() -> User? {
         print("Attempting to get cached user data")

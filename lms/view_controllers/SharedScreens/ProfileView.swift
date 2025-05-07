@@ -236,8 +236,12 @@ struct ProfileView: View {
     private func logout() {
         Task {
             do {
-                // First reset the app state
+                // First reset the app state - this must happen before anything else
                 await MainActor.run {
+                    // Force reset the state to logged out
+                    appState.isLoggedIn = false
+                    appState.currentUser = nil
+                    appState.currentUserRole = nil
                     appState.resetState()
                 }
 
@@ -246,16 +250,21 @@ struct ProfileView: View {
                 try? KeychainManager.shared.deleteLibraryId()
                 UserCacheManager.shared.clearCache()
                 AnalyticsHandler.shared.clearCache()
-                // Add any other cache or persistent storage clearing here
-                // For example, clear UserDefaults if used:
-                // UserDefaults.standard.removePersistentDomain(forName: Bundle.main.bundleIdentifier!)
-                // UserDefaults.standard.synchronize()
-
-                // Then perform the logout operations
+                
+                // Clear any other user-specific data from UserDefaults
+                let defaults = UserDefaults.standard
+                defaults.removeObject(forKey: "lastViewedBooks")
+                defaults.removeObject(forKey: "userPreferences")
+                
+                // Perform the Supabase signOut operation
                 try await LoginManager.shared.signOut()
                 
-                // Finally dismiss the view
+                // Use notification center to notify the app that logout has occurred
+                // This will help any observers reset their state
                 await MainActor.run {
+                    NotificationCenter.default.post(name: Notification.Name("UserDidLogout"), object: nil)
+                    
+                    // Dismiss this view to return to the previous screen
                     dismiss()
                 }
             } catch {

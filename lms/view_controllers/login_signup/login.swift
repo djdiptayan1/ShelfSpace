@@ -31,6 +31,10 @@ class LoginState: ObservableObject {
     @Published var currentUser: User?
     @Published var showLoginAnimation = false
     @Published var otpVerified = false
+    
+    // Field validation states
+    @Published var isEmailValid = false
+    @Published var showEmailValidation = false
 
     // Navigation states
     @Published var showForgotPassword = false
@@ -47,6 +51,18 @@ class LoginState: ObservableObject {
             errorMessage = "An unexpected error occurred: \(error.localizedDescription)"
         }
         showError = true
+    }
+    
+    // Validate email using regex pattern
+    func validateEmail() {
+        let emailRegEx = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
+        let emailPredicate = NSPredicate(format:"SELF MATCHES %@", emailRegEx)
+        isEmailValid = emailPredicate.evaluate(with: email)
+        
+        // Only show validation message if user has started typing
+        if !email.isEmpty {
+            showEmailValidation = true
+        }
     }
 }
 
@@ -281,6 +297,16 @@ struct LoginView: View {
                 .autocorrectionDisabled()
                 .textContentType(.emailAddress)
                 .keyboardType(.emailAddress)
+                .onChange(of: state.email) { _ in
+                    state.validateEmail()
+                }
+
+                if state.showEmailValidation && !state.isEmailValid {
+                    Text("Invalid email format")
+                        .font(.system(size: 12, weight: .regular, design: .rounded))
+                        .foregroundColor(.red)
+                        .padding(.horizontal, 24)
+                }
 
                 CustomTextField(
                     text: $state.password,
@@ -334,8 +360,8 @@ struct LoginView: View {
                 .frame(height: 54)
                 .padding(.horizontal, isHorizontal ? 0 : 24)
             }
-            .disabled(state.isProcessing || state.email.isEmpty || state.password.isEmpty)
-            .opacity((state.email.isEmpty || state.password.isEmpty) ? 0.7 : 1)
+            .disabled(state.isProcessing || state.email.isEmpty || state.password.isEmpty || !state.isEmailValid)
+            .opacity((state.email.isEmpty || state.password.isEmpty || !state.isEmailValid) ? 0.7 : 1)
 
             HStack(spacing: 4) {
                 Text("New to Library?")

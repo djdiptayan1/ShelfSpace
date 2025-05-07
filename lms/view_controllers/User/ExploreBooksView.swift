@@ -14,6 +14,9 @@ struct ExploreBooksView: View {
     
     @State private var allBooks: [BookModel] = []
     @State private var isLoading = false
+    @State private var isLoadingMore = false
+    @State private var errorMessage: String?
+    @State private var showError = false
     
     // Updated to use BookGenre structure from HomeView
     let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
@@ -105,6 +108,23 @@ struct ExploreBooksView: View {
                                     }
                                     .buttonStyle(PlainButtonStyle())
                                 }
+                                
+                                // Add pagination loader at the bottom
+                                if !isFiltering {
+                                    HStack {
+                                        Spacer()
+                                        if isLoadingMore {
+                                            ProgressView()
+                                                .padding()
+                                        }
+                                        Spacer()
+                                    }
+                                    .id("BottomLoader")
+                                    .onAppear {
+                                        loadMoreBooks()
+                                    }
+                                    .gridCellColumns(2) // Take up full width in grid
+                                }
                             }
                             .padding()
                         }
@@ -112,6 +132,11 @@ struct ExploreBooksView: View {
                 }
                 .navigationBarTitle("Explore Books", displayMode: .inline)
                 .navigationBarHidden(true)
+                .alert("Error", isPresented: $showError) {
+                    Button("OK", role: .cancel) { }
+                } message: {
+                    Text(errorMessage ?? "An unknown error occurred")
+                }
             }
         }
         .foregroundColor(Color.text(for: colorScheme))
@@ -120,10 +145,16 @@ struct ExploreBooksView: View {
         }
     }
     
+    // Helper to check if filtering is active
+    var isFiltering: Bool {
+        return !searchText.isEmpty || !selectedGenres.isEmpty
+    }
+    
     // MARK: - Helper Methods
     
     private func loadBooks() async {
         isLoading = true
+        self.allBooks = BookHandler.shared.getCachedData() ?? []
         fetchBooks { result in
             isLoading = false
             
@@ -133,9 +164,30 @@ struct ExploreBooksView: View {
                 for book in fetchedBooks where book.coverImageUrl != nil {
                     self.preloadBookCover(for: book)
                 }
-            case .failure:
-                // Handle error
-                break
+            case let .failure(error):
+                self.errorMessage = error.localizedDescription
+                self.showError = true
+            }
+        }
+    }
+    
+    private func loadMoreBooks() {
+        guard !isFiltering && !isLoadingMore else { return }
+        
+        isLoadingMore = true
+        lms.loadMoreBooks { result in
+            self.isLoadingMore = false
+            
+            switch result {
+            case .success(let allBooks):
+                withAnimation {
+                    self.allBooks = allBooks
+                }
+                print("[DEBUG] (ExploreBooksView) Loaded more books. Total count: \(allBooks.count)")
+            case .failure(let error):
+                self.errorMessage = "Failed to load more books: \(error.localizedDescription)"
+                self.showError = true
+                print("[ERROR] (ExploreBooksView) Failed to load more books: \(error)")
             }
         }
     }

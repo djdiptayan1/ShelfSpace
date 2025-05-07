@@ -37,120 +37,167 @@ struct PersonalInfoView: View {
 
                 // Form Fields
                 VStack(spacing: 16) {
-                    // Name Field
-                    CustomTextField(
-                        text: $viewModel.name,
-                        placeholder: "Full Name",
-                        iconName: "person.fill",
-                        isSecure: false,
-                        colorScheme: colorScheme,
-                        fieldType: .name
-                    )
-                    .focused($focusedField, equals: .name)
-                    .onChange(of: viewModel.name) { _ in
-                        viewModel.resetError()
-                    }
-
-                    // Gender Selection
-                    Menu {
-                        ForEach(genderOptions, id: \.self) { option in
-                            Button(action: {
-                                viewModel.gender = option
-                                viewModel.resetError()
-                            }) {
-                                Text(option)
-                            }
-                        }
-                    } label: {
-                        HStack {
-                            Image(systemName: "person.crop.circle")
-                                .foregroundColor(Color.accent(for: colorScheme))
-                                .font(.system(size: 16))
-
-                            Text(viewModel.gender.isEmpty ? "Select Gender" : viewModel.gender)
-                                .foregroundColor(viewModel.gender.isEmpty ? Color.text(for: colorScheme).opacity(0.5) : Color.text(for: colorScheme))
-                                .font(.system(size: 16))
-
-                            Spacer()
-
-                            Image(systemName: "chevron.down")
-                                .foregroundColor(Color.primary(for: colorScheme))
-                                .font(.system(size: 12))
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 18)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.text(for: colorScheme).opacity(0.1), lineWidth: 1)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.text(for: colorScheme).opacity(0.03))
-                                )
+                    // Name Field with validation
+                    VStack(alignment: .leading, spacing: 4) {
+                        CustomTextField(
+                            text: $viewModel.name,
+                            placeholder: "Full Name",
+                            iconName: "person.fill",
+                            isSecure: false,
+                            colorScheme: colorScheme,
+                            fieldType: .name
                         )
+                        .focused($focusedField, equals: .name)
+                        .onChange(of: viewModel.name) { _ in
+                            viewModel.resetError()
+                            viewModel.validateName()
+                        }
+                        
+                        if !viewModel.isNameValid {
+                            Text(viewModel.nameMessage)
+                                .font(.caption)
+                                .foregroundColor(.red)
+                                .padding(.leading, 8)
+                        }
                     }
 
-                    // Age Field
-//                    CustomTextField(
-//                        text: $viewModel.age,
-//                        placeholder: "Age",
-//                        iconName: "number",
-//                        isSecure: false,
-//                        colorScheme: colorScheme,
-//                        keyboardType: .numberPad,
-//                        fieldType: .age,
-//                    )
-//                    .focused($focusedField, equals: .age)
-
-                    Menu {
-                        ForEach(4 ... 90, id: \.self) { age in
-                            Button(action: {
-                                viewModel.age = "\(age)"
-                                viewModel.resetError()
-                            }) {
-                                Text("\(age)")
+                    // Gender Selection with validation
+                    VStack(alignment: .leading, spacing: 4) {
+                        Menu {
+                            ForEach(genderOptions, id: \.self) { option in
+                                Button(action: {
+                                    viewModel.gender = option
+                                    viewModel.resetError()
+                                    viewModel.validateGender()
+                                }) {
+                                    Text(option)
+                                }
                             }
+                        } label: {
+                            HStack {
+                                Image(systemName: "person.crop.circle")
+                                    .foregroundColor(Color.accent(for: colorScheme))
+                                    .font(.system(size: 16))
+
+                                Text(viewModel.gender.isEmpty ? "Select Gender" : viewModel.gender)
+                                    .foregroundColor(viewModel.gender.isEmpty ? Color.text(for: colorScheme).opacity(0.5) : Color.text(for: colorScheme))
+                                    .font(.system(size: 16))
+
+                                Spacer()
+
+                                Image(systemName: "chevron.down")
+                                    .foregroundColor(Color.primary(for: colorScheme))
+                                    .font(.system(size: 12))
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 18)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(viewModel.isGenderValid ? Color.text(for: colorScheme).opacity(0.1) : Color.red, lineWidth: 1)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .fill(Color.text(for: colorScheme).opacity(0.03))
+                                    )
+                            )
                         }
-                    } label: {
-                        HStack {
-                            Image(systemName: "number")
-                                .foregroundColor(Color.accent(for: colorScheme))
-                                .font(.system(size: 16))
-
-                            Text(viewModel.age.isEmpty ? "Select Age" : viewModel.age)
-                                .foregroundColor(viewModel.age.isEmpty ? Color.text(for: colorScheme).opacity(0.5) : Color.text(for: colorScheme))
-                                .font(.system(size: 16))
-
-                            Spacer()
-
-                            Image(systemName: "chevron.down")
-                                .foregroundColor(Color.primary(for: colorScheme))
-                                .font(.system(size: 12))
+                        .onAppear {
+                            viewModel.validateGender()
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 18)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.text(for: colorScheme).opacity(0.1), lineWidth: 1)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.text(for: colorScheme).opacity(0.03))
-                                )
-                        )
+                        
+                        if !viewModel.isGenderValid {
+                            Text(viewModel.genderMessage)
+                                .font(.caption)
+                                .foregroundColor(.red)
+                                .padding(.leading, 8)
+                        }
                     }
 
-                    // Phone Number Field
-                    CustomTextField(
-                        text: $viewModel.phoneNumber,
-                        placeholder: "Phone Number",
-                        iconName: "phone.fill",
-                        isSecure: false,
-                        colorScheme: colorScheme,
-                        keyboardType: .phonePad,
-                        fieldType: .phone
-                    )
-                    .focused($focusedField, equals: .phone)
-                    .onChange(of: viewModel.phoneNumber) { _ in
-                        viewModel.resetError()
+                    // Age Field with validation
+                    VStack(alignment: .leading, spacing: 4) {
+                        Menu {
+                            ForEach(4 ... 90, id: \.self) { age in
+                                Button(action: {
+                                    viewModel.age = "\(age)"
+                                    viewModel.resetError()
+                                    viewModel.validateAge()
+                                }) {
+                                    Text("\(age)")
+                                }
+                            }
+                        } label: {
+                            HStack {
+                                Image(systemName: "number")
+                                    .foregroundColor(Color.accent(for: colorScheme))
+                                    .font(.system(size: 16))
+
+                                Text(viewModel.age.isEmpty ? "Select Age" : viewModel.age)
+                                    .foregroundColor(viewModel.age.isEmpty ? Color.text(for: colorScheme).opacity(0.5) : Color.text(for: colorScheme))
+                                    .font(.system(size: 16))
+
+                                Spacer()
+
+                                Image(systemName: "chevron.down")
+                                    .foregroundColor(Color.primary(for: colorScheme))
+                                    .font(.system(size: 12))
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 18)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(viewModel.isAgeValid ? Color.text(for: colorScheme).opacity(0.1) : Color.red, lineWidth: 1)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .fill(Color.text(for: colorScheme).opacity(0.03))
+                                    )
+                            )
+                        }
+                        .onAppear {
+                            viewModel.validateAge()
+                        }
+                        
+                        if !viewModel.isAgeValid {
+                            Text(viewModel.ageMessage)
+                                .font(.caption)
+                                .foregroundColor(.red)
+                                .padding(.leading, 8)
+                        }
+                    }
+
+                    // Phone Number Field with validation and input limiting
+                    VStack(alignment: .leading, spacing: 4) {
+                        CustomTextField(
+                            text: $viewModel.phoneNumber,
+                            placeholder: "Phone Number (10 digits)",
+                            iconName: "phone.fill",
+                            isSecure: false,
+                            colorScheme: colorScheme,
+                            keyboardType: .phonePad,
+                            fieldType: .phone
+                        )
+                        .focused($focusedField, equals: .phone)
+                        .onChange(of: viewModel.phoneNumber) { newValue in
+                            viewModel.resetError()
+                            
+                            // Filter out non-numeric characters
+                            let filtered = newValue.filter { $0.isNumber }
+                            if filtered != newValue {
+                                viewModel.phoneNumber = filtered
+                            }
+                            
+                            // Limit to 10 digits
+                            if viewModel.phoneNumber.count > 10 {
+                                viewModel.phoneNumber = String(viewModel.phoneNumber.prefix(10))
+                            }
+                            
+                            viewModel.validatePhone()
+                        }
+                        
+                        if !viewModel.isPhoneValid {
+                            Text(viewModel.phoneMessage)
+                                .font(.caption)
+                                .foregroundColor(.red)
+                                .padding(.leading, 8)
+                        }
                     }
                 }
                 .padding(.horizontal, 24)
@@ -164,28 +211,14 @@ struct PersonalInfoView: View {
 
                 Button {
                     withAnimation {
-                        if viewModel.name.isEmpty {
-                            viewModel.errorMessage = "Name is required."
-                            viewModel.showError = true
-                        } else if viewModel.gender.isEmpty {
-                            viewModel.errorMessage = "Gender is required."
-                            viewModel.showError = true
-                        } else if viewModel.age.isEmpty {
-                            viewModel.errorMessage = "Age is required."
-                            viewModel.showError = true
-                        } else if Int(viewModel.age) == nil || Int(viewModel.age)! < 5 {
-                            viewModel.errorMessage = "You must be at least 5 years old."
-                            viewModel.showError = true
-                        } else if viewModel.phoneNumber.isEmpty {
-                            viewModel.errorMessage = "Phone number is required."
-                            viewModel.showError = true
-                        } else if viewModel.phoneNumber.count != 10 || !viewModel.phoneNumber.allSatisfy({ $0.isNumber }) {
-                            viewModel.errorMessage = "Phone number must be exactly 10 digits."
-                            viewModel.showError = true
-                        } else if !viewModel.isValidPhone(viewModel.phoneNumber) {
-                            viewModel.errorMessage = "Please enter a valid phone number."
-                            viewModel.showError = true
-                        } else {
+                        // Validate all fields
+                        viewModel.validateName()
+                        viewModel.validateGender()
+                        viewModel.validateAge()
+                        viewModel.validatePhone()
+                        
+                        if viewModel.isNameValid && viewModel.isGenderValid && 
+                           viewModel.isAgeValid && viewModel.isPhoneValid {
                             viewModel.nextStep()
                         }
                     }
@@ -207,8 +240,9 @@ struct PersonalInfoView: View {
                     .frame(height: 54)
                     .padding(.horizontal, 24)
                 }
-                .disabled(viewModel.isLoading || !viewModel.isStep2Valid)
-                .opacity(viewModel.isStep2Valid ? 1 : 0.7)
+                .disabled(viewModel.isLoading)
+                .opacity(!viewModel.name.isEmpty && !viewModel.gender.isEmpty && 
+                         !viewModel.age.isEmpty && !viewModel.phoneNumber.isEmpty ? 1 : 0.7)
 
                 Spacer()
             }

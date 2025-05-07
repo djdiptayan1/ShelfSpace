@@ -5,42 +5,71 @@
 //  Created by Diptayan Jash on 18/04/25.
 //
 import SwiftUI
+import Foundation
 
 struct AdminTabbar: View {
     @State private var selectedTab = 0
     @Environment(\.colorScheme) private var colorScheme
     @StateObject private var themeManager = ThemeManager()
+    @EnvironmentObject private var appState: AppState
+    
+    // Add state for managing presentation of login screen
+    @State private var navigateToLogin = false
     
     var body: some View {
-        TabView(selection: $selectedTab) {
-            HomeViewAdmin()
-                .tag(0)
-                .tabItem {
-                    Label("Dashboard", systemImage: "house")
-                }
+        Group {
+            if navigateToLogin {
+                // When navigateToLogin is true, show the login screen
+                ContentView()
+            } else {
+                TabView(selection: $selectedTab) {
+                    HomeViewAdmin()
+                        .tag(0)
+                        .tabItem {
+                            Label("Dashboard", systemImage: "house")
+                        }
 
-            BookViewAdmin()
-                .tag(1)
-                .tabItem {
-                    Label("Books", systemImage: "book.closed")
-                }
+                    BookViewAdmin()
+                        .tag(1)
+                        .tabItem {
+                            Label("Books", systemImage: "book.closed")
+                        }
 
-            UsersViewAdmin()
-                .tag(2)
-                .tabItem {
-                    Label("Users", systemImage: "person.2.fill")
-                }
+                    UsersViewAdmin()
+                        .tag(2)
+                        .tabItem {
+                            Label("Users", systemImage: "person.2.fill")
+                        }
 
-            ManagePoliciesAdmin()
-                .tag(3)
-                .tabItem {
-                    Label("Policies", systemImage: "document.badge.gearshape.fill")
+                    ManagePoliciesAdmin()
+                        .tag(3)
+                        .tabItem {
+                            Label("Policies", systemImage: "document.badge.gearshape.fill")
+                        }
                 }
+                .accentColor(Color.primary(for: colorScheme))
+                .toolbarBackground(Color.TabbarBackground(for: colorScheme), for: .tabBar)
+                .toolbarBackground(.visible, for: .tabBar)
+                .toolbarColorScheme(colorScheme, for: .tabBar)
+                .onReceive(NotificationCenter.default.publisher(for: Notification.Name("UserDidLogout"))) { _ in
+                    print("Received logout notification in AdminTabbar")
+                    // Set navigateToLogin to true when we receive the logout notification
+                    navigateToLogin = true
+                }
+            }
         }
-        .accentColor(Color.primary(for: colorScheme))
-        .toolbarBackground(Color.TabbarBackground(for: colorScheme), for: .tabBar)
-        .toolbarBackground(.visible, for: .tabBar)
-        .toolbarColorScheme(colorScheme, for: .tabBar)
+        .onAppear {
+            // Check if we're logged in when view appears
+            if !appState.isLoggedIn {
+                navigateToLogin = true
+            }
+        }
+        .onChange(of: appState.isLoggedIn) { isLoggedIn in
+            // React to changes in the login state
+            if !isLoggedIn {
+                navigateToLogin = true
+            }
+        }
     }
 }
 

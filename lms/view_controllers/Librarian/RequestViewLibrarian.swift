@@ -38,8 +38,8 @@ struct RequestViewLibrarian: View {
     @State private var checkInOutMode: CheckInOutModalView.Mode = .checkOut
     @State private var isProcessingCheckout = false
     @State private var checkoutResultMessage: String? = nil
-    private var itemCount: Int {
-        return selectedSegment == .checkOut ? filteredBorrowRequests.count : filteredReservations.count
+        private var itemCount: Int {
+        return selectedSegment == .checkOut ? filteredReservations.count : filteredBorrowRequests.count
     }
     
     var filteredReservations: [ReservationModel] {
@@ -137,6 +137,19 @@ struct RequestViewLibrarian: View {
                                     alertMessage = "Failed to reject request: \(error.localizedDescription)"
                                     showAlert = true
                                 }
+                            }
+                        }
+                    }
+                    if let reservation = reservationToDelete {
+                        Task{
+                            do{
+                                try await ReservationHandler.shared.cancelReservation(reservation.id)
+                                await MainActor.run {
+                                    self.reservation.removeAll{ $0.id == reservation.id}
+                                }
+                            }catch{
+                                alertMessage = "Failed to reject request: \(error.localizedDescription)"
+                                showAlert = true
                             }
                         }
                     }
@@ -268,7 +281,7 @@ struct RequestViewLibrarian: View {
                                 )
                                 .padding(.horizontal)
                             }
-                        }else{
+                            }else{
                             ForEach(filteredBorrowRequests) { borrow in
                                 BorrowRequestCardView(
                                     borrow: borrow,
@@ -286,8 +299,8 @@ struct RequestViewLibrarian: View {
                                 )
                                 .padding(.horizontal)
                             }
-
-                        }
+                            
+                                                    }
                     }
                     .padding(.vertical)
                 }
@@ -377,7 +390,7 @@ struct RequestViewLibrarian: View {
             }
         }
     }
-}
+    }
 
 // MARK: - Borrow Request Card View
 
@@ -439,7 +452,7 @@ struct BorrowRequestCardView: View {
             // User & Status Header
             HStack {
                 // We're not using user.name directly to avoid UserModel decoding issues
-                Text("Request ID: \(borrowId.uuidString.prefix(8))...")
+                Text("Request ID: \(borrowId.uuidString.suffix(6))")
                     .font(.system(size: 14, weight: .medium))
                 
                 Spacer()
@@ -539,17 +552,37 @@ struct BorrowRequestCardView: View {
     
     private var bookCover: some View {
         Group {
-            if let coverUrl = book.coverImageUrl, let url = URL(string: coverUrl) {
-                AsyncImage(url: url) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(Color.gray.opacity(0.2))
+            if let coverUrl = book.coverImageUrl, 
+               let url = URL(string: coverUrl.replacingOccurrences(of: "http://", with: "https://")) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .empty:
+                        ZStack {
+                            Color.gray.opacity(0.2)
+                            ProgressView()
+                        }
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    case .failure(_):
+                        ZStack {
+                            Color.gray.opacity(0.2)
+                            Image(systemName: "book.closed")
+                                .font(.system(size: 30))
+                                .foregroundColor(.gray)
+                        }
+                    @unknown default:
+                        ZStack {
+                            Color.gray.opacity(0.2)
+                            Image(systemName: "questionmark")
+                                .font(.system(size: 30))
+                                .foregroundColor(.gray)
+                        }
+                    }
                 }
                 .frame(width: 80, height: 120)
+                .clipped()
                 .cornerRadius(8)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
