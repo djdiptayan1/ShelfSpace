@@ -69,18 +69,14 @@ struct ISBNInputStep: View {
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var keyboardHeight: CGFloat = 0
+    @State private var isValidISBN: Bool = false
+    @State private var showValidationHint: Bool = false
     
     private let bookInfoService = BookInfoService()
     
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-//                Text("Add a Book")
-//                    .font(.title)
-//                    .fontWeight(.bold)
-//                    .foregroundColor(Color.text(for: colorScheme))
-//                    .padding(.top, 30)
-                
                 Text("Enter the ISBN number to identify the book")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
@@ -111,16 +107,42 @@ struct ISBNInputStep: View {
                                 .focused($isISBNFocused)
                                 .onChange(of: bookData.isbn) { newValue in
                                     // Remove any non-digit characters
-                                    bookData.isbn = newValue.filter { $0.isNumber }
+                                    let filteredValue = newValue.filter { $0.isNumber }
+                                    
+                                    // Only update if different to avoid cursor jumps
+                                    if filteredValue != bookData.isbn {
+                                        bookData.isbn = filteredValue
+                                    }
                                     
                                     // Limit to 13 digits
                                     if bookData.isbn.count > 13 {
                                         bookData.isbn = String(bookData.isbn.prefix(13))
                                     }
+                                    
+                                    // Validate ISBN
+                                    validateISBN()
+                                    
+                                    // Show validation hint when user starts typing
+                                    if !bookData.isbn.isEmpty {
+                                        showValidationHint = true
+                                    }
                                 }
+                                .overlay(
+                                    HStack {
+                                        Spacer()
+                                        if !bookData.isbn.isEmpty {
+                                            Image(systemName: isValidISBN ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                                                .foregroundColor(isValidISBN ? .green : .red)
+                                                .padding(.trailing, 8)
+                                                .opacity(showValidationHint ? 1 : 0)
+                                        }
+                                    }
+                                )
                             
                             Button(action: {
                                 bookData.isbn = ""
+                                isValidISBN = false
+                                showValidationHint = false
                             }) {
                                 Image(systemName: "xmark.circle.fill")
                                     .foregroundColor(.gray)
@@ -129,9 +151,16 @@ struct ISBNInputStep: View {
                             .disabled(bookData.isbn.isEmpty)
                         }
                         
-                        Text("Enter the 10 or 13-digit ISBN number")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        if showValidationHint {
+                            Text(getValidationMessage())
+                                .font(.caption)
+                                .foregroundColor(isValidISBN ? .green : .red)
+                                .animation(.easeInOut, value: isValidISBN)
+                        } else {
+                            Text("Enter the 10 or 13-digit ISBN number")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                     }
                     .padding()
                     .background(
@@ -197,11 +226,11 @@ struct ISBNInputStep: View {
                 // Continue Button
                 Button(action: {
                     Task {
-                        if bookData.isbn.count == 10 || bookData.isbn.count == 13 {
+                        if isValidISBN {
                             await fetchBookInfo()
                         } else {
                             showError = true
-                            errorMessage = "ISBN must be either 10 or 13 digits."
+                            errorMessage = "Please enter a valid ISBN (10 or 13 digits)."
                         }
                     }
                 }) {
@@ -220,17 +249,17 @@ struct ISBNInputStep: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
                     .background(
-                        bookData.isbn.isEmpty || isLoading ?
+                        (bookData.isbn.isEmpty || !isValidISBN || isLoading) ?
                         LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.5), Color.blue.opacity(0.3)]), startPoint: .leading, endPoint: .trailing) :
                         LinearGradient(gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.8)]), startPoint: .leading, endPoint: .trailing)
                     )
                     .cornerRadius(16)
                     .shadow(color: Color.blue.opacity(0.3), radius: 5, x: 0, y: 3)
                 }
-                .disabled(bookData.isbn.isEmpty || isLoading)
+                .disabled(bookData.isbn.isEmpty || !isValidISBN || isLoading)
                 .padding(.horizontal, 20)
                 .padding(.bottom, 32)
-                .opacity(bookData.isbn.isEmpty || isLoading ? 0.6 : 1.0)
+                .opacity((bookData.isbn.isEmpty || !isValidISBN || isLoading) ? 0.6 : 1.0)
                 
                 // Add extra padding at the bottom when keyboard is shown
                 Color.clear.frame(height: keyboardHeight > 0 ? keyboardHeight - 40 : 0)
@@ -246,8 +275,16 @@ struct ISBNInputStep: View {
         .sheet(isPresented: $showBarcodeScanner) {
             BarcodeScannerView(scannedCode: $bookData.isbn, onScanComplete: { code in
                 Task {
-                    await fetchBookInfo()
-                    onScanComplete()
+                    validateISBN() // Validate scanned ISBN
+                    
+                    // Only fetch if valid
+                    if isValidISBN {
+                        await fetchBookInfo()
+                        onScanComplete()
+                    } else {
+                        showError = true
+                        errorMessage = "The scanned barcode is not a valid ISBN. Please try again."
+                    }
                 }
             })
         }
@@ -266,11 +303,42 @@ struct ISBNInputStep: View {
             NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
                 keyboardHeight = 0
             }
+            
+            // Validate initial ISBN if any
+            validateISBN()
         }
         .onDisappear {
             // Remove keyboard observers
             NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
             NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
+        }
+    }
+    
+    // New method to validate ISBN
+    private func validateISBN() {
+        let isbn = bookData.isbn.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Basic length validation
+        isValidISBN = isbn.count == 10 || isbn.count == 13
+        
+        // Only show validation feedback if user has entered something
+        showValidationHint = !isbn.isEmpty
+    }
+    
+    // Helper method to get the appropriate validation message
+    private func getValidationMessage() -> String {
+        let isbn = bookData.isbn
+        
+        if isbn.isEmpty {
+            return "Enter the 10 or 13-digit ISBN number"
+        } else if isbn.count < 10 {
+            return "ISBN is too short (minimum 10 digits)"
+        } else if isbn.count > 13 {
+            return "ISBN is too long (maximum 13 digits)"
+        } else if isbn.count == 10 || isbn.count == 13 {
+            return "Valid ISBN format"
+        } else {
+            return "ISBN must be exactly 10 or 13 digits"
         }
     }
     
