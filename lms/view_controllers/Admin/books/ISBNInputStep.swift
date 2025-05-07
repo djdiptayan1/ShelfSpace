@@ -68,168 +68,176 @@ struct ISBNInputStep: View {
     @State private var isLoading = false
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var keyboardHeight: CGFloat = 0
     
     private let bookInfoService = BookInfoService()
     
     var body: some View {
-        VStack(spacing: 24) {
-            Text("Add a Book")
-                .font(.title)
-                .fontWeight(.bold)
-                .foregroundColor(Color.text(for: colorScheme))
-                .padding(.top, 30)
-            
-            Text("Enter the ISBN number to identify the book")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-            
-            // ISBN Input Card
-            VStack(spacing: 20) {
-                // Manual Input Card
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Image(systemName: "keyboard")
-                            .foregroundColor(.blue)
-                            .font(.system(size: 20))
-                        
-                        Text("Manual Entry")
-                            .font(.headline)
-                            .foregroundColor(Color.text(for: colorScheme))
-                    }
-                    .padding(.bottom, 4)
-                    
-                    HStack {
-                        TextField("Enter ISBN number", text: $bookData.isbn)
-                            .keyboardType(.numberPad)
-                            .padding()
-                            .background(Color.gray.opacity(0.1))
-                            .cornerRadius(12)
-                            .focused($isISBNFocused)
-                            .onChange(of: bookData.isbn) { newValue in
-                                // Remove any non-digit characters
-                                bookData.isbn = newValue.filter { $0.isNumber }
-                                
-                                // Limit to 13 digits
-                                if bookData.isbn.count > 13 {
-                                    bookData.isbn = String(bookData.isbn.prefix(13))
-                                }
-                            }
-                        
-                        Button(action: {
-                            bookData.isbn = ""
-                        }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(.gray)
-                                .opacity(bookData.isbn.isEmpty ? 0 : 1)
-                        }
-                        .disabled(bookData.isbn.isEmpty)
-                    }
-                    
-                    Text("Enter the 13-digit ISBN number")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .padding()
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(colorScheme == .dark ? Color.black.opacity(0.3) : Color.white)
-                        .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
-                )
-                .padding(.horizontal, 20)
+        ScrollView {
+            VStack(spacing: 24) {
+//                Text("Add a Book")
+//                    .font(.title)
+//                    .fontWeight(.bold)
+//                    .foregroundColor(Color.text(for: colorScheme))
+//                    .padding(.top, 30)
                 
-                Text("OR")
-                    .font(.headline)
+                Text("Enter the ISBN number to identify the book")
+                    .font(.subheadline)
                     .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
                 
-                // Barcode Scanner Card
-                Button(action: {
-                    showBarcodeScanner = true
-                }) {
+                // ISBN Input Card
+                VStack(spacing: 20) {
+                    // Manual Input Card
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
-                            Image(systemName: "barcode.viewfinder")
+                            Image(systemName: "keyboard")
                                 .foregroundColor(.blue)
                                 .font(.system(size: 20))
                             
-                            Text("Scan Barcode")
+                            Text("Manual Entry")
                                 .font(.headline)
                                 .foregroundColor(Color.text(for: colorScheme))
                         }
                         .padding(.bottom, 4)
                         
                         HStack {
-                            Spacer()
-                            
-                            Image(systemName: "camera.fill")
-                                .font(.system(size: 36))
-                                .foregroundColor(.blue)
+                            TextField("Enter ISBN number", text: $bookData.isbn)
+                                .keyboardType(.numberPad)
                                 .padding()
-                                .background(
-                                    Circle()
-                                        .fill(Color.blue.opacity(0.1))
-                                )
+                                .background(Color.gray.opacity(0.1))
+                                .cornerRadius(12)
+                                .focused($isISBNFocused)
+                                .onChange(of: bookData.isbn) { newValue in
+                                    // Remove any non-digit characters
+                                    bookData.isbn = newValue.filter { $0.isNumber }
+                                    
+                                    // Limit to 13 digits
+                                    if bookData.isbn.count > 13 {
+                                        bookData.isbn = String(bookData.isbn.prefix(13))
+                                    }
+                                }
                             
-                            Spacer()
+                            Button(action: {
+                                bookData.isbn = ""
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.gray)
+                                    .opacity(bookData.isbn.isEmpty ? 0 : 1)
+                            }
+                            .disabled(bookData.isbn.isEmpty)
                         }
                         
-                        Text("Scan the book's barcode using your camera")
+                        Text("Enter the 13-digit ISBN number")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
                     .padding()
-                    .frame(maxWidth: .infinity)
                     .background(
                         RoundedRectangle(cornerRadius: 16)
                             .fill(colorScheme == .dark ? Color.black.opacity(0.3) : Color.white)
                             .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
                     )
+                    .padding(.horizontal, 20)
+                    
+                    Text("OR")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                    
+                    // Barcode Scanner Card
+                    Button(action: {
+                        showBarcodeScanner = true
+                    }) {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Image(systemName: "barcode.viewfinder")
+                                    .foregroundColor(.blue)
+                                    .font(.system(size: 20))
+                                
+                                Text("Scan Barcode")
+                                    .font(.headline)
+                                    .foregroundColor(Color.text(for: colorScheme))
+                            }
+                            .padding(.bottom, 4)
+                            
+                            HStack {
+                                Spacer()
+                                
+                                Image(systemName: "camera.fill")
+                                    .font(.system(size: 36))
+                                    .foregroundColor(.blue)
+                                    .padding()
+                                    .background(
+                                        Circle()
+                                            .fill(Color.blue.opacity(0.1))
+                                    )
+                                
+                                Spacer()
+                            }
+                            
+                            Text("Scan the book's barcode using your camera")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(colorScheme == .dark ? Color.black.opacity(0.3) : Color.white)
+                                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
+                        )
+                    }
+                    .padding(.horizontal, 20)
                 }
+                .padding(.top, 20)
+                
+                Spacer(minLength: 60)
+                
+                // Continue Button
+                Button(action: {
+                    Task {
+                        if bookData.isbn.count == 10 || bookData.isbn.count == 13 {
+                            await fetchBookInfo()
+                        } else {
+                            showError = true
+                            errorMessage = "ISBN must be either 10 or 13 digits."
+                        }
+                    }
+                }) {
+                    HStack {
+                        if isLoading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        } else {
+                            Text("Continue")
+                                .fontWeight(.semibold)
+                            
+                            Image(systemName: "arrow.right")
+                        }
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(
+                        bookData.isbn.isEmpty || isLoading ?
+                        LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.5), Color.blue.opacity(0.3)]), startPoint: .leading, endPoint: .trailing) :
+                        LinearGradient(gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.8)]), startPoint: .leading, endPoint: .trailing)
+                    )
+                    .cornerRadius(16)
+                    .shadow(color: Color.blue.opacity(0.3), radius: 5, x: 0, y: 3)
+                }
+                .disabled(bookData.isbn.isEmpty || isLoading)
                 .padding(.horizontal, 20)
+                .padding(.bottom, 32)
+                .opacity(bookData.isbn.isEmpty || isLoading ? 0.6 : 1.0)
+                
+                // Add extra padding at the bottom when keyboard is shown
+                Color.clear.frame(height: keyboardHeight > 0 ? keyboardHeight - 40 : 0)
             }
-            .padding(.top, 20)
-            
-            Spacer()
-            
-            // Continue Button
-            Button(action: {
-                Task {
-                    if bookData.isbn.count == 10 || bookData.isbn.count == 13 {
-                        await fetchBookInfo()
-                    } else {
-                        showError = true
-                        errorMessage = "ISBN must be either 10 or 13 digits."
-                    }
-                }
-            }) {
-                HStack {
-                    if isLoading {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                    } else {
-                        Text("Continue")
-                            .fontWeight(.semibold)
-                        
-                        Image(systemName: "arrow.right")
-                    }
-                }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(
-                    bookData.isbn.isEmpty || isLoading ?
-                    LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.5), Color.blue.opacity(0.3)]), startPoint: .leading, endPoint: .trailing) :
-                    LinearGradient(gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.8)]), startPoint: .leading, endPoint: .trailing)
-                )
-                .cornerRadius(16)
-                .shadow(color: Color.blue.opacity(0.3), radius: 5, x: 0, y: 3)
-            }
-            .disabled(bookData.isbn.isEmpty || isLoading)
-            .padding(.horizontal, 20)
-            .padding(.bottom, 32)
-            .opacity(bookData.isbn.isEmpty || isLoading ? 0.6 : 1.0)
+            .frame(minHeight: UIScreen.main.bounds.height)
         }
+        .scrollDismissesKeyboard(.interactively)
         .alert("Error", isPresented: $showError) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -247,6 +255,22 @@ struct ISBNInputStep: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 isISBNFocused = true
             }
+            
+            // Set up keyboard observers
+            NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
+                if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
+                    keyboardHeight = keyboardFrame.height
+                }
+            }
+            
+            NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
+                keyboardHeight = 0
+            }
+        }
+        .onDisappear {
+            // Remove keyboard observers
+            NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
+            NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
         }
     }
     
