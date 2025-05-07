@@ -8,6 +8,9 @@ struct signupView: View {
     @State private var showImagePicker = false
     @FocusState private var focusedField: AuthFieldType?
     @Environment(\.colorScheme) private var colorScheme
+    
+    // Add state for showing user exists alert
+    @State private var showUserExistsAlert = false
 
     var body: some View {
         GeometryReader { geometry in
@@ -62,51 +65,120 @@ struct signupView: View {
 
                         // Form Fields
                         VStack(spacing: 16) {
-                            CustomTextField(
-                                text: $viewModel.email,
-                                placeholder: "Email ID",
-                                iconName: "envelope.fill",
-                                isSecure: false,
-                                focusState: _focusedField,
-                                colorScheme: colorScheme,
-                                keyboardType: .emailAddress,
-                                fieldType: .email
-                            )
-                            .focused($focusedField, equals: .email)
-                            .onChange(of: viewModel.email) { _ in
-                                viewModel.resetError()
+                            // Email field with validation
+                            VStack(alignment: .leading, spacing: 4) {
+                                CustomTextField(
+                                    text: $viewModel.email,
+                                    placeholder: "Email ID",
+                                    iconName: "envelope.fill",
+                                    isSecure: false,
+                                    focusState: _focusedField,
+                                    colorScheme: colorScheme,
+                                    keyboardType: .emailAddress,
+                                    fieldType: .email
+                                )
+                                .focused($focusedField, equals: .email)
+                                .onChange(of: viewModel.email) { _ in
+                                    viewModel.resetError()
+                                    viewModel.validateEmail()
+                                }
+                                
+                                if !viewModel.isEmailValid && !viewModel.email.isEmpty {
+                                    Text(viewModel.emailMessage)
+                                        .font(.caption)
+                                        .foregroundColor(.red)
+                                        .padding(.leading, 8)
+                                }
                             }
 
-                            CustomTextField(
-                                text: $viewModel.password,
-                                placeholder: "Password",
-                                iconName: "lock.fill",
-                                isSecure: !showPassword,
-                                showSecureToggle: true,
-                                secureToggleAction: { showPassword.toggle() },
-                                focusState: _focusedField,
-                                colorScheme: colorScheme,
-                                fieldType: .password
-                            )
-                            .focused($focusedField, equals: .password)
-                            .onChange(of: viewModel.password) { _ in
-                                viewModel.resetError()
+                            // Password field with strength indicator
+                            VStack(alignment: .leading, spacing: 4) {
+                                CustomTextField(
+                                    text: $viewModel.password,
+                                    placeholder: "Password",
+                                    iconName: "lock.fill",
+                                    isSecure: !showPassword,
+                                    showSecureToggle: true,
+                                    secureToggleAction: { showPassword.toggle() },
+                                    focusState: _focusedField,
+                                    colorScheme: colorScheme,
+                                    fieldType: .password
+                                )
+                                .focused($focusedField, equals: .password)
+                                .onChange(of: viewModel.password) { _ in
+                                    viewModel.resetError()
+                                    viewModel.validatePassword()
+                                    if !viewModel.confirmPassword.isEmpty {
+                                        viewModel.validateConfirmPassword()
+                                    }
+                                }
+                                
+                                // Password strength indicator
+                                if !viewModel.password.isEmpty {
+                                    HStack {
+                                        Text(viewModel.passwordStrength.description)
+                                            .font(.caption)
+                                            .foregroundColor(viewModel.passwordStrength.color)
+                                        
+                                        Spacer()
+                                    }
+                                    .padding(.horizontal, 8)
+                                    
+                                    // Password strength bar
+                                    GeometryReader { geometry in
+                                        HStack(spacing: 4) {
+                                            ForEach(0..<4) { index in
+                                                RoundedRectangle(cornerRadius: 2)
+                                                    .fill(index < viewModel.passwordStrength.rawValue 
+                                                          ? viewModel.passwordStrength.color 
+                                                          : Color.gray.opacity(0.3))
+                                                    .frame(width: (geometry.size.width - 12) / 4, height: 4)
+                                            }
+                                        }
+                                    }
+                                    .frame(height: 4)
+                                    .padding(.horizontal, 8)
+                                    
+                                    // Password requirements
+                                    if !viewModel.passwordMessages.isEmpty {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            ForEach(viewModel.passwordMessages, id: \.self) { message in
+                                                Text(message)
+                                                    .font(.caption2)
+                                                    .foregroundColor(.red)
+                                            }
+                                        }
+                                        .padding(.horizontal, 8)
+                                        .padding(.top, 4)
+                                    }
+                                }
                             }
 
-                            CustomTextField(
-                                text: $viewModel.confirmPassword,
-                                placeholder: "Confirm Password",
-                                iconName: "lock.fill",
-                                isSecure: !showConfirmPassword,
-                                showSecureToggle: true,
-                                secureToggleAction: { showConfirmPassword.toggle() },
-                                focusState: _focusedField,
-                                colorScheme: colorScheme,
-                                fieldType: .confirmPassword
-                            )
-                            .focused($focusedField, equals: .confirmPassword)
-                            .onChange(of: viewModel.confirmPassword) { _ in
-                                viewModel.resetError()
+                            // Confirm password field
+                            VStack(alignment: .leading, spacing: 4) {
+                                CustomTextField(
+                                    text: $viewModel.confirmPassword,
+                                    placeholder: "Confirm Password",
+                                    iconName: "lock.shield.fill",
+                                    isSecure: !showConfirmPassword,
+                                    showSecureToggle: true,
+                                    secureToggleAction: { showConfirmPassword.toggle() },
+                                    focusState: _focusedField,
+                                    colorScheme: colorScheme,
+                                    fieldType: .confirmPassword
+                                )
+                                .focused($focusedField, equals: .confirmPassword)
+                                .onChange(of: viewModel.confirmPassword) { _ in
+                                    viewModel.resetError()
+                                    viewModel.validateConfirmPassword()
+                                }
+                                
+                                if !viewModel.confirmPassword.isEmpty && !viewModel.isPasswordsMatching {
+                                    Text("Passwords do not match")
+                                        .font(.caption)
+                                        .foregroundColor(.red)
+                                        .padding(.leading, 8)
+                                }
                             }
                         }
                         .padding(.horizontal, 24)
@@ -120,29 +192,12 @@ struct signupView: View {
 
                         Button {
                             withAnimation {
-                                if viewModel.email.isEmpty {
-                                    viewModel.errorMessage = "Email is required."
-                                    viewModel.showError = true
-                                } else if !viewModel.isValidEmail(viewModel.email) {
-                                    viewModel.errorMessage = "Please enter a valid email address."
-                                    viewModel.showError = true
-                                } else if viewModel.password.isEmpty {
-                                    viewModel.errorMessage = "Password is required."
-                                    viewModel.showError = true
-                                } else if viewModel.password.count < 4 {
-                                    viewModel.errorMessage = "Password must be at least 4 characters."
-                                    viewModel.showError = true
-                                } else if viewModel.confirmPassword.isEmpty {
-                                    viewModel.errorMessage = "Please confirm your password."
-                                    viewModel.showError = true
-                                } else if viewModel.password != viewModel.confirmPassword {
-                                    viewModel.errorMessage = "Passwords do not match."
-                                    viewModel.showError = true
-                                } else {
-                                    viewModel.createAuthAccount { success in
-                                        if success {
-                                            viewModel.nextStep()
-                                        }
+                                viewModel.createAuthAccount { success in
+                                    if success {
+                                        viewModel.nextStep()
+                                    } else if viewModel.isUserAlreadyExistsError {
+                                        // Show the user exists alert instead of the generic error
+                                        showUserExistsAlert = true
                                     }
                                 }
                             }
@@ -188,6 +243,32 @@ struct signupView: View {
             }
             .onTapGesture {
                 focusedField = nil
+            }
+            // Add a specific alert for "user already exists" error
+            .alert("Account Already Exists", isPresented: $showUserExistsAlert) {
+//                Button("Go to Login", role: .destructive) {
+//                    presentationMode.wrappedValue.dismiss()
+//                }
+                Button("Try Different Email", role: .cancel) {
+                    // Clear the email field for convenience
+                    viewModel.email = ""
+                    viewModel.password = ""
+                    viewModel.confirmPassword = ""
+                    viewModel.resetError()
+                    // Set focus to email field
+                    focusedField = .email
+                }
+            }
+//            message: {
+//                Text("An account with this email already exists. Would you like to login instead, or use a different email?")
+//            }
+            // Keep the regular error alert for other error types
+            .alert("Signup Error", isPresented: $viewModel.showError) {
+                Button("OK", role: .cancel) {
+                    viewModel.showError = false
+                }
+            } message: {
+                Text(viewModel.errorMessage)
             }
         }
     }
