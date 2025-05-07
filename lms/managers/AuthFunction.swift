@@ -212,7 +212,13 @@ class LoginManager {
                 // Handle Auth errors specifically
                 DispatchQueue.main.async {
                     print("Auth Signup Error: \(error)")
-                    completion(.failure(LoginError.signupError("Authentication error during signup: \(error.localizedDescription)")))
+                    
+                    // Check specifically for user_already_exists error
+                    if error.errorCode.rawValue == "user_already_exists" {
+                        completion(.failure(LoginError.signupError("User already registered")))
+                    } else {
+                        completion(.failure(LoginError.signupError("Authentication error during signup: \(error.localizedDescription)")))
+                    }
                 }
             } catch {
                 // Handle any other errors
