@@ -245,6 +245,7 @@ struct ProfileView: View {
                 try? KeychainManager.shared.deleteToken()
                 try? KeychainManager.shared.deleteLibraryId()
                 UserCacheManager.shared.clearCache()
+                AnalyticsHandler.shared.clearCache()
                 // Add any other cache or persistent storage clearing here
                 // For example, clear UserDefaults if used:
                 // UserDefaults.standard.removePersistentDomain(forName: Bundle.main.bundleIdentifier!)
