@@ -124,6 +124,7 @@ struct ExploreBooksView: View {
     
     private func loadBooks() async {
         isLoading = true
+        self.allBooks = BookHandler.shared.getCachedData() ?? []
         fetchBooks { result in
             isLoading = false
             

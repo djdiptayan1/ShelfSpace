@@ -382,6 +382,11 @@ func getOrCreateAuthorId(authorName: String, bookId: UUID) async throws -> UUID 
     return createdAuthor.id
 }
 
+class BookHandler:CacheHandler<[BookModel]>{
+    static let shared = BookHandler(cacheFileName: "book_cache.json")
+}
+
+
 func createBook(book: BookModel) async throws -> BookModel {
     print("Add BOOK API CALL HERE ...")
 
@@ -544,6 +549,7 @@ func fetchBooks(completion: @escaping (Result<[BookModel], Error>) -> Void) { //
                     }
                     return mutableBook
                 }
+                BookHandler.shared.cacheData(processedBooks)
                 
                 // Return results via completion handler
                 DispatchQueue.main.async {
