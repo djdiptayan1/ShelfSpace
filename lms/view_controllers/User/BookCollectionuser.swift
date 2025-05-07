@@ -277,7 +277,7 @@ struct BookCardView: View {
                 .fixedSize(horizontal: false, vertical: true)
             
             // Author Name
-            Text(book.authorNames?.first ?? "Unknown Author")
+            Text((book.authorNames?.isEmpty ?? true ? "" : book.authorNames?[0]) ?? "")
                 .font(.subheadline)
                 .foregroundColor(Color.text(for: colorScheme).opacity(0.7))
             
