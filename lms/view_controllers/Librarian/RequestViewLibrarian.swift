@@ -39,7 +39,7 @@ struct RequestViewLibrarian: View {
     @State private var isProcessingCheckout = false
     @State private var checkoutResultMessage: String? = nil
     private var itemCount: Int {
-        return selectedSegment == .checkOut ? filteredBorrowRequests.count : filteredReservations.count
+        return selectedSegment == .checkOut ? filteredReservations.count : filteredBorrowRequests.count
     }
     
     var filteredReservations: [ReservationModel] {
@@ -137,6 +137,19 @@ struct RequestViewLibrarian: View {
                                     alertMessage = "Failed to reject request: \(error.localizedDescription)"
                                     showAlert = true
                                 }
+                            }
+                        }
+                    }
+                    if let reservation = reservationToDelete {
+                        Task{
+                            do{
+                                try await ReservationHandler.shared.cancelReservation(reservation.id)
+                                await MainActor.run {
+                                    self.reservation.removeAll{ $0.id == reservation.id}
+                                }
+                            }catch{
+                                alertMessage = "Failed to reject request: \(error.localizedDescription)"
+                                showAlert = true
                             }
                         }
                     }
