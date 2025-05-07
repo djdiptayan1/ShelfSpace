@@ -6,8 +6,20 @@ struct BookDetailView: View {
     @Environment(\.presentationMode) var presentationMode
 
     // State to track book status (you might want to move this to your Book model)
-    @State private var bookStatus: BookStatus = .loading
-
+    private var bookStatus: BookStatus {
+        if isBorrowed{
+            return .reading
+        }
+        if isReserved{
+            return .requested
+        }
+        if book.availableCopies == 0{
+            return .notAvailable
+        }else{
+            return .available
+        }
+        return .loading
+    }
     // Add rating state
     @State private var userRating: Int = 0
 
@@ -24,10 +36,19 @@ struct BookDetailView: View {
     @State private var loadedImage: UIImage? = nil
     @State private var isLoading: Bool = false
     @State private var loadError: Bool = false
+    @State private var user:User?
     
     @State private var isBorrowLoading: Bool = false
     @State private var borrow:BorrowModel?
     @State private var reservation:ReservationModel?
+    private var isBorrowed:Bool{
+        if user == nil{ return false}
+        return user!.borrowed_book_ids.contains(book.id)
+    }
+    private var isReserved:Bool{
+        if user == nil{ return false}
+        return user!.reserved_book_ids.contains(book.id)
+    }
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -84,7 +105,7 @@ struct BookDetailView: View {
                                 ? "bookmark.fill" : "bookmark"
                         )
                         .font(.system(size: 22))
-                        .foregroundColor(isBookmarked ? .black : .gray)
+                        .foregroundColor(isBookmarked ? .gray : .gray)
                     }
                 }
                 .padding(.horizontal)
@@ -93,7 +114,7 @@ struct BookDetailView: View {
 
                 // Main content
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
+                    VStack(alignment: .leading, spacing: 20) {
                         // Book cover and details layout similar to the provided image
                         HStack(alignment: .top, spacing: 20) {
                             // Book Cover Image
@@ -145,24 +166,24 @@ struct BookDetailView: View {
 //                        .padding(.vertical)
                         // Status badge - made to look like the blue button in the image
                         Text(bookStatus.displayText)
-                            .font(.system(size: 18))
-                            .foregroundColor(Color.green)
+                            .font(.system(size: 20).bold())
+                            .foregroundColor(Color.secondary(for: colorScheme))
 //                            .cornerRadius(20)
                             .padding(.leading,16)
 
                         // Genre tags in a horizontal scroll - styling similar to the teal buttons in the image
                         ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 10) {
+                            HStack(spacing: 8) {
                                 ForEach(book.genreNames!, id: \.self) { genre in
                                     Text(genre)
-                                        .font(.system(size: 16))
-                                        .padding(.horizontal, 20)
+                                        .font(.system(size: 14))
+                                        .padding(.horizontal,12)
                                         .padding(.vertical, 12)
                                         .background(
-                                            Color.secondary(for: colorScheme).opacity(0.5)
+                                            Color.gray.opacity(0.3)
                                         )
                                         .foregroundColor(Color.text(for: colorScheme))
-                                        .cornerRadius(20)
+                                        .cornerRadius(8)
                                 }
                             }
                             .padding(.horizontal)
@@ -221,34 +242,7 @@ struct BookDetailView: View {
             .onAppear(){
                 Task{
                     self.isBorrowLoading = true
-                    reservation = try await ReservationHandler.shared.getReservationForBookId(book.id)
-                    
-                    if reservation != nil {
-                        bookStatus = .requested
-                    }else{
-                        borrow = try await BorrowHandler.shared.getBorrowForBookId(book.id)
-                        
-                        if let borrow = borrow {
-                            self.isBorrowLoading = false
-                            switch(borrow.status){
-                            case .requested:
-                                bookStatus = .requested
-                            case .borrowed:
-                                bookStatus = .reading
-                            case .returned:
-                                bookStatus = .completed(dueDate: borrow.borrow_date)
-                            case .overdue:
-                                bookStatus = .completed(dueDate: borrow.borrow_date)
-                            }
-                        }
-                        else{
-                            if(book.availableCopies <= 0){
-                                bookStatus = .notAvailable
-                            }else{
-                                bookStatus = .available
-                            }
-                        }
-                    }
+                    user = try await LoginManager.shared.getCurrentUser()
                     self.isBorrowLoading = false
                 }
             }
@@ -381,9 +375,12 @@ struct BookDetailView: View {
                     }
                     do {
                         reservation = try await ReservationHandler.shared.reserve(bookId: book.id)
+                        if user != nil {
+                            user?.reserved_book_ids.append(book.id)
+                            UserCacheManager.shared.cacheUser(user!)
+                        }
                         withAnimation(.easeOut(duration: 0.3)) {
                             isBorrowLoading = false
-                            bookStatus = .requested
                         }
                     } catch {
                         withAnimation {
@@ -399,19 +396,22 @@ struct BookDetailView: View {
                     }
                     do {
                         try await ReservationHandler.shared.cancelReservation(reservation!.id)
+                        if user != nil {
+                            if let index = user!.reserved_book_ids.firstIndex(of: book.id) {
+                                user!.reserved_book_ids.remove(at: index)
+                            }
+                            UserCacheManager.shared.cacheUser(user!)
+                        }
                         withAnimation(.easeOut(duration: 0.3)) {
                             isBorrowLoading = false
-                            bookStatus = .available
                         }
                     } catch {
                         withAnimation {
                             isBorrowLoading = false
-                            // Handle error state if needed
                         }
                     }
                 case .completed:
                     break
-                    bookStatus = .available
                 case .notAvailable,.loading:
                     break
                 }
@@ -440,7 +440,7 @@ struct BookDetailView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(actionButtonColor.opacity(0.8))
+                    .background(actionButtonColor)
                     .cornerRadius(10)
                     .transition(.opacity)
                 }
@@ -486,7 +486,7 @@ struct BookDetailView: View {
         case .available,.loading:
             return Color.accent(for: colorScheme)
         case .reading:
-            return .green
+            return .indigo
         case .requested,.notAvailable:
             return .gray
         case .completed:
@@ -517,7 +517,7 @@ enum BookStatus {
             return "Loading..."
         case .notAvailable:
             return "Not Available"
-        case .completed(let dueDate):
+        case .completed:
            return "Completed"
 
         }

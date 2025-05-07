@@ -86,7 +86,7 @@ struct ExploreBooksView: View {
                                 .edgesIgnoringSafeArea(.top)
                                 .shadow(
                                     color: Color.primary(for: colorScheme)
-                                        .opacity(0.1), radius: 5, x: 0, y: 3)
+                                        .opacity(0.4), radius: 5, x: 0, y: 3)
                         )
                         .zIndex(1)
                         

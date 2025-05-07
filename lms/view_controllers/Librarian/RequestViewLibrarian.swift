@@ -38,13 +38,16 @@ struct RequestViewLibrarian: View {
     @State private var checkInOutMode: CheckInOutModalView.Mode = .checkOut
     @State private var isProcessingCheckout = false
     @State private var checkoutResultMessage: String? = nil
+    private var itemCount: Int {
+        return selectedSegment == .checkOut ? filteredBorrowRequests.count : filteredReservations.count
+    }
     
     var filteredReservations: [ReservationModel] {
         reservation
     }
 
     var filteredBorrowRequests: [BorrowModel] {
-        let filtered: [BorrowModel] = borrowRequests
+        let filtered: [BorrowModel] = borrowRequests.filter{$0.status != .returned}
         if searchText.isEmpty {
             return filtered
         }
@@ -190,7 +193,7 @@ struct RequestViewLibrarian: View {
     
     private var requestCountView: some View {
         HStack {
-            Text("\(reservation.count) \(reservation.count == 1 ? "request" : "requests") found")
+            Text("\(itemCount) \(itemCount == 1 ? "request" : "requests") found")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
             Spacer()

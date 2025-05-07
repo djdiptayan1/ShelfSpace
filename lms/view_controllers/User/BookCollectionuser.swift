@@ -35,6 +35,7 @@ enum BookCollectionTab: String, CaseIterable {
 struct BookCollectionuser: View {
     // MARK: - Properties
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.presentationMode) var presentationMode
     @Namespace private var animation
     @State private var selectedTab: BookCollectionTab = .request
     @State private var expandedTab: Bool = true
@@ -157,8 +158,16 @@ struct BookCollectionuser: View {
                 requestedBooks = reservations.compactMap(\.book)
             }
         }
-        .background(ReusableBackground(colorScheme: colorScheme))
         .navigationBarTitleDisplayMode(.inline)
+        .gesture(
+            DragGesture()
+                .onEnded { gesture in
+                    if gesture.translation.width > 100 {
+                        // Swipe from left to right (standard iOS back gesture)
+                        self.presentationMode.wrappedValue.dismiss()
+                    }
+                }
+        )
     }
     
     // MARK: - Tab Bar View
@@ -258,11 +267,14 @@ struct BookCardView: View {
                 loadCoverImage()
             }
             
-            // Book Title
+            // Book Title - limited to 3 lines
             Text(book.title)
                 .font(.headline)
                 .fontWeight(.semibold)
                 .foregroundColor(Color.text(for: colorScheme))
+                .lineLimit(3)
+                .frame(height: 80, alignment: .top)
+                .fixedSize(horizontal: false, vertical: true)
             
             // Author Name
             Text(book.authorNames?.first ?? "Unknown Author")

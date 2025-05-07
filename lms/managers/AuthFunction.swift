@@ -26,6 +26,8 @@ struct APIUserResponse: Codable {
     let is_active: Bool
     let interests: [String]?
     let wishlist_book_ids:[UUID]
+    let borrowed_book_ids:[UUID]
+    let reserved_book_ids:[UUID]
 
 }
 class LoginManager {
@@ -118,6 +120,8 @@ class LoginManager {
                     name: decodedResponse.name,
                     is_active: decodedResponse.is_active,
                     library_id: decodedResponse.library_id,
+                    borrowed_book_ids: decodedResponse.borrowed_book_ids,
+                    reserved_book_ids: decodedResponse.reserved_book_ids,
                     wishlist_book_ids:decodedResponse.wishlist_book_ids,
                     interests: decodedResponse.interests
                 )
@@ -267,6 +271,8 @@ class LoginManager {
                 name: decodedResponse.name,
                 is_active: decodedResponse.is_active,
                 library_id: decodedResponse.library_id,
+                borrowed_book_ids: decodedResponse.borrowed_book_ids,
+                reserved_book_ids: decodedResponse.reserved_book_ids,
                 wishlist_book_ids:decodedResponse.wishlist_book_ids,
                 interests: decodedResponse.interests
             )
