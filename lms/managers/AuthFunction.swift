@@ -233,17 +233,7 @@ class LoginManager {
         try await supabase.auth.signOut()
     }
 
-    func getCurrentUser() async throws -> User? {
-        let otpVerified = UserCacheManager.shared.getCachedOtp() != nil
-        if !otpVerified {
-            return nil
-        }
-        // First try to get from cache
-        if let cachedUser = UserCacheManager.shared.getCachedUser() {
-            print("Returning cached user data")
-            return cachedUser
-        }
-        
+    func FetchUser()async -> User?{
         do {
             // If not in cache, try to get token from keychain
             let accessToken = try KeychainManager.shared.getToken()
@@ -252,17 +242,18 @@ class LoginManager {
             guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/users/\(supabaseUser.id)") else {
                 throw URLError(.badURL)
             }
-
+            
             var request = URLRequest(url: url)
             request.httpMethod = "GET"
             request.setValue("application/json", forHTTPHeaderField: "Accept")
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-
+            
             let (data, _) = try await URLSession.shared.data(for: request)
-
+            
             // Decode the JSON into your APIUserResponse model
             let decodedResponse = try JSONUtility.shared.decode(APIUserResponse.self, from: data)
-
+            print(decodedResponse)
+            
             // Construct User object
             let appUser = User(
                 id: supabaseUser.id,
@@ -286,6 +277,20 @@ class LoginManager {
             error.logDetails()
             return nil
         }
+    }
+    
+    func getCurrentUser() async throws -> User? {
+        let otpVerified = UserCacheManager.shared.getCachedOtp() != nil
+        if !otpVerified {
+            return nil
+        }
+        // First try to get from cache
+        if let cachedUser = UserCacheManager.shared.getCachedUser() {
+            print("Returning cached user data")
+            return cachedUser
+        }
+        
+        return await FetchUser()
     }
     
     func checkSession() async -> Bool {
