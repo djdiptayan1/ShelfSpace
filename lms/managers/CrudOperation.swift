@@ -37,11 +37,16 @@ func insertUser(userData: [String: Any], completion: @escaping (Bool) -> Void) {
             request.setValue("application/json", forHTTPHeaderField: "Accept")
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
-            // Ensure all UUIDs are converted to strings before serialization
+            // Ensure all UUIDs and user data fields are properly formatted
             var processedUserData = userData
+            
+            // Handle UUID fields
             if let userId = userData["user_id"] as? UUID {
                 processedUserData["user_id"] = userId.uuidString
+            } else if let userIdStr = userData["user_id"] as? String {
+                processedUserData["user_id"] = userIdStr
             }
+            
             if let borrowedIds = userData["borrowed_book_ids"] as? [UUID] {
                 processedUserData["borrowed_book_ids"] = borrowedIds.map { $0.uuidString }
             }
@@ -51,12 +56,31 @@ func insertUser(userData: [String: Any], completion: @escaping (Bool) -> Void) {
             if let wishlistIds = userData["wishlist_book_ids"] as? [UUID] {
                 processedUserData["wishlist_book_ids"] = wishlistIds.map { $0.uuidString }
             }
-
-            // Convert the processed userData dictionary to JSON data
-            let jsonData = try JSONSerialization.data(withJSONObject: processedUserData, options: [])
+            
+            // Make sure personal info fields are explicitly included
+            if let gender = userData["gender"] as? String {
+                processedUserData["gender"] = gender.lowercased()
+            }
+            
+            // Ensure age is properly formatted as integer
+            if let age = userData["age"] as? Int {
+                processedUserData["age"] = age
+            } else if let ageStr = userData["age"] as? String, let ageInt = Int(ageStr) {
+                processedUserData["age"] = ageInt
+            }
+            
+            if let phoneNumber = userData["phone_number"] as? String {
+                processedUserData["phone_number"] = phoneNumber
+            }
+            
+            // Log the final data being sent
+            print("Final processed user data: \(processedUserData)")
+            
+            // Convert the processed userData dictionary to JSON data using JSONUtility
+            let jsonData = try JSONUtility.shared.encodeFromDictionary(processedUserData)
             request.httpBody = jsonData
 
-            print("Sending user data: \(String(data: jsonData, encoding: .utf8) ?? "")")
+            print("Sending user data JSON: \(String(data: jsonData, encoding: .utf8) ?? "")")
 
             let (data, response) = try await URLSession.shared.data(for: request)
 
@@ -79,6 +103,7 @@ func insertUser(userData: [String: Any], completion: @escaping (Bool) -> Void) {
             }
         } catch {
             print("Error creating user: \(error)")
+            print("Error details: \(String(describing: error))")
             DispatchQueue.main.async {
                 completion(false)
             }
