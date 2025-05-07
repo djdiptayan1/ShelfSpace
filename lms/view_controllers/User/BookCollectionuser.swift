@@ -157,7 +157,6 @@ struct BookCollectionuser: View {
                 requestedBooks = reservations.compactMap(\.book)
             }
         }
-        .background(ReusableBackground(colorScheme: colorScheme))
         .navigationBarTitleDisplayMode(.inline)
     }
     
