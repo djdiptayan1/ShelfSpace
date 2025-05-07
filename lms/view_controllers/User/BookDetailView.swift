@@ -6,8 +6,20 @@ struct BookDetailView: View {
     @Environment(\.presentationMode) var presentationMode
 
     // State to track book status (you might want to move this to your Book model)
-    @State private var bookStatus: BookStatus = .loading
-
+    private var bookStatus: BookStatus {
+        if isBorrowed{
+            return .reading
+        }
+        if isReserved{
+            return .requested
+        }
+        if book.availableCopies == 0{
+            return .notAvailable
+        }else{
+            return .available
+        }
+        return .loading
+    }
     // Add rating state
     @State private var userRating: Int = 0
 
@@ -24,10 +36,19 @@ struct BookDetailView: View {
     @State private var loadedImage: UIImage? = nil
     @State private var isLoading: Bool = false
     @State private var loadError: Bool = false
+    @State private var user:User?
     
     @State private var isBorrowLoading: Bool = false
     @State private var borrow:BorrowModel?
     @State private var reservation:ReservationModel?
+    private var isBorrowed:Bool{
+        if user == nil{ return false}
+        return user!.borrowed_book_ids.contains(book.id)
+    }
+    private var isReserved:Bool{
+        if user == nil{ return false}
+        return user!.reserved_book_ids.contains(book.id)
+    }
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -221,34 +242,7 @@ struct BookDetailView: View {
             .onAppear(){
                 Task{
                     self.isBorrowLoading = true
-                    reservation = try await ReservationHandler.shared.getReservationForBookId(book.id)
-                    
-                    if reservation != nil {
-                        bookStatus = .requested
-                    }else{
-                        borrow = try await BorrowHandler.shared.getBorrowForBookId(book.id)
-                        
-                        if let borrow = borrow {
-                            self.isBorrowLoading = false
-                            switch(borrow.status){
-                            case .requested:
-                                bookStatus = .requested
-                            case .borrowed:
-                                bookStatus = .reading
-                            case .returned:
-                                bookStatus = .completed(dueDate: borrow.borrow_date)
-                            case .overdue:
-                                bookStatus = .completed(dueDate: borrow.borrow_date)
-                            }
-                        }
-                        else{
-                            if(book.availableCopies <= 0){
-                                bookStatus = .notAvailable
-                            }else{
-                                bookStatus = .available
-                            }
-                        }
-                    }
+                    user = try await LoginManager.shared.getCurrentUser()
                     self.isBorrowLoading = false
                 }
             }
@@ -381,9 +375,12 @@ struct BookDetailView: View {
                     }
                     do {
                         reservation = try await ReservationHandler.shared.reserve(bookId: book.id)
+                        if user != nil {
+                            user?.reserved_book_ids.append(book.id)
+                            UserCacheManager.shared.cacheUser(user!)
+                        }
                         withAnimation(.easeOut(duration: 0.3)) {
                             isBorrowLoading = false
-                            bookStatus = .requested
                         }
                     } catch {
                         withAnimation {
@@ -399,19 +396,22 @@ struct BookDetailView: View {
                     }
                     do {
                         try await ReservationHandler.shared.cancelReservation(reservation!.id)
+                        if user != nil {
+                            if let index = user!.reserved_book_ids.firstIndex(of: book.id) {
+                                user!.reserved_book_ids.remove(at: index)
+                            }
+                            UserCacheManager.shared.cacheUser(user!)
+                        }
                         withAnimation(.easeOut(duration: 0.3)) {
                             isBorrowLoading = false
-                            bookStatus = .available
                         }
                     } catch {
                         withAnimation {
                             isBorrowLoading = false
-                            // Handle error state if needed
                         }
                     }
                 case .completed:
                     break
-                    bookStatus = .available
                 case .notAvailable,.loading:
                     break
                 }
@@ -517,7 +517,7 @@ enum BookStatus {
             return "Loading..."
         case .notAvailable:
             return "Not Available"
-        case .completed(let dueDate):
+        case .completed:
            return "Completed"
 
         }
