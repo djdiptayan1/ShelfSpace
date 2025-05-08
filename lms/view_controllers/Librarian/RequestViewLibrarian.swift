@@ -532,7 +532,7 @@ struct BorrowRequestCardView: View {
                 .padding(.vertical, 12)
             }
             .buttonStyle(.borderedProminent)
-            .tint(.blue)
+            .tint(Color.accentColor)
             
             Button(action: onReject) {
             HStack {
