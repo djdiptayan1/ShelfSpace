@@ -290,7 +290,7 @@ struct ProfileHeaderView: View {
                 Circle()
                     .fill(
                         LinearGradient(
-                            gradient: Gradient(colors: [Color.blue, Color.purple]),
+                            gradient: Gradient(colors: [Color.primary(for : colorScheme), Color.secondary(for : colorScheme)]),
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -352,7 +352,7 @@ struct InfoCardView<Content: View>: View {
             HStack {
                 Image(systemName: icon)
                     .font(.headline)
-                    .foregroundColor(.blue)
+                    .foregroundColor(Color.primary(for: colorScheme))
                 
                 Text(title)
                     .font(.headline)
