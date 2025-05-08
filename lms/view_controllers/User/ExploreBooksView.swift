@@ -23,21 +23,23 @@ struct ExploreBooksView: View {
     
     // Filtered books based on search text or selected genres
     var filteredBooks: [BookModel] {
-        if searchText.isEmpty && selectedGenres.isEmpty {
-            return allBooks
-        }
-        
-        return allBooks.filter { book in
-            let matchesSearch = searchText.isEmpty ||
-                book.title.lowercased().contains(searchText.lowercased())
-            
-            let matchesGenre = selectedGenres.isEmpty ||
-                !selectedGenres.isDisjoint(with: book.genreNames ?? [])
-            
-            return matchesSearch && matchesGenre
-        }
-    }
-    
+           if searchText.isEmpty && selectedGenres.isEmpty {
+               return allBooks
+           }
+           
+           return allBooks.filter { book in
+               let matchesSearch = searchText.isEmpty ||
+                   book.title.lowercased().contains(searchText.lowercased()) ||
+                   (book.authorNames?.contains { $0.lowercased().contains(searchText.lowercased()) } ?? false) ||
+                   (book.genreNames?.contains { $0.lowercased().contains(searchText.lowercased()) } ?? false)
+               
+               let matchesGenre = selectedGenres.isEmpty ||
+                   !selectedGenres.isDisjoint(with: book.genreNames ?? [])
+               
+               return matchesSearch && matchesGenre
+           }
+       }
+
     // MARK: - Main Body
     var body: some View {
         GeometryReader { geometry in
