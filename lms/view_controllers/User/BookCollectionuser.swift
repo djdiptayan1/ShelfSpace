@@ -44,8 +44,10 @@ struct BookCollectionuser: View {
     @State private var requestedBooks: [BookModel] = []
     @State private var wishlistBooks: [BookModel] = []
     @State private var borrows: [BorrowModel] = []
+    @State private var reservations:[ReservationModel] = []
     @State private var currentBooks:[BookModel] = []
     @State private var returnedBooks:[BookModel] = []
+    @State private var policy:Policy?
 
 
     @State private var demoBooks: [BookModel] = [
@@ -127,7 +129,7 @@ struct BookCollectionuser: View {
                             ForEach(finalBooks.prefix(6)) { book in
                                 NavigationLink(destination: BookDetailView(book: book))
                                 {
-                                    BookCardView(book: book, tab: selectedTab, colorScheme: colorScheme)
+                                    BookCardView(book: book, tab: selectedTab, colorScheme: colorScheme,reservation: $reservations,borrows: $borrows,policy: $policy)
                                 }
                             }
                         }
@@ -136,6 +138,11 @@ struct BookCollectionuser: View {
                     }
                     
                     Spacer()
+                }
+            }
+            .onAppear(){
+                fetchPolicy(libraryId: UUID()) { policy in
+                    self.policy = policy
                 }
             }
             .onAppear(){
@@ -158,7 +165,7 @@ struct BookCollectionuser: View {
             }
             .onAppear(){
                 Task{
-                    let reservations = try await ReservationHandler.shared.getReservations()
+                    reservations = try await ReservationHandler.shared.getReservations()
                     //get books from borrows
                     let currentBookIds = reservations.compactMap(\.book_id)
 
@@ -234,9 +241,25 @@ struct BookCardView: View {
     let book: BookModel
     let tab: BookCollectionTab
     let colorScheme: ColorScheme
+    private var dueDate:Date?{
+        if let res = reservation.first(where: { $0.book_id == book.id }),tab == .request{
+            return res.expires_at
+        }
+        if tab == .current, let borrow = borrows.first(where: { $0.book_id == book.id }){
+                if let days = policy?.max_borrow_days {
+                    let newDate = Calendar.current.date(byAdding: .day, value: days, to: borrow.borrow_date)
+                    return newDate
+            }
+        }
+        return nil
+    }
     @State private var loadedImage: UIImage? = nil
     @State private var isLoading: Bool = false
     @State private var loadError: Bool = false
+    @Binding var reservation:[ReservationModel]
+    @Binding var borrows:[BorrowModel]
+    @Binding var policy:Policy?
+    
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -277,7 +300,6 @@ struct BookCardView: View {
             .onAppear(){
                 loadCoverImage()
             }
-            
             // Book Title - limited to 3 lines
             Text(book.title)
                 .font(.headline)
@@ -298,15 +320,17 @@ struct BookCardView: View {
                     Image(systemName: "calendar")
                         .font(.caption)
                         .foregroundColor(Color.secondary(for: colorScheme))
-                    Text("Due: 12th Jun")
-                        .font(.caption)
-                        .foregroundColor(.orange)
+                    if dueDate != nil{
+                        Text("Due: \(dueDate!.shortFormatted)")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                    }
                 }
             }
             
             // Status Tags
             HStack(spacing: 6) {
-                if tab == .current {
+                if tab == .current, dueDate != nil, dueDate! < Date() {
                     Text("Overdue")
                         .font(.caption)
                         .padding(.horizontal, 8)
@@ -382,5 +406,12 @@ struct bookCollectionuser_Previews: PreviewProvider {
                 .preferredColorScheme(.dark)
                 .previewDisplayName("Dark Mode")
         }
+    }
+}
+extension Date {
+    var shortFormatted: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "d MMM"
+        return formatter.string(from: self)
     }
 }
