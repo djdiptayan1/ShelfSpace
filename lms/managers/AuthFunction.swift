@@ -231,11 +231,16 @@ class LoginManager {
     }
 
     func signOut() async throws {
-        // Clear the user cache
+        try? KeychainManager.shared.deleteToken()
+        try? KeychainManager.shared.deleteLibraryId()
         UserCacheManager.shared.clearCache()
-        // Delete the token from Keychain
-        try KeychainManager.shared.deleteToken()
-        // Sign out from Supabase
+        AnalyticsHandler.shared.clearCache()
+        
+        let defaults = UserDefaults.standard
+        defaults.removeObject(forKey: "lastViewedBooks")
+        defaults.removeObject(forKey: "userPreferences")
+        
+        
         try await supabase.auth.signOut()
     }
 
