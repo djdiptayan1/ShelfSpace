@@ -245,8 +245,8 @@ struct BookCardView: View {
                 if let image = loadedImage {
                     Image(uiImage: image)
                         .resizable()
-                        .scaledToFill()
-                        .frame(height: 200)
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 135,height: 200)
                         .clipped()
                         .cornerRadius(8)
                 }else{
