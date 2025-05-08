@@ -68,31 +68,31 @@ struct ProfileView: View {
                             }
                             
                             // Additional User Details Card
-                            InfoCardView(
-                                title: "Additional Details",
-                                icon: "person.crop.rectangle.stack",
-                                content: {
-                                    VStack(spacing: 8) {
-                                        if let age = user.age {
-                                            DetailRow(title: "Age", value: "\(age)")
-                                        }
-                                        if let phone = user.phone_number {
-                                            DetailRow(title: "Phone", value: phone)
-                                        }
-                                        if let gender = user.gender {
-                                            DetailRow(title: "Gender", value: gender.capitalized)
-                                        }
-                                        if let interests = user.interests, !interests.isEmpty {
-                                            DetailRow(title: "Interests", value: interests.joined(separator: ", "))
-                                        }
-//                                        DetailRow(title: "Member Since", value: formatDate(user.created_at))
-                                    }
-                                }
-                            )
-                            
-                            // Stats Card
                             if user.role == .member {
-                            StatsCardView(user: user)
+                                InfoCardView(
+                                    title: "Additional Details",
+                                    icon: "person.crop.rectangle.stack",
+                                    content: {
+                                        VStack(spacing: 8) {
+                                            if let age = user.age {
+                                                DetailRow(title: "Age", value: "\(age)")
+                                            }
+                                            if let phone = user.phone_number {
+                                                DetailRow(title: "Phone", value: phone)
+                                            }
+                                            if let gender = user.gender {
+                                                DetailRow(title: "Gender", value: gender.capitalized)
+                                            }
+                                            if let interests = user.interests, !interests.isEmpty {
+                                                DetailRow(title: "Interests", value: interests.joined(separator: ", "))
+                                            }
+                                            //                                        DetailRow(title: "Member Since", value: formatDate(user.created_at))
+                                        }
+                                    }
+                                )
+                                
+                                // Stats Card
+                                StatsCardView(user: user)
                             }
                         }
                         .padding(.horizontal)
