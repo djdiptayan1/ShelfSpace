@@ -27,7 +27,7 @@ func insertUser(userData: [String: Any], completion: @escaping (Bool) -> Void) {
             let token = try KeychainManager.shared.getToken()
             print("Creating user with token: \(token)")
 
-            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/users") else {
+            guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/users") else {
                 throw URLError(.badURL)
             }
 
@@ -117,7 +117,7 @@ func fetchUsers(completion: @escaping (Result<[User], Error>) -> Void) {
             let token = try KeychainManager.shared.getToken()
             let libraryId = try KeychainManager.shared.getLibraryId()
 
-            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/users?limit=200&libraryId=\(libraryId)") else {
+            guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/users?limit=200&libraryId=\(libraryId)") else {
                 throw URLError(.badURL)
             }
 
@@ -166,7 +166,7 @@ func fetchLibraries(completion: @escaping (Result<[Library], Error>) -> Void) {
             let token = try KeychainManager.shared.getToken()
             print("fetching libraries with token: \(token)")
 
-            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/libraries?limit=200") else {
+            guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/libraries?limit=200") else {
                 throw URLError(.badURL)
             }
 
@@ -230,7 +230,7 @@ func addLibrians(email: String,
             print("Access Token while adding librian: \(token)")
             let userId = authResponse.user.id
 
-            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/users") else {
+            guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/users") else {
                 throw URLError(.badURL)
             }
 
@@ -285,7 +285,7 @@ func fetchGenres(completion: @escaping (Result<[String], Error>) -> Void) {
             let token = try KeychainManager.shared.getToken()
             print("fetching genres with token: \(token)")
 
-            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/genres") else {
+            guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/genres") else {
                 throw URLError(.badURL)
             }
 
@@ -344,7 +344,7 @@ func fetchAuthors(completion: @escaping (Result<[String], Error>) -> Void) {
             let token = try KeychainManager.shared.getToken()
             print("fetching libraries with token: \(token)")
 
-            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/authors") else {
+            guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/authors") else {
                 throw URLError(.badURL)
             }
 
@@ -370,7 +370,7 @@ struct AuthorListResponse: Decodable {
 func getOrCreateAuthorId(authorName: String, bookId: UUID) async throws -> UUID {
     let token = try KeychainManager.shared.getToken()
     // 1. Check if author exists
-    guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/authors?search=\(authorName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? authorName)") else {
+    guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/authors?search=\(authorName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? authorName)") else {
         throw URLError(.badURL)
     }
     var request = URLRequest(url: url)
@@ -385,7 +385,7 @@ func getOrCreateAuthorId(authorName: String, bookId: UUID) async throws -> UUID 
         }
     }
     // 2. If not found, create author
-    guard let postUrl = URL(string: "https://lms-temp-be.vercel.app/api/v1/authors") else {
+    guard let postUrl = URL(string: "https://www.anwinsharon.com/lms/api/v1/authors") else {
         throw URLError(.badURL)
     }
     var postRequest = URLRequest(url: postUrl)
@@ -441,7 +441,7 @@ func createBook(book: BookModel) async throws -> BookModel {
 
     let libraryIdString = try KeychainManager.shared.getLibraryId()
     guard let libraryId = UUID(uuidString: libraryIdString),
-          let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/books") else {
+          let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/books") else {
         throw URLError(.badURL)
     }
 
@@ -616,7 +616,7 @@ func fetchBooks(
             print("Manager state before fetch: CurrentPage: \(manager.currentPage), TotalPages: \(manager.totalPages), Books: \(manager.books.count)")
 
 
-            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/books?page=\(pageToFetch)&limit=\(limit)&sortBy=\(sortBy)&sortOrder=\(sortOrder)&libraryId=\(libIdToUse)") else {
+            guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/books?page=\(pageToFetch)&limit=\(limit)&sortBy=\(sortBy)&sortOrder=\(sortOrder)&libraryId=\(libIdToUse)") else {
                 throw BookFetchError.invalidURL
             }
 
@@ -693,7 +693,7 @@ func insertPolicy(policyData: Policy, completion: @escaping (Bool, UUID?) -> Voi
             let token = try KeychainManager.shared.getToken()
             print("Sending policy data to API with token: \(token)")
 
-            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/policies") else {
+            guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/policies") else {
                 throw URLError(.badURL)
             }
 
@@ -750,7 +750,7 @@ func updatePolicy(policyId: UUID, policyData: Policy, completion: @escaping (Boo
             let token = try KeychainManager.shared.getToken()
             print("Updating policy data for ID: \(policyId)")
 
-            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/policies/\(policyId.uuidString)") else {
+            guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/policies/\(policyId.uuidString)") else {
                 throw URLError(.badURL)
             }
 
@@ -803,7 +803,7 @@ func fetchPolicy(libraryId: UUID, completion: @escaping (Policy?) -> Void) {
             let token = try KeychainManager.shared.getToken()
             print("Fetching policy data for library ID: \(libraryID)")
 
-            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/policies/library/\(libraryID)") else {
+            guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/policies/library/\(libraryID)") else {
                 throw URLError(.badURL)
             }
 
@@ -876,7 +876,7 @@ func createUserWithAuth(email: String, password: String, name: String, role: Str
             ]
 
             // Insert user data into database
-            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/users") else {
+            guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/users") else {
                 throw URLError(.badURL)
             }
 
@@ -950,7 +950,7 @@ func updateBookAPI(book: BookModel) async throws -> BookModel {
 
     let libraryIdString = try KeychainManager.shared.getLibraryId()
     guard let libraryId = UUID(uuidString: libraryIdString),
-          let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/books/\(book.id.uuidString)") else {
+          let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/books/\(book.id.uuidString)") else {
         throw URLError(.badURL)
     }
 
@@ -1027,7 +1027,7 @@ func deleteBookAPI(bookId: UUID) async throws {
     guard let token = try? KeychainManager.shared.getToken() else {
         throw URLError(.userAuthenticationRequired)
     }
-    guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/books/\(bookId.uuidString)") else {
+    guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/books/\(bookId.uuidString)") else {
         throw URLError(.badURL)
     }
     var request = URLRequest(url: url)
@@ -1052,7 +1052,7 @@ func addToWishlistAPI(bookId: UUID) async throws {
     guard let token = try? KeychainManager.shared.getToken() else {
         throw URLError(.userAuthenticationRequired)
     }
-    guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/wishlists") else {
+    guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/wishlists") else {
         throw URLError(.badURL)
     }
     var request = URLRequest(url: url)
@@ -1097,7 +1097,7 @@ func removeWishListApi(bookId:UUID)async throws{
     guard let token = try? KeychainManager.shared.getToken() else {
         throw URLError(.userAuthenticationRequired)
     }
-    guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/wishlists/books/" + bookId.uuidString) else {
+    guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/wishlists/books/" + bookId.uuidString) else {
         throw URLError(.badURL)
     }
     var request = URLRequest(url: url)
@@ -1146,7 +1146,7 @@ func getWishList()async throws -> [BookModel]{
         print("Using library ID from keychain: \(libraryIdString)")
         
         // Create URL request
-        guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/wishlists/my?limit=200") else {
+        guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/wishlists/my?limit=200") else {
             throw BookFetchError.invalidURL
         }
         
@@ -1206,7 +1206,7 @@ class ReviewHandler{
         guard let token = try? KeychainManager.shared.getToken() else {
             throw URLError(.userAuthenticationRequired)
         }
-        guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/reviews") else {
+        guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/reviews") else {
             throw URLError(.badURL)
         }
         var request = URLRequest(url: url)
@@ -1259,7 +1259,7 @@ class ReviewHandler{
             
             
             // Create URL request
-            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/reviews/book/\(bookId.uuidString)?page=1&limit=100&sortBy=reviewed_at&sortOrder=asc") else {
+            guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/reviews/book/\(bookId.uuidString)?page=1&limit=100&sortBy=reviewed_at&sortOrder=asc") else {
                 throw BookFetchError.invalidURL
             }
             
@@ -1319,7 +1319,7 @@ class BorrowHandler{
         guard let token = try? KeychainManager.shared.getToken() else {
             throw URLError(.userAuthenticationRequired)
         }
-        guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/borrow-transactions") else {
+        guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/borrow-transactions") else {
             throw URLError(.badURL)
         }
         var request = URLRequest(url: url)
@@ -1373,7 +1373,7 @@ class BorrowHandler{
             
             
             // Create URL request
-            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/borrow-transactions?limit=200&sortBy=borrow_date&sortOrder=asc") else {
+            guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/borrow-transactions?limit=200&sortBy=borrow_date&sortOrder=asc") else {
                 throw BookFetchError.invalidURL
             }
             
@@ -1426,7 +1426,7 @@ class BorrowHandler{
         guard let token = try? KeychainManager.shared.getToken() else {
             throw URLError(.userAuthenticationRequired)
         }
-        guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/borrow-transactions/\(borrowId.uuidString)/cancel") else {
+        guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/borrow-transactions/\(borrowId.uuidString)/cancel") else {
             throw URLError(.badURL)
         }
         var request = URLRequest(url: url)
@@ -1468,7 +1468,7 @@ class BorrowHandler{
         guard let token = try? KeychainManager.shared.getToken() else {
             throw URLError(.userAuthenticationRequired)
         }
-        guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/borrow-transactions/\(borrowId.uuidString)/return") else {
+        guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/borrow-transactions/\(borrowId.uuidString)/return") else {
             throw URLError(.badURL)
         }
         var request = URLRequest(url: url)
@@ -1522,7 +1522,7 @@ class ReservationHandler{
         guard let token = try? KeychainManager.shared.getToken() else {
             throw URLError(.userAuthenticationRequired)
         }
-        guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/reservations") else {
+        guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/reservations") else {
             throw URLError(.badURL)
         }
         var request = URLRequest(url: url)
@@ -1576,7 +1576,7 @@ class ReservationHandler{
             
             
             // Create URL request
-            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/reservations?limit=200&sortBy=borrow_date&sortOrder=asc") else {
+            guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/reservations?limit=200&sortBy=borrow_date&sortOrder=asc") else {
                 throw BookFetchError.invalidURL
             }
             
@@ -1629,7 +1629,7 @@ class ReservationHandler{
         guard let token = try? KeychainManager.shared.getToken() else {
             throw URLError(.userAuthenticationRequired)
         }
-        guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/reservations/\(borrowId.uuidString)") else {
+        guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/reservations/\(borrowId.uuidString)") else {
             throw URLError(.badURL)
         }
         var request = URLRequest(url: url)
@@ -1796,7 +1796,7 @@ class AnalyticsHandler {
             print("📊 Fetching fresh analytics for library ID: \(libraryIdString)")
             
             // Create URL request
-            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/analytics?library_id=\(libraryIdString)") else {
+            guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/analytics?library_id=\(libraryIdString)") else {
                 throw URLError(.badURL)
             }
             
