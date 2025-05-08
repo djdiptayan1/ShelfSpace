@@ -47,6 +47,8 @@ struct BookDetailView: View {
                             .font(.title2)
                             .foregroundColor(Color.text(for: colorScheme))
                     }
+                    .accessibility(label: Text("Back"))
+                    .accessibility(hint: Text("Double tap to go back to previous screen"))
 
                     Spacer()
 
@@ -55,6 +57,7 @@ struct BookDetailView: View {
                         .font(.title3)
                         .fontWeight(.bold)
                         .foregroundColor(Color.text(for: colorScheme))
+                        .accessibility(addTraits: .isHeader)
 
                     Spacer()
 
@@ -89,6 +92,8 @@ struct BookDetailView: View {
                         .font(.system(size: 22))
                         .foregroundColor(isBookmarked ? Color.primary(for: colorScheme).opacity(0.6) : Color.primary(for: colorScheme).opacity(0.6))
                     }
+                    .accessibility(label: Text(isBookmarked ? "Remove from bookmarks" : "Add to bookmarks"))
+                    .accessibility(hint: Text("Double tap to toggle bookmark status"))
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 10)
@@ -109,6 +114,7 @@ struct BookDetailView: View {
                                     )
                                     .clipped()
                                     .padding(.leading)
+                                    .accessibility(hidden: true)
                             } else {
                                 RoundedRectangle(cornerRadius: 8)
                                     .fill(
@@ -121,10 +127,12 @@ struct BookDetailView: View {
                                             endPoint: .bottomTrailing
                                         )
                                     )
+                                    .accessibility(hidden: true)
 
                                 Image(systemName: "book.fill")
                                     .font(.system(size: 20))
                                     .foregroundColor(.white.opacity(0.7))
+                                    .accessibility(hidden: true)
                             }
 
                             VStack(alignment: .leading, spacing: 10) {
@@ -133,24 +141,22 @@ struct BookDetailView: View {
                                     .font(.system(size: 24, weight: .bold))
                                     .foregroundColor(Color.text(for: colorScheme))
                                     .padding(.top, 5)
+                                    .accessibility(addTraits: .isHeader)
 
                                 // Author with "by" prefix as shown in the image
                                 Text("by " + (book.authorNames!.isEmpty ? "" : book.authorNames![0]))
                                     .font(.system(size: 18))
                                     .foregroundColor(Color.text(for: colorScheme).opacity(0.7))
-
-                                
                             }
                             .padding(.trailing)
                             
                         }
-//                        .padding(.vertical)
                         // Status badge - made to look like the blue button in the image
                         Text(bookStatus.displayText)
                             .font(.system(size: 20).bold())
                             .foregroundColor(Color.secondary(for: colorScheme))
-//                            .cornerRadius(20)
                             .padding(.leading,16)
+                            .accessibility(label: Text("Book status: \(bookStatus.displayText)"))
 
                         // Genre tags in a horizontal scroll - styling similar to the teal buttons in the image
                         ScrollView(.horizontal, showsIndicators: false) {
@@ -169,6 +175,8 @@ struct BookDetailView: View {
                             }
                             .padding(.horizontal)
                         }
+                        .accessibilityElement(children: .combine)
+                        .accessibility(label: Text("Genres: \(book.genreNames?.joined(separator: ", ") ?? "")"))
 
                         // Tab selector for Details and Reviews
                         HStack(spacing: 0) {
@@ -198,10 +206,14 @@ struct BookDetailView: View {
                                 }
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 8)
+                                .accessibility(label: Text(tab.rawValue))
+                                .accessibility(addTraits: selectedTab == tab ? [.isButton, .isSelected] : .isButton)
                             }
                         }
                         .padding(.horizontal)
-//                        .background(Color.accent(for: colorScheme).opacity(0.2))
+                        .accessibilityElement(children: .contain)
+                        .accessibility(label: Text("Tabs"))
+                        .accessibility(hint: Text("Swipe left or right to navigate between tabs"))
 
                         // Content based on selected tab
                         switch selectedTab {
@@ -219,15 +231,10 @@ struct BookDetailView: View {
             }
             .onAppear(){
                 Task{
-                    let wishlists = try await getWishList()
-                    isBookmarked = wishlists.contains(where: {$0.id == book.id})
-                }
-            }
-            .onAppear(){
-                Task{
                     self.isBorrowLoading = true
                     user = try await LoginManager.shared.getCurrentUser()
                     if let user = user{
+                        self.isBookmarked = user.wishlist_book_ids.contains(book.id)
                         isReserved = user.reserved_book_ids.contains(book.id)
                         isBorrowed = user.borrowed_book_ids.contains(book.id)
                         if isBorrowed{
@@ -259,6 +266,8 @@ struct BookDetailView: View {
             }
             .navigationBarHidden(true)
         }
+        .accessibilityElement(children: .contain)
+        .accessibility(label: Text("Book details for \(book.title)"))
     }
     
     // Rest of the code remains the same...
@@ -355,6 +364,7 @@ struct BookDetailView: View {
                     .foregroundColor(Color.text(for: colorScheme))
             }
             .padding(.horizontal)
+            .accessibility(label: Text("Description: \(book.description ?? "")"))
 
             // Add Rating Section after description
            
@@ -372,6 +382,7 @@ struct BookDetailView: View {
         VStack(alignment: .leading, spacing: 24) {
             ReviewsSection(book: book)
         }
+        .accessibilityElement(children: .contain)
     }
 
     // Action button based on status
@@ -465,6 +476,8 @@ struct BookDetailView: View {
             .animation(.easeInOut(duration: 0.2), value: isBorrowLoading)
             .disabled(isBorrowLoading)
         }
+        .accessibility(label: Text(actionButtonText))
+        .accessibility(hint: Text(buttonAccessibilityHint()))
     }
 
     // Helper function to provide context-aware loading text
@@ -480,6 +493,25 @@ struct BookDetailView: View {
             return "Processing..."
         }
     }
+    
+    // Helper function for accessibility hints
+    private func buttonAccessibilityHint() -> String {
+        switch bookStatus {
+        case .available:
+            return "Double tap to borrow this book"
+        case .requested:
+            return "Double tap to cancel your reservation"
+        case .reading:
+            return "Double tap to return this book"
+        case .completed:
+            return "Double tap to borrow this book again"
+        case .notAvailable:
+            return "This book is not currently available"
+        case .loading:
+            return "Loading book status"
+        }
+    }
+    
     private var actionButtonText: String {
         switch bookStatus {
         case .available:
@@ -537,6 +569,7 @@ enum BookStatus {
 
         }
     }
+}
 //    var displayTextcolor: Color {
 //        switch self {
 //        case .available:
@@ -554,6 +587,6 @@ enum BookStatus {
 //
 //        }
 //    }
-}
+
 
 
