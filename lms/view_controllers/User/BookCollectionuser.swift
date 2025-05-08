@@ -160,7 +160,11 @@ struct BookCollectionuser: View {
                 Task{
                     let reservations = try await ReservationHandler.shared.getReservations()
                     //get books from borrows
-                    requestedBooks = reservations.compactMap(\.book)
+                    let currentBookIds = reservations.compactMap(\.book_id)
+
+                    if let cachedBooks = BookHandler.shared.getCachedData(){
+                        requestedBooks = cachedBooks.filter{currentBookIds.contains($0.id)}
+                    }
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
