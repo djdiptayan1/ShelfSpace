@@ -39,6 +39,7 @@ struct ManagePoliciesAdmin: View {
                         .padding(.horizontal, 20)
                         .padding(.top, 25) // Increased top padding
                         .padding(.bottom, 10) // Added bottom padding
+                        .accessibilityAddTraits(.isHeader)
     
                     // Policy items list
                     ForEach(policyItems, id: \.self) { policy in
@@ -50,6 +51,8 @@ struct ManagePoliciesAdmin: View {
                                 }) {
                                     policyItemView(title: policy)
                                 }
+                                .accessibilityLabel("Open Fines and Overdue Items policy settings")
+                                .accessibilityAddTraits(.isButton)
                             } else if policy == "Reservation Policy" {
                                 // Custom button for the Reservation policy
                                 Button(action: {
@@ -57,6 +60,8 @@ struct ManagePoliciesAdmin: View {
                                 }) {
                                     policyItemView(title: policy)
                                 }
+                                .accessibilityLabel("Open Reservation Policy settings")
+                                .accessibilityAddTraits(.isButton)
                             } else if policy == "Borrowing Policy" {
                                 // Custom button for the Borrowing policy
                                 Button(action: {
@@ -64,6 +69,8 @@ struct ManagePoliciesAdmin: View {
                                 }) {
                                     policyItemView(title: policy)
                                 }
+                                .accessibilityLabel("Open Borrowing Policy settings")
+                                .accessibilityAddTraits(.isButton)
                             } else {
                                 // For Privacy Policy, use a regular Button as placeholder
                                 Button(action: {
@@ -72,6 +79,8 @@ struct ManagePoliciesAdmin: View {
                                 }) {
                                     policyItemView(title: policy)
                                 }
+                                .accessibilityLabel("Open Privacy Policy")
+                                .accessibilityAddTraits(.isButton)
                             }
                         }
                         .padding(.horizontal, 20)

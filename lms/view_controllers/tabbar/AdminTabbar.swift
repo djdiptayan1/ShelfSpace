@@ -21,6 +21,8 @@ struct AdminTabbar: View {
             if navigateToLogin {
                 // When navigateToLogin is true, show the login screen
                 ContentView()
+                    .accessibilityHidden(false)
+                    .accessibilityLabel("Login screen")
             } else {
                 TabView(selection: $selectedTab) {
                     HomeViewAdmin()
@@ -28,24 +30,32 @@ struct AdminTabbar: View {
                         .tabItem {
                             Label("Dashboard", systemImage: "house")
                         }
+                        .accessibilityLabel("Dashboard Tab")
+                        .accessibilityHint("Navigates to admin dashboard")
 
                     BookViewAdmin()
                         .tag(1)
                         .tabItem {
                             Label("Books", systemImage: "book.closed")
                         }
+                        .accessibilityLabel("Books Tab")
+                        .accessibilityHint("Navigates to books section")
 
                     UsersViewAdmin()
                         .tag(2)
                         .tabItem {
                             Label("Users", systemImage: "person.2.fill")
                         }
+                        .accessibilityLabel("Users Tab")
+                        .accessibilityHint("Navigates to users list")
 
                     ManagePoliciesAdmin()
                         .tag(3)
                         .tabItem {
                             Label("Policies", systemImage: "document.badge.gearshape.fill")
                         }
+                        .accessibilityLabel("Policies Tab")
+                        .accessibilityHint("Navigates to manage library policies")
                 }
                 .accentColor(Color.primary(for: colorScheme))
                 .toolbarBackground(Color.TabbarBackground(for: colorScheme), for: .tabBar)

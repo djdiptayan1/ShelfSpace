@@ -46,12 +46,15 @@ struct ReservationSettingsView: View {
                                 .font(.system(size: 17, weight: .regular))
                                 .foregroundColor(.red)
                         }
+                        .accessibilityLabel("Cancel button")
+                        .accessibilityHint("Dismisses the settings view")
 
                         Spacer()
 
                         Text("Reservation Settings")
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(Color.text(for: colorScheme))
+                            .accessibilityAddTraits(.isHeader)
 
                         Spacer()
 
@@ -64,6 +67,8 @@ struct ReservationSettingsView: View {
                                 .foregroundColor(Color.primary(for: colorScheme))
                         }
                         .disabled(policyViewModel.isLoading)
+                        .accessibilityLabel("Save button")
+                        .accessibilityHint("Saves the reservation settings")
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 16)
@@ -120,17 +125,22 @@ struct ReservationSettingsView: View {
                                 Text("Hold Duration")
                                     .font(.system(size: 18, weight: .semibold, design: .rounded))
                                     .foregroundColor(Color.text(for: colorScheme))
+                                    .accessibilityAddTraits(.isHeader)
 
                                 Text("\(Int(holdDurationHours)) Hours")
                                     .font(.system(size: 36, weight: .bold, design: .rounded))
                                     .foregroundColor(Color.primary(for: colorScheme))
                                     .frame(maxWidth: .infinity, alignment: .center)
                                     .padding(.vertical, 10)
+                                    .accessibilityValue("\(Int(holdDurationHours)) hours selected")
 
                                 // iOS-style slider
                                 Slider(value: $holdDurationHours, in: 1 ... 48, step: 1)
                                     .accentColor(Color.primary(for: colorScheme))
                                     .padding(.vertical, 10)
+                                    .accessibilityLabel("Hold Duration Slider")
+                                    .accessibilityValue("\(Int(holdDurationHours)) hours")
+                                    .accessibilityHint("Adjusts the hold duration from 1 to 48 hours")
 
                                 HStack {
                                     Text("1 Hour")
@@ -192,6 +202,7 @@ struct ReservationSettingsView: View {
                         .view()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(Color.black.opacity(0.1))
+                        .accessibilityHidden(true)
                     }
                 }
             )

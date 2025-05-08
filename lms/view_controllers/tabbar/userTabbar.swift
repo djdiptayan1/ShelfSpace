@@ -30,6 +30,7 @@ struct UserTabbar: View {
                             Image(systemName: "house")
                             Text("Home")
                         }
+                        .accessibilityLabel("Home Tab")
                     
                     ExploreBooksView()
                         .tag(1)
@@ -37,6 +38,7 @@ struct UserTabbar: View {
                             Image(systemName: "magnifyingglass")
                             Text("Explore")
                         }
+                        .accessibilityLabel("Explore Tab")
                     
                     BookCollectionuser()
                         .tag(2)
@@ -44,6 +46,7 @@ struct UserTabbar: View {
                             Image(systemName: "books.vertical.fill")
                             Text("My Books")
                         }
+                        .accessibilityLabel("My Books Tab")
                 }
                 .accentColor(Color.primary(for: colorScheme))
                 .toolbarBackground(Color.TabbarBackground(for: colorScheme), for: .tabBar)
