@@ -94,6 +94,19 @@ open lms.xcodeproj
 
 4. Build and run the application.
 
+## 📚 Creating a Library
+
+To create a new library in ShelfSpace, admins must first register at:
+
+**[https://admin-reg-eight.vercel.app/](https://admin-reg-eight.vercel.app/)**
+
+This registration process will:
+- Create your admin account
+- Set up your library in the system
+- Provide you with access credentials for the ShelfSpace app
+
+Once registered, you can use the ShelfSpace iOS app to fully manage your library.
+
 ## 🔧 Configuration
 
 The application connects to a backend API hosted on Vercel. You'll need to configure the appropriate API keys in the `Config.swift` file.
@@ -108,15 +121,14 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-## 📝 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
 ## 👥 Team
 
 - **Diptayan Jash** - [djdiptayan](https://github.com/djdiptayan)
 - **Anwin Sharon** - [Anwin](https://github.com/darkdeathoriginal)
-- **Navdeep Lakhlan**
+- **Navdeep Lakhlan** - [Navdeep](https://github.com/Navdeep-Lakhlan)
+- **Nayaki Maneeth Reddy** - [maneethreddy](https://github.com/maneethreddy)
+- **Rakshith** - [R-Langer77](https://github.com/R-Langer77)
+- **Vansh Vineet Bhatia** - [v4vanshh](https://github.com/v4vanshh)
 
 ## 📊 Future Enhancements
 
