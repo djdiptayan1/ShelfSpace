@@ -128,6 +128,8 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - **Nayaki Maneeth Reddy** - [maneethreddy](https://github.com/maneethreddy)
 - **Rakshith** - [R-Langer77](https://github.com/R-Langer77)
 - **Vansh Vineet Bhatia** - [v4vanshh](https://github.com/v4vanshh)
+- **Sneha Gorai** - [Tani2413](https://github.com/Tani2413)
+- **Niharika Shukla** - [niihariika](https://github.com/niihariika)
 
 ## 📊 Future Enhancements
 
