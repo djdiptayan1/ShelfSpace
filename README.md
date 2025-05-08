@@ -3,12 +3,11 @@
 <div align="center">
   <img src="https://img.shields.io/badge/Platform-iOS%2016.6+-blue.svg" alt="iOS 16.6+">
   <img src="https://img.shields.io/badge/Swift-5.0-orange.svg" alt="Swift 5.0">
-  <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="MIT License">
   <img src="https://img.shields.io/badge/Status-Development-yellow.svg" alt="Status">
 </div>
 
 <p align="center">
-  <img src="https://via.placeholder.com/200x200.png?text=ShelfSpace" width="200" height="200" alt="ShelfSpace Logo">
+  <img src="https://shelfspace-83o.pages.dev/logo.png" width="200" height="200" alt="ShelfSpace Logo">
 </p>
 
 ShelfSpace is a modern, feature-rich Library Management System built with SwiftUI that streamlines the management of library resources. The app offers tailored interfaces for administrators, librarians, and members, providing a seamless experience for all users involved in library operations.
@@ -53,10 +52,10 @@ ShelfSpace is a modern, feature-rich Library Management System built with SwiftU
 <!-- Consider adding actual screenshots of your app here -->
 
 <div align="center">
-  <img src="https://via.placeholder.com/200x400.png?text=Login" width="200" alt="Login Screen">
-  <img src="https://via.placeholder.com/200x400.png?text=Admin+Dashboard" width="200" alt="Admin Dashboard">
-  <img src="https://via.placeholder.com/200x400.png?text=Book+Details" width="200" alt="Book Details">
-  <img src="https://via.placeholder.com/200x400.png?text=User+Profile" width="200" alt="User Profile">
+  <img src="https://shelfspace-83o.pages.dev/IMG_3859.PNG" width="200" alt="User Screen">
+  <img src="https://shelfspace-83o.pages.dev/admin-dashboard.png" width="200" alt="Admin Dashboard">
+  <img src="https://shelfspace-83o.pages.dev/lib-dash.png" width="200" alt="librarian dash">
+  <img src="https://shelfspace-83o.pages.dev/Simulator Screenshot - iPhone 16 Pro - 2025-05-08 at 15.24.18.png" width="200" alt="User Profile">
 </div>
 
 ## 🏗️ Architecture
