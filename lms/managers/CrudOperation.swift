@@ -536,7 +536,7 @@ class BookPaginationManager: ObservableObject {
     var currentPage = 1
     var totalPages = 1
     var isLoading = false
-    var itemsPerPage = 15 // Default, can be overridden by fetchBooks limit
+    var itemsPerPage = 200 // Default, can be overridden by fetchBooks limit
     var books: [BookModel] = []
 
     func hasMorePages() -> Bool {
@@ -556,7 +556,7 @@ class BookPaginationManager: ObservableObject {
 func fetchBooks(
     manager: BookPaginationManager,
     page: Int? = nil, // Specific page to fetch. If nil and isLoadingMore is false, fetches page 1.
-    limit: Int = 15,
+    limit: Int = 200,
     sortBy: String = "title",
     sortOrder: String = "asc",
     isLoadingMore: Bool = false,
