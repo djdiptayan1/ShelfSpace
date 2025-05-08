@@ -54,14 +54,14 @@ struct SplashScreenView: View {
                         .frame(width: 400, height: 400)
                         
                         // Loading indicator with status message
-                        HStack(spacing: 10) {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle())
-                            Text(analyticsLoaded ? "Finalizing..." : "Loading library data...")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.top, 20)
+//                        HStack(spacing: 10) {
+//                            ProgressView()
+//                                .progressViewStyle(CircularProgressViewStyle())
+//                            Text(analyticsLoaded ? "Finalizing..." : "Loading library data...")
+//                                .font(.caption)
+//                                .foregroundColor(.secondary)
+//                        }
+//                        .padding(.top, 20)
                         
 //                        if let error = appState.prefetchError {
 //                            Text(error)
