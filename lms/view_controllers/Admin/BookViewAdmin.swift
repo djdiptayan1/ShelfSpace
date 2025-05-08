@@ -9,6 +9,8 @@ import Foundation
 import SwiftUI
 
 struct BookViewAdmin: View {
+    @StateObject private var homePaginationManager = BookPaginationManager()
+    
     @Environment(\.colorScheme) private var colorScheme
     @State private var books: [BookModel] = []
     @State private var searchText: String = ""
@@ -206,7 +208,7 @@ struct BookViewAdmin: View {
     
     private func loadBooks() async {
         isLoading = true
-        fetchBooks { result in
+        fetchBooks(manager: homePaginationManager) { result in
             defer { isLoading = false }
 
             switch result {
@@ -228,7 +230,7 @@ struct BookViewAdmin: View {
         isLoadingMore = true
         // Remove the [weak self] capture list since structs don't need weak references
         // And fix the explicit type annotation
-        lms.loadMoreBooks { result in
+        lms.loadMoreBooks(manager: homePaginationManager) { result in
             self.isLoadingMore = false
             switch result {
             case .success(let allBooks):
