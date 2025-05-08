@@ -376,25 +376,28 @@ struct InfoCardView<Content: View>: View {
 struct StatsCardView: View {
     let user: User
     @Environment(\.colorScheme) private var colorScheme
+    @State private var wishlists:[BookModel]?
+    @State private var reservation: [ReservationModel]?
+    @State private var borrowed:[BorrowModel]?
     
     var body: some View {
         HStack(spacing: 20) {
             StatItem(
-                value: user.borrowed_book_ids.count,
+                value: borrowed?.count ?? 0,
                 label: "Borrowed",
                 iconName: "book.closed",
                 color: .blue
             )
             
             StatItem(
-                value: user.reserved_book_ids.count,
+                value: reservation?.count ?? 0,
                 label: "Reserved",
                 iconName: "clock",
                 color: .orange
             )
             
             StatItem(
-                value: user.wishlist_book_ids.count,
+                value: wishlists?.count ?? 0,
                 label: "Bookmarked",
                 iconName: "bookmark",
                 color: .red
@@ -406,6 +409,13 @@ struct StatsCardView: View {
                 .fill(colorScheme == .dark ? Color(hex: "252525") : .white)
                 .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
         )
+        .onAppear(){
+            Task{
+                wishlists = try await getWishList()
+                reservation = try await ReservationHandler.shared.getReservations()
+                borrowed = try await BorrowHandler.shared.getBorrows()
+            }
+        }
     }
 }
 
