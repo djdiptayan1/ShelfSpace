@@ -13,10 +13,10 @@ struct UserTabbar: View {
     @Environment(\.colorScheme) private var colorScheme
     @StateObject private var themeManager = ThemeManager()
     @EnvironmentObject private var appState: AppState
-    
+
     // Add state for managing presentation of login screen
     @State private var navigateToLogin = false
-    
+
     var body: some View {
         Group {
             if navigateToLogin {
@@ -31,7 +31,7 @@ struct UserTabbar: View {
                             Text("Home")
                         }
                         .accessibilityLabel("Home Tab")
-                    
+
                     ExploreBooksView()
                         .tag(1)
                         .tabItem {
@@ -39,7 +39,7 @@ struct UserTabbar: View {
                             Text("Explore")
                         }
                         .accessibilityLabel("Explore Tab")
-                    
+
                     BookCollectionuser()
                         .tag(2)
                         .tabItem {
@@ -47,12 +47,22 @@ struct UserTabbar: View {
                             Text("My Books")
                         }
                         .accessibilityLabel("My Books Tab")
+
+                    FolioView()
+                        .tag(3)
+                        .tabItem {
+                            Image(systemName: "apple.intelligence")
+                            Text("Folio")
+                        }
+                        .accessibilityLabel("Mood Journey Tab")
                 }
                 .accentColor(Color.primary(for: colorScheme))
                 .toolbarBackground(Color.TabbarBackground(for: colorScheme), for: .tabBar)
                 .toolbarBackground(.visible, for: .tabBar)
                 .toolbarColorScheme(colorScheme, for: .tabBar)
-                .onReceive(NotificationCenter.default.publisher(for: Notification.Name("UserDidLogout"))) { _ in
+                .onReceive(
+                    NotificationCenter.default.publisher(for: Notification.Name("UserDidLogout"))
+                ) { _ in
                     print("Received logout notification in UserTabbar")
                     // Set navigateToLogin to true when we receive the logout notification
                     navigateToLogin = true
