@@ -37,6 +37,8 @@ struct UsersViewLibrarian: View {
                         Image(systemName: "plus.circle.fill")
                             .font(.title2)
                             .foregroundColor(Color.primary(for: colorScheme)) // Use color helper
+                            .accessibilityLabel("Add Member")
+                            .accessibilityHint("Opens the form to add a new member")
                     }
                 }
             }
@@ -80,6 +82,9 @@ struct UsersViewLibrarian: View {
             ForEach(viewModel.activeMembers) { user in
                 MemberRow(user: user, viewModel: viewModel)
                     .id(user.id.uuidString + (user.is_active ?? false ? "-active" : "-inactive"))
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("\(user.name), \(user.role.rawValue.capitalized)")
+                    .accessibilityHint(user.is_active == true ? "Active member" : "Inactive member")
             }
         }
         .id(viewModel.activeMembers.map { $0.id.uuidString + ($0.is_active ?? false ? "-active" : "-inactive") }.joined())
@@ -87,12 +92,16 @@ struct UsersViewLibrarian: View {
         .overlay {
             if viewModel.activeMembers.isEmpty {
                 EmptyStateView(type: "Members", colorScheme: colorScheme)
+                    .accessibilityElement()
+                    .accessibilityLabel("No members available")
+                    .accessibilityHint("Pull down to refresh or add a new member")
             }
         }
         .refreshable {
             print("Refreshing members...")
             viewModel.fetchUsersoflibrary()
         }
+        .accessibilityLabel("Members List")
     }
 
      // Helper function to add mock data for previews/testing

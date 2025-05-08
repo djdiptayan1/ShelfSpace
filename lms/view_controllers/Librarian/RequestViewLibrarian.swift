@@ -107,6 +107,7 @@ struct RequestViewLibrarian: View {
                                             }
                             }
                         )
+                        .accessibilityElement(children: .combine)
                     }
                 }
             }
@@ -118,6 +119,7 @@ struct RequestViewLibrarian: View {
                         Image(systemName: "arrow.clockwise")
                             .font(.system(size: 16, weight: .medium))
                     }
+                    .accessibilityLabel("Refresh requests")
                 }
             }
             .sheet(isPresented: $showCamera) {
@@ -125,6 +127,7 @@ struct RequestViewLibrarian: View {
                     BarcodeScannerView(scannedCode: $scannedBarcode) { barcode in
                         handleScannedBarcode(barcode, for: borrow)
                     }
+                    .accessibilityElement(children: .combine)
                 }
             }
             .alert("Scan Result", isPresented: $showAlert) {
@@ -175,7 +178,9 @@ struct RequestViewLibrarian: View {
             .onAppear {
                 fetchBorrowRequests()
             }
+            .accessibilityElement(children: .contain)
         }
+        .accessibilityElement(children: .contain)
     }
     
     // MARK: - View Components
@@ -185,10 +190,13 @@ struct RequestViewLibrarian: View {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.gray)
                 .padding(.leading, 8)
+                .accessibilityHidden(true)
             
             TextField("Search by title, ISBN or description...", text: $searchText)
                 .autocapitalization(.none)
                 .disableAutocorrection(true)
+                .accessibilityLabel("Search books")
+                .accessibilityHint("Search by title, ISBN or description")
             
             if !searchText.isEmpty {
                 Button(action: { searchText = "" }) {
@@ -196,6 +204,7 @@ struct RequestViewLibrarian: View {
                         .foregroundColor(.gray)
                         .padding(.trailing, 8)
                 }
+                .accessibilityLabel("Clear search")
             }
         }
         .padding(10)
@@ -203,6 +212,7 @@ struct RequestViewLibrarian: View {
         .cornerRadius(10)
         .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
         .padding(.horizontal)
+        .accessibilityElement(children: .combine)
     }
     
     private var segmentedControl: some View {
@@ -212,6 +222,10 @@ struct RequestViewLibrarian: View {
             }
         }
         .pickerStyle(SegmentedPickerStyle())
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Request type selector")
+        .accessibilityValue(selectedSegment.rawValue)
+        .accessibilityHint("Select whether to view check out or check in requests")
     }
     
     private var requestCountView: some View {
@@ -219,6 +233,7 @@ struct RequestViewLibrarian: View {
             Text("\(itemCount) \(itemCount == 1 ? "request" : "requests") found")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
+                .accessibilityLabel("\(itemCount) \(itemCount == 1 ? "request" : "requests") found")
             Spacer()
         }
     }
@@ -229,6 +244,7 @@ struct RequestViewLibrarian: View {
                 VStack {
                     Spacer()
                     ProgressView("Loading requests...")
+                        .accessibilityLabel("Loading requests")
                     Spacer()
                 }
             } else if let error = fetchError {
@@ -238,6 +254,7 @@ struct RequestViewLibrarian: View {
                         Image(systemName: "exclamationmark.triangle")
                             .font(.largeTitle)
                             .foregroundColor(.red)
+                            .accessibilityHidden(true)
                         Text("Error")
                             .font(.headline)
                         Text(error)
@@ -249,8 +266,10 @@ struct RequestViewLibrarian: View {
                         }
                         .buttonStyle(.borderedProminent)
                         .padding(.top)
+                        .accessibilityLabel("Try again")
                     }
                     .padding()
+                    .accessibilityElement(children: .combine)
                     Spacer()
                 }
             } else if (filteredReservations.isEmpty && selectedSegment == .checkOut) || (filteredBorrowRequests.isEmpty && selectedSegment == .checkIn) {
@@ -260,6 +279,7 @@ struct RequestViewLibrarian: View {
                         Image(systemName: selectedSegment == .checkOut ? "tray" : "book.closed")
                             .font(.system(size: 50))
                             .foregroundColor(.gray)
+                            .accessibilityHidden(true)
                         Text("No \(selectedSegment.rawValue) Requests")
                             .font(.headline)
                         Text("There are no \(selectedSegment == .checkOut ? "check out" : "check in") requests at this time.")
@@ -268,6 +288,8 @@ struct RequestViewLibrarian: View {
                             .multilineTextAlignment(.center)
                     }
                     .padding()
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("No \(selectedSegment.rawValue) requests. There are no \(selectedSegment == .checkOut ? "check out" : "check in") requests at this time.")
                     Spacer()
                 }
             } else {
@@ -290,6 +312,7 @@ struct RequestViewLibrarian: View {
                                     }
                                 )
                                 .padding(.horizontal)
+                                .accessibilityElement(children: .contain)
                             }
                             }else{
                             ForEach(filteredBorrowRequests) { borrow in
@@ -308,15 +331,18 @@ struct RequestViewLibrarian: View {
                                     }
                                 )
                                 .padding(.horizontal)
+                                .accessibilityElement(children: .contain)
                             }
                             
                                                     }
                     }
                     .padding(.vertical)
+                    .accessibilityElement(children: .contain)
                 }
                 .scrollIndicators(.hidden)
             }
         }
+        .accessibilityElement(children: .contain)
     }
 
     // MARK: - Helper Methods
@@ -331,8 +357,6 @@ struct RequestViewLibrarian: View {
         let bookIsbn = book.isbn ?? ""
         
         if barcode == bookIsbn {
-            // Here you would call the API to process the check out/in
-            // For now, just remove from the list and show success
             withAnimation {
                 borrowRequests.removeAll { $0.id == borrow.id }
             }
@@ -381,7 +405,6 @@ struct RequestViewLibrarian: View {
 
         Task {
             do {
-                // Fetch initial data
                 let fetchedBorrows = try await BorrowHandler.shared.getBorrows()
                 let fetchedReservations = try await ReservationHandler.shared.getReservations()
 
@@ -401,13 +424,14 @@ struct RequestViewLibrarian: View {
             }
         }
     }
+    
     private func enrichBorrowModels(_ borrows: [BorrowModel]) async -> [BorrowModel] {
         guard let cachedBooks = BookHandler.shared.getCachedData(), !cachedBooks.isEmpty else {
             return borrows
         }
         var updatedBorrows = borrows
         for i in 0..<updatedBorrows.count {
-            if updatedBorrows[i].book == nil && updatedBorrows[i].status != .returned { // Only enrich if book data is missing
+            if updatedBorrows[i].book == nil && updatedBorrows[i].status != .returned {
                 if let foundBook = cachedBooks.first(where: { $0.id == updatedBorrows[i].book_id }) {
                     updatedBorrows[i].book = foundBook
                 }
@@ -415,24 +439,22 @@ struct RequestViewLibrarian: View {
         }
         return updatedBorrows
     }
+    
     private func enrichReservationModels(_ reservations: [ReservationModel]) async -> [ReservationModel] {
         guard let cachedBooks = BookHandler.shared.getCachedData(), !cachedBooks.isEmpty else {
             return reservations
         }
         var updatedReservations = reservations
         for i in 0..<updatedReservations.count {
-            // Assuming ReservationModel has book_id and book properties
-            if updatedReservations[i].book == nil { // Only enrich if book data is missing
-                if let foundBook = cachedBooks.first(where: { $0.id == updatedReservations[i].book_id }) { // Adjust book_id property name if different
+            if updatedReservations[i].book == nil {
+                if let foundBook = cachedBooks.first(where: { $0.id == updatedReservations[i].book_id }) {
                     updatedReservations[i].book = foundBook
                 }
             }
         }
         return updatedReservations
     }
-
-
-    }
+}
 
 // MARK: - Borrow Request Card View
 
@@ -471,7 +493,7 @@ struct BorrowRequestCardView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Book Info Section (No User Info Bar to avoid UserModel issues)
+            // Book Info Section
             bookInfoSection
             
             // Status Bar
@@ -483,19 +505,20 @@ struct BorrowRequestCardView: View {
         .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityHint(accessibilityHint)
     }
     
     // MARK: - Component Views
-    
-    // Removed userInfoBar to avoid UserModel decoding issues
     
     private var bookInfoSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             // User & Status Header
             HStack {
-                // We're not using user.name directly to avoid UserModel decoding issues
                 Text("Request ID: \(borrowId.uuidString.suffix(6))")
                     .font(.system(size: 14, weight: .medium))
+                    .accessibilityLabel("Request ID: \(borrowId.uuidString.suffix(6))")
                 
                 Spacer()
                 
@@ -504,6 +527,7 @@ struct BorrowRequestCardView: View {
             .padding()
             
             Divider()
+                .accessibilityHidden(true)
             
             HStack(alignment: .top, spacing: 16) {
                 // Book Cover
@@ -514,32 +538,37 @@ struct BorrowRequestCardView: View {
                     Text(book?.title ?? "Unknown Title")
                         .font(.headline)
                         .lineLimit(2)
+                        .accessibilityAddTraits(.isHeader)
                     
                     if let isbn = book?.isbn {
                         HStack {
                             Image(systemName: "barcode")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
+                                .accessibilityHidden(true)
                             Text(isbn)
                                 .font(.caption)
-                            .foregroundColor(.secondary)
+                                .foregroundColor(.secondary)
+                                .accessibilityLabel("ISBN: \(isbn)")
                         }
                     }
                     
-                        HStack {
-                            Image(systemName: "books.vertical")
+                    HStack {
+                        Image(systemName: "books.vertical")
                             .font(.caption)
                             .foregroundColor(.secondary)
-                            Text("\(book?.availableCopies ?? 0) of \(book?.totalCopies ?? 0) available")
-                                .font(.caption)
-                                .foregroundColor(book?.availableCopies ?? 0 > 0 ? .green : .red)
-                        }
-                    
+                            .accessibilityHidden(true)
+                        Text("\(book?.availableCopies ?? 0) of \(book?.totalCopies ?? 0) available")
+                            .font(.caption)
+                            .foregroundColor(book?.availableCopies ?? 0 > 0 ? .green : .red)
+                            .accessibilityLabel("\(book?.availableCopies ?? 0) of \(book?.totalCopies ?? 0) copies available")
+                    }
                     
                     // Request Dates
                     dateView
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityElement(children: .combine)
             }
             .padding(.horizontal)
             .padding(.vertical, 12)
@@ -551,16 +580,19 @@ struct BorrowRequestCardView: View {
             Text("Request Status:")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
+                .accessibilityHidden(true)
             
-                Spacer()
+            Spacer()
             
             Text(statusText)
                 .font(.subheadline.bold())
                 .foregroundColor(.orange)
+                .accessibilityLabel("Status: \(statusText)")
         }
         .padding(.horizontal)
         .padding(.vertical, 8)
         .background(colorScheme == .dark ? Color.black.opacity(0.3) : Color.gray.opacity(0.1))
+        .accessibilityElement(children: .combine)
     }
     
     private var buttonSection: some View {
@@ -568,6 +600,7 @@ struct BorrowRequestCardView: View {
             Button(action: onProcess) {
                 HStack {
                     Image(systemName: type == .checkOut ? "arrow.right.doc.on.clipboard" : "arrow.left.doc.on.clipboard")
+                        .accessibilityHidden(true)
                     Text(type == .checkOut ? "Check Out" : "Check In")
                 }
                 .frame(maxWidth: .infinity)
@@ -575,10 +608,12 @@ struct BorrowRequestCardView: View {
             }
             .buttonStyle(.borderedProminent)
             .tint(Color.accentColor)
+            .accessibilityLabel(type == .checkOut ? "Check Out" : "Check In")
             
             Button(action: onReject) {
-            HStack {
+                HStack {
                     Image(systemName: "xmark")
+                        .accessibilityHidden(true)
                     Text("Reject")
                 }
                 .frame(maxWidth: .infinity)
@@ -586,15 +621,17 @@ struct BorrowRequestCardView: View {
             }
             .buttonStyle(.bordered)
             .foregroundColor(.red)
+            .accessibilityLabel("Reject request")
         }
         .padding()
+        .accessibilityElement(children: .contain)
     }
     
     // MARK: - Supporting Views
     
     private var bookCover: some View {
         Group {
-            if let coverUrl = book?.coverImageUrl, 
+            if let coverUrl = book?.coverImageUrl,
                let url = URL(string: coverUrl.replacingOccurrences(of: "http://", with: "https://")) {
                 AsyncImage(url: url) { phase in
                     switch phase {
@@ -631,6 +668,7 @@ struct BorrowRequestCardView: View {
                         .stroke(Color.gray.opacity(0.3), lineWidth: 0.5)
                 )
                 .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+                .accessibilityLabel("Book cover")
             } else {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(Color.gray.opacity(0.2))
@@ -644,37 +682,44 @@ struct BorrowRequestCardView: View {
                         RoundedRectangle(cornerRadius: 8)
                             .stroke(Color.gray.opacity(0.3), lineWidth: 0.5)
                     )
+                    .accessibilityLabel("Book cover placeholder")
             }
         }
+        .accessibilityHidden(true)
     }
     
     private var dateView: some View {
         VStack(alignment: .leading, spacing: 4) {
             Divider()
                 .padding(.vertical, 4)
+                .accessibilityHidden(true)
             
             HStack {
                 Image(systemName: "calendar")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .accessibilityHidden(true)
                 
                 Text("Requested: \(reservationTime.formatted(date: .numeric, time: .shortened))")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .accessibilityLabel("Requested on \(reservationTime.formatted(date: .complete, time: .omitted))")
             }
             
-                HStack {
-                    Image(systemName: "calendar.badge.clock")
+            HStack {
+                Image(systemName: "calendar.badge.clock")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .accessibilityHidden(true)
+                if let dueTime = dueTime {
+                    Text("Due: \(dueTime.formatted(date: .numeric, time: .omitted))")
                         .font(.caption)
-                        .foregroundColor(.secondary)
-                    if let dueTime = dueTime{
-                        Text("Due: \(dueTime.formatted(date: .numeric, time: .omitted))")
-                            .font(.caption)
-                            .foregroundColor(dueTime < Date() ? .red : .secondary)
-                    }
+                        .foregroundColor(dueTime < Date() ? .red : .secondary)
+                        .accessibilityLabel("Due on \(dueTime.formatted(date: .complete, time: .omitted))")
                 }
-            
+            }
         }
+        .accessibilityElement(children: .combine)
     }
     
     private var statusBadge: some View {
@@ -685,9 +730,9 @@ struct BorrowRequestCardView: View {
             .background(
                 Capsule()
                     .fill(statusColor.opacity(0.2))
-            )
             .foregroundColor(statusColor)
-    }
+            .accessibilityLabel("Status: Reserved")
+                )}
     
     // MARK: - Helper Properties
     
@@ -696,13 +741,22 @@ struct BorrowRequestCardView: View {
     }
     
     private var statusText: String {
-            return "Waiting for Approval"
-        
+        return "Waiting for Approval"
     }
     
-    // Add a simple helper to get book ISBN safely
-    private var bookIsbn: String {
-        return book?.isbn ?? "No ISBN"
+    private var accessibilityLabel: String {
+        let title = book?.title ?? "Unknown Title"
+        let isbn = book?.isbn ?? "No ISBN"
+        let available = book?.availableCopies ?? 0
+        let total = book?.totalCopies ?? 0
+        let requestedDate = reservationTime.formatted(date: .complete, time: .omitted)
+        let dueDate = dueTime?.formatted(date: .complete, time: .omitted) ?? "No due date"
+        
+        return "\(title). ISBN: \(isbn). \(available) of \(total) copies available. Requested on \(requestedDate). Due on \(dueDate). Status: Waiting for Approval."
+    }
+    
+    private var accessibilityHint: String {
+        return "Swipe left or right to hear actions available for this request"
     }
 }
 
