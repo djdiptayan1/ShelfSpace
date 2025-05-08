@@ -145,33 +145,14 @@ struct BookCollectionuser: View {
                     self.policy = policy
                 }
             }
-            .onAppear(){
-                Task{
-                    borrows = try await BorrowHandler.shared.getBorrows()
-                    let currentFiltered = borrows.filter{$0.status == .borrowed}
-                    let returnedFiltered = borrows.filter{$0.status == .returned}
-                    let currentBookIds = currentFiltered.compactMap(\.book_id)
-                    let returnedBookIds = returnedFiltered.compactMap(\.book_id)
-                    if let cachedBooks = BookHandler.shared.getCachedData(){
-                        currentBooks = cachedBooks.filter{currentBookIds.contains($0.id)}
-                        returnedBooks = cachedBooks.filter{returnedBookIds.contains($0.id)}
+            .onAppear {
+                        Task {
+                            await loadBookData()
+                        }
                     }
-                }
-            }
             .onAppear(){
                 Task{
                     self.wishlistBooks = try await getWishList()
-                }
-            }
-            .onAppear(){
-                Task{
-                    reservations = try await ReservationHandler.shared.getReservations()
-                    //get books from borrows
-                    let currentBookIds = reservations.compactMap(\.book_id)
-
-                    if let cachedBooks = BookHandler.shared.getCachedData(){
-                        requestedBooks = cachedBooks.filter{currentBookIds.contains($0.id)}
-                    }
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -186,6 +167,85 @@ struct BookCollectionuser: View {
             )
         }
     }
+    func loadBookData() async {
+            do {
+                async let borrowsData = BorrowHandler.shared.getBorrows()
+                async let reservationsData = ReservationHandler.shared.getReservations()
+
+                self.borrows = try await borrowsData
+                self.reservations = try await reservationsData
+
+                let currentFilteredBorrows = borrows.filter { $0.status == .borrowed }
+                let returnedFilteredBorrows = borrows.filter { $0.status == .returned }
+
+                let borrowCurrentBookIds = Set(currentFilteredBorrows.compactMap(\.book_id))
+                let borrowReturnedBookIds = Set(returnedFilteredBorrows.compactMap(\.book_id))
+                let reservationBookIds = Set(reservations.compactMap(\.book_id))
+
+                var allUniqueBookIds = Set<UUID>()
+                allUniqueBookIds.formUnion(borrowCurrentBookIds)
+                allUniqueBookIds.formUnion(borrowReturnedBookIds)
+                allUniqueBookIds.formUnion(reservationBookIds)
+
+                if allUniqueBookIds.isEmpty {
+                    print("ℹ️ No book IDs to process from borrows or reservations.")
+                    currentBooks = []
+                    returnedBooks = []
+                    requestedBooks = []
+                    return
+                }
+
+                print("ℹ️ All unique book IDs to resolve: \(allUniqueBookIds.map { $0.uuidString }.joined(separator: ", "))")
+
+                var resolvedBooks: [UUID: BookModel] = [:]
+
+                if let cachedBooksArray = BookHandler.shared.getCachedData() {
+                    for book in cachedBooksArray {
+                        if allUniqueBookIds.contains(book.id) {
+                            resolvedBooks[book.id] = book
+                            print("✅ Found book \(book.id) in cache: \(book.title)")
+                        }
+                    }
+                }
+
+                let missingBookIds = allUniqueBookIds.filter { resolvedBooks[$0] == nil }
+
+                if !missingBookIds.isEmpty {
+                    print("ℹ️ Missing \(missingBookIds.count) books from cache. Fetching them: \(missingBookIds.map { $0.uuidString }.joined(separator: ", "))")
+                    var newlyFetchedBooks: [BookModel] = []
+
+                    try await withThrowingTaskGroup(of: BookModel?.self) { group in
+                        for bookId in missingBookIds {
+                            group.addTask {
+                                print("🚀 Fetching book with ID: \(bookId)")
+                                return try await fetchBookFromId(bookId)
+                            }
+                        }
+
+                        for try await fetchedBook in group {
+                            if let book = fetchedBook {
+                                newlyFetchedBooks.append(book)
+                                resolvedBooks[book.id] = book
+                            }
+                        }
+                    }
+                    
+                } else {
+                    print("✅ All required books were found in the cache.")
+                }
+
+                currentBooks = borrowCurrentBookIds.compactMap { resolvedBooks[$0] }
+                returnedBooks = borrowReturnedBookIds.compactMap { resolvedBooks[$0] }
+                requestedBooks = reservationBookIds.compactMap { resolvedBooks[$0] }
+
+                print("✅ Successfully loaded book data. Current: \(currentBooks.count), Returned: \(returnedBooks.count), Requested: \(requestedBooks.count)")
+
+            } catch {
+                print("❌ Error in loadBookData: \(error.localizedDescription)")
+                error.logDetails() // Make sure this extension is available
+            }
+        }
+
     
     // MARK: - Tab Bar View
     private var tabBarView: some View {

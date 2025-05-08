@@ -553,6 +553,51 @@ class BookPaginationManager: ObservableObject {
     }
 }
 
+func fetchBookFromId(_ bookId:UUID) async throws-> BookModel?{
+    guard let token = try? KeychainManager.shared.getToken() else {
+        throw URLError(.userAuthenticationRequired)
+    }
+    guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/books/\(bookId.uuidString)") else {
+        throw URLError(.badURL)
+    }
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+    
+    let (data, response) = try await URLSession.shared.data(for: request)
+
+    guard let httpResponse = response as? HTTPURLResponse else {
+        throw URLError(.badServerResponse)
+    }
+
+    print("\u{1F4E5} Server response status code: \(httpResponse.statusCode)")
+    if let responseString = String(data: data, encoding: .utf8) {
+        print("\u{1F4E5} Server response body: \(responseString)")
+    }
+    let booksResponse = try JSONUtility.shared.decode(BookModel.self, from: data)
+
+    if (200...299).contains(httpResponse.statusCode) {
+        print("✅ Fetched book")
+        return booksResponse
+    } else {
+        do {
+            let errorResponse = try JSONUtility.shared.decode(ErrorResponse.self, from: data)
+            print("❌ Error fetching book: \(errorResponse.errorMessage)")
+            throw NSError(domain: "FetchBookError", code: httpResponse.statusCode,
+                          userInfo: [NSLocalizedDescriptionKey: errorResponse.errorMessage])
+        } catch {
+            let rawErrorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+            print("❌ Error fetching book (raw): \(rawErrorMessage)")
+            print("Underlying decoding error (if any):")
+            error.logDetails()
+            throw NSError(domain: "FetchBookError", code: httpResponse.statusCode,
+                          userInfo: [NSLocalizedDescriptionKey: rawErrorMessage])
+        }
+    }
+}
+
 func fetchBooks(
     manager: BookPaginationManager,
     page: Int? = nil, // Specific page to fetch. If nil and isLoadingMore is false, fetches page 1.
