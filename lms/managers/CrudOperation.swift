@@ -37,11 +37,16 @@ func insertUser(userData: [String: Any], completion: @escaping (Bool) -> Void) {
             request.setValue("application/json", forHTTPHeaderField: "Accept")
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
-            // Ensure all UUIDs are converted to strings before serialization
+            // Ensure all UUIDs and user data fields are properly formatted
             var processedUserData = userData
+            
+            // Handle UUID fields
             if let userId = userData["user_id"] as? UUID {
                 processedUserData["user_id"] = userId.uuidString
+            } else if let userIdStr = userData["user_id"] as? String {
+                processedUserData["user_id"] = userIdStr
             }
+            
             if let borrowedIds = userData["borrowed_book_ids"] as? [UUID] {
                 processedUserData["borrowed_book_ids"] = borrowedIds.map { $0.uuidString }
             }
@@ -51,12 +56,31 @@ func insertUser(userData: [String: Any], completion: @escaping (Bool) -> Void) {
             if let wishlistIds = userData["wishlist_book_ids"] as? [UUID] {
                 processedUserData["wishlist_book_ids"] = wishlistIds.map { $0.uuidString }
             }
-
-            // Convert the processed userData dictionary to JSON data
-            let jsonData = try JSONSerialization.data(withJSONObject: processedUserData, options: [])
+            
+            // Make sure personal info fields are explicitly included
+            if let gender = userData["gender"] as? String {
+                processedUserData["gender"] = gender.lowercased()
+            }
+            
+            // Ensure age is properly formatted as integer
+            if let age = userData["age"] as? Int {
+                processedUserData["age"] = age
+            } else if let ageStr = userData["age"] as? String, let ageInt = Int(ageStr) {
+                processedUserData["age"] = ageInt
+            }
+            
+            if let phoneNumber = userData["phone_number"] as? String {
+                processedUserData["phone_number"] = phoneNumber
+            }
+            
+            // Log the final data being sent
+            print("Final processed user data: \(processedUserData)")
+            
+            // Convert the processed userData dictionary to JSON data using JSONUtility
+            let jsonData = try JSONUtility.shared.encodeFromDictionary(processedUserData)
             request.httpBody = jsonData
 
-            print("Sending user data: \(String(data: jsonData, encoding: .utf8) ?? "")")
+            print("Sending user data JSON: \(String(data: jsonData, encoding: .utf8) ?? "")")
 
             let (data, response) = try await URLSession.shared.data(for: request)
 
@@ -79,6 +103,7 @@ func insertUser(userData: [String: Any], completion: @escaping (Bool) -> Void) {
             }
         } catch {
             print("Error creating user: \(error)")
+            print("Error details: \(String(describing: error))")
             DispatchQueue.main.async {
                 completion(false)
             }
@@ -382,11 +407,6 @@ func getOrCreateAuthorId(authorName: String, bookId: UUID) async throws -> UUID 
     return createdAuthor.id
 }
 
-class BookHandler:CacheHandler<[BookModel]>{
-    static let shared = BookHandler(cacheFileName: "book_cache.json")
-}
-
-
 func createBook(book: BookModel) async throws -> BookModel {
     print("Add BOOK API CALL HERE ...")
 
@@ -505,70 +525,157 @@ func createBook(book: BookModel) async throws -> BookModel {
     }
 }
 
-func fetchBooks(completion: @escaping (Result<[BookModel], Error>) -> Void) { // FULLY WORKING
+class BookHandler:CacheHandler<[BookModel]>{
+    static let shared = BookHandler(cacheFileName: "book_cache.json")
+}
+
+// Creating a class to manage book pagination state
+class BookPaginationManager {
+    static let shared = BookPaginationManager()
+    
+    var currentPage = 1
+    var totalPages = 1
+    var isLoading = false
+    var itemsPerPage = 15
+    var books: [BookModel] = []
+    
+    func hasMorePages() -> Bool {
+        return currentPage < totalPages
+    }
+    
+    func reset() {
+        currentPage = 1
+        totalPages = 1
+        books = []
+        isLoading = false
+    }
+}
+
+// Updated function signature to include isLoadingMore parameter
+func fetchBooks(page: Int? = nil, limit: Int = 15, sortBy: String = "title", sortOrder: String = "asc", isLoadingMore: Bool = false, completion: @escaping (Result<[BookModel], Error>) -> Void) {
+    // Get pagination manager
+    let paginationManager = BookPaginationManager.shared
+    
+    // If we're already loading or trying to load a page beyond total pages, return early
+    if paginationManager.isLoading || (page != nil && page! > paginationManager.totalPages && paginationManager.totalPages > 0) {
+        completion(.success(paginationManager.books))
+        return
+    }
+    
+    // Set current page - either use provided page or increment if loading more
+    let currentPage: Int
+    if let requestedPage = page {
+        currentPage = requestedPage
+    } else if isLoadingMore {
+        currentPage = paginationManager.currentPage + 1
+    } else {
+        // Reset if this is a fresh load
+        if !isLoadingMore {
+            paginationManager.reset()
+        }
+        currentPage = 1
+    }
+    
+    // Update state to loading
+    paginationManager.isLoading = true
+    
     Task {
-            do {
-                // Get authentication token and library ID
-                guard let token = try? KeychainManager.shared.getToken() else {
-                    throw BookFetchError.tokenMissing
+        do {
+            // Get authentication token and library ID
+            guard let token = try? KeychainManager.shared.getToken() else {
+                throw BookFetchError.tokenMissing
+            }
+            
+            let libraryIdString = try KeychainManager.shared.getLibraryId()
+            print("Using library ID from keychain: \(libraryIdString)")
+            print("Fetching books, page \(currentPage) of \(paginationManager.totalPages)")
+            
+            // Create URL request with pagination parameters
+            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/books?page=\(currentPage)&limit=\(limit)&sortBy=\(sortBy)&sortOrder=\(sortOrder)&libraryId=\(libraryIdString)") else {
+                throw BookFetchError.invalidURL
+            }
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "GET"
+            request.addValue("application/json", forHTTPHeaderField: "accept")
+            request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            
+            // Make the network request
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            // Check response status
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw BookFetchError.unknown
+            }
+            
+            guard (200 ... 299).contains(httpResponse.statusCode) else {
+                throw BookFetchError.serverError(httpResponse.statusCode)
+            }
+            
+            // Use the JSON utility to decode the response
+            let booksResponse = try JSONUtility.shared.decode(BooksResponse.self, from: data)
+            
+            // Update pagination information
+            paginationManager.currentPage = currentPage
+            paginationManager.totalPages = booksResponse.pagination.totalPages
+            
+            // Process books
+            var processedBooks = booksResponse.data.map { book in
+                var mutableBook = book
+                if mutableBook.authorNames == nil {
+                    mutableBook.authorNames = []
                 }
+                return mutableBook
+            }
+            
+            // Update books collection: append if loading more, otherwise replace
+            if isLoadingMore {
+                paginationManager.books.append(contentsOf: processedBooks)
+            } else {
+                paginationManager.books = processedBooks
+            }
+            
+            // Cache the books
+            BookHandler.shared.cacheData(paginationManager.books)
+            
+            // Return results via completion handler
+            DispatchQueue.main.async {
+                // Mark loading as complete
+                paginationManager.isLoading = false
                 
-                let libraryIdString = try KeychainManager.shared.getLibraryId()
-                print("Using library ID from keychain: \(libraryIdString)")
-                
-                // Create URL request
-                guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/books?limit=200&libraryId=\(libraryIdString)") else {
-                    throw BookFetchError.invalidURL
-                }
-                
-                var request = URLRequest(url: url)
-                request.httpMethod = "GET"
-                request.addValue("application/json", forHTTPHeaderField: "accept")
-                request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-                
-                // Make the network request
-                let (data, response) = try await URLSession.shared.data(for: request)
-                
-                // Check response status
-                guard let httpResponse = response as? HTTPURLResponse else {
-                    throw BookFetchError.unknown
-                }
-                
-                guard (200 ... 299).contains(httpResponse.statusCode) else {
-                    throw BookFetchError.serverError(httpResponse.statusCode)
-                }
-                
-                // Use the JSON utility to decode the response
-                let booksResponse = try JSONUtility.shared.decode(BooksResponse.self, from: data)
-                
-                // Process books if needed
-                var processedBooks = booksResponse.data.map { book in
-                    var mutableBook = book
-                    if mutableBook.authorNames == nil {
-                        mutableBook.authorNames = []
-                    }
-                    return mutableBook
-                }
-                BookHandler.shared.cacheData(processedBooks)
-                
-                // Return results via completion handler
-                DispatchQueue.main.async {
-                    completion(.success(processedBooks))
-                    print("Successfully fetched \(processedBooks.count) books")
-                }
-            } catch let error as BookFetchError {
-                DispatchQueue.main.async {
-                    completion(.failure(error))
-                }
-            } catch {
-                // Log detailed error information
-                error.logDetails()
-                
-                DispatchQueue.main.async {
-                    completion(.failure(BookFetchError.networkError(error)))
-                }
+                // Return the complete collection (either just this page or all pages loaded so far)
+                completion(.success(paginationManager.books))
+                print("Successfully fetched \(processedBooks.count) books, page \(currentPage)/\(booksResponse.pagination.totalPages), total items: \(booksResponse.pagination.totalItems)")
+            }
+        } catch let error as BookFetchError {
+            paginationManager.isLoading = false
+            DispatchQueue.main.async {
+                completion(.failure(error))
+            }
+        } catch {
+            // Log detailed error information
+            error.logDetails()
+            paginationManager.isLoading = false
+            
+            DispatchQueue.main.async {
+                completion(.failure(BookFetchError.networkError(error)))
             }
         }
+    }
+}
+
+// Helper function to load more books when user scrolls to bottom
+func loadMoreBooks(completion: @escaping (Result<[BookModel], Error>) -> Void) {
+    let paginationManager = BookPaginationManager.shared
+    
+    // Check if there are more pages to load
+    if paginationManager.hasMorePages() && !paginationManager.isLoading {
+        // Call fetchBooks with isLoadingMore flag
+        fetchBooks(isLoadingMore: true, completion: completion)
+    } else {
+        // Return the current set of books if there are no more to load
+        completion(.success(paginationManager.books))
+    }
 }
 
 func insertPolicy(policyData: Policy, completion: @escaping (Bool, UUID?) -> Void) {

@@ -23,6 +23,9 @@ struct APIUserResponse: Codable {
     let role: UserRole
     let name: String
     let library_id : String
+    let age: Int?
+    let phone_number: String?
+    let gender: String?
     let is_active: Bool
     let interests: [String]?
     let wishlist_book_ids:[UUID]
@@ -123,7 +126,10 @@ class LoginManager {
                     borrowed_book_ids: decodedResponse.borrowed_book_ids,
                     reserved_book_ids: decodedResponse.reserved_book_ids,
                     wishlist_book_ids:decodedResponse.wishlist_book_ids,
-                    interests: decodedResponse.interests
+                    age: decodedResponse.age,
+                    phone_number: decodedResponse.phone_number,
+                    interests: decodedResponse.interests,
+                    gender: decodedResponse.gender
                 )
 
                 // Cache the user data
@@ -212,7 +218,13 @@ class LoginManager {
                 // Handle Auth errors specifically
                 DispatchQueue.main.async {
                     print("Auth Signup Error: \(error)")
-                    completion(.failure(LoginError.signupError("Authentication error during signup: \(error.localizedDescription)")))
+                    
+                    // Check specifically for user_already_exists error
+                    if error.errorCode.rawValue == "user_already_exists" {
+                        completion(.failure(LoginError.signupError("User already registered")))
+                    } else {
+                        completion(.failure(LoginError.signupError("Authentication error during signup: \(error.localizedDescription)")))
+                    }
                 }
             } catch {
                 // Handle any other errors
@@ -225,11 +237,16 @@ class LoginManager {
     }
 
     func signOut() async throws {
-        // Clear the user cache
+        try? KeychainManager.shared.deleteToken()
+        try? KeychainManager.shared.deleteLibraryId()
         UserCacheManager.shared.clearCache()
-        // Delete the token from Keychain
-        try KeychainManager.shared.deleteToken()
-        // Sign out from Supabase
+        AnalyticsHandler.shared.clearCache()
+        
+        let defaults = UserDefaults.standard
+        defaults.removeObject(forKey: "lastViewedBooks")
+        defaults.removeObject(forKey: "userPreferences")
+        
+        
         try await supabase.auth.signOut()
     }
 
@@ -265,7 +282,10 @@ class LoginManager {
                 borrowed_book_ids: decodedResponse.borrowed_book_ids,
                 reserved_book_ids: decodedResponse.reserved_book_ids,
                 wishlist_book_ids:decodedResponse.wishlist_book_ids,
-                interests: decodedResponse.interests
+                age: decodedResponse.age,
+                phone_number: decodedResponse.phone_number,
+                interests: decodedResponse.interests,
+                gender: decodedResponse.gender
             )
             
             // Cache the user data

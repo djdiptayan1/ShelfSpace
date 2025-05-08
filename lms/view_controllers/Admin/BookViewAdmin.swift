@@ -24,6 +24,8 @@ struct BookViewAdmin: View {
     @State private var showError = false
     @State private var isEditingBook = false
     @State private var editingBookId: UUID? = nil
+    @State private var isLoadingMore = false
+    @State private var scrollViewProxy: ScrollViewProxy? = nil
 
     var filteredBooks: [BookModel] {
         var result = books
@@ -46,64 +48,91 @@ struct BookViewAdmin: View {
             ZStack {
                 ReusableBackground(colorScheme: colorScheme)
 
-                ScrollView {
-                    VStack(spacing: 16) {
-                        // Search bar (scrolls with content)
-                        SearchBar(searchText: $searchText, colorScheme: colorScheme)
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            // Search bar (scrolls with content)
+                            SearchBar(searchText: $searchText, colorScheme: colorScheme)
 
-                        // Category filter (scrolls with content)
-                        CategoryFilterView(
-                            selectedCategory: $selectedCategory,
-                            colorScheme: colorScheme
-                        )
+                            // Category filter (scrolls with content)
+                            CategoryFilterView(
+                                selectedCategory: $selectedCategory,
+                                colorScheme: colorScheme
+                            )
 
-                        // Loading or Book List (scrolls below search & filter)
-                        if isLoading {
-                            LoadingAnimationView(colorScheme: colorScheme)
-                                .padding(.top, 100)
+                            // Loading or Book List (scrolls below search & filter)
+                            if isLoading {
+                                LoadingAnimationView(colorScheme: colorScheme)
+                                    .padding(.top, 100)
 
-                        } else {
-                            if books.isEmpty {
-                                EmptyBookListView(colorScheme: colorScheme)
                             } else {
-                                BookList(
-                                    books: filteredBooks,
-                                    colorScheme: colorScheme,
-                                    onEdit: { book in
-                                        bookData = BookAddViewAdmin.bookData(from: book)
-                                        // Load cover image from URL if needed
-                                        if bookData.bookCover == nil, let urlStringRaw = book.coverImageUrl {
-                                            let urlString = urlStringRaw.hasPrefix("http://") ? urlStringRaw.replacingOccurrences(of: "http://", with: "https://") : urlStringRaw
-                                            if let url = URL(string: urlString) {
-                                                print("[DEBUG] (BookViewAdmin) Attempting to load cover image from URL: \(urlString)")
-                                                Task {
-                                                    do {
-                                                        let (data, _) = try await URLSession.shared.data(from: url)
-                                                        if let image = UIImage(data: data) {
-                                                            print("[DEBUG] (BookViewAdmin) Successfully loaded cover image from URL")
-                                                            await MainActor.run {
-                                                                bookData.bookCover = image
+                                if books.isEmpty {
+                                    EmptyBookListView(colorScheme: colorScheme)
+                                } else {
+                                    BookList(
+                                        books: filteredBooks,
+                                        colorScheme: colorScheme,
+                                        onEdit: { book in
+                                            bookData = BookAddViewAdmin.bookData(from: book)
+                                            // Load cover image from URL if needed
+                                            if bookData.bookCover == nil, let urlStringRaw = book.coverImageUrl {
+                                                let urlString = urlStringRaw.hasPrefix("http://") ? urlStringRaw.replacingOccurrences(of: "http://", with: "https://") : urlStringRaw
+                                                if let url = URL(string: urlString) {
+                                                    print("[DEBUG] (BookViewAdmin) Attempting to load cover image from URL: \(urlString)")
+                                                    Task {
+                                                        do {
+                                                            let (data, _) = try await URLSession.shared.data(from: url)
+                                                            if let image = UIImage(data: data) {
+                                                                print("[DEBUG] (BookViewAdmin) Successfully loaded cover image from URL")
+                                                                await MainActor.run {
+                                                                    bookData.bookCover = image
+                                                                }
+                                                            } else {
+                                                                print("[DEBUG] (BookViewAdmin) Failed to create UIImage from data")
                                                             }
-                                                        } else {
-                                                            print("[DEBUG] (BookViewAdmin) Failed to create UIImage from data")
+                                                        } catch {
+                                                            print("[DEBUG] (BookViewAdmin) Failed to load cover image from URL: \(error)")
                                                         }
-                                                    } catch {
-                                                        print("[DEBUG] (BookViewAdmin) Failed to load cover image from URL: \(error)")
                                                     }
                                                 }
                                             }
+                                            editingBookId = book.id
+                                            isEditingBook = true
+                                        },
+                                        onDelete: deleteBook
+                                    )
+                                    
+                                    // Bottom loader for pagination
+                                    if !filteredBooks.isEmpty {
+                                        HStack {
+                                            Spacer()
+                                            if isLoadingMore {
+                                                ProgressView()
+                                                    .padding()
+                                            }
+                                            Spacer()
                                         }
-                                        editingBookId = book.id
-                                        isEditingBook = true
-                                    },
-                                    onDelete: deleteBook
-                                )                            }
+                                        .id("BottomLoader")
+                                        .onAppear {
+                                            // When this appears, load more content if needed
+                                            if !searchText.isEmpty || selectedCategory != .all {
+                                                // Don't load more when filtering
+                                                return
+                                            }
+                                            loadMoreBooks()
+                                        }
+                                    }
+                                }
+                            }
                         }
+                        .padding(.top)
                     }
-                    .padding(.top)
-                }
-                .refreshable {
-                    await loadBooks()
+                    .onAppear {
+                        scrollViewProxy = proxy
+                    }
+                    .refreshable {
+                        await loadBooks()
+                    }
                 }
             }
             .navigationTitle("Books")
@@ -176,22 +205,45 @@ struct BookViewAdmin: View {
     }
     
     private func loadBooks() async {
-            isLoading = true
-            fetchBooks { result in
-                defer { isLoading = false }
+        isLoading = true
+        fetchBooks { result in
+            defer { isLoading = false }
 
-                switch result {
-                case let .success(fetchedBooks):
-                    self.books = fetchedBooks
-                    for book in fetchedBooks where book.coverImageUrl != nil {
-                        self.preloadBookCover(for: book)
-                    }
-                case let .failure(error):
-                    self.errorMessage = error.localizedDescription
-                    self.showError = true
+            switch result {
+            case let .success(fetchedBooks):
+                self.books = fetchedBooks
+                for book in fetchedBooks where book.coverImageUrl != nil {
+                    self.preloadBookCover(for: book)
                 }
+            case let .failure(error):
+                self.errorMessage = error.localizedDescription
+                self.showError = true
             }
         }
+    }
+    
+    private func loadMoreBooks() {
+        guard !isLoadingMore else { return }
+        
+        isLoadingMore = true
+        // Remove the [weak self] capture list since structs don't need weak references
+        // And fix the explicit type annotation
+        lms.loadMoreBooks { result in
+            self.isLoadingMore = false
+            switch result {
+            case .success(let allBooks):
+                withAnimation {
+                    self.books = allBooks
+                }
+                print("[DEBUG] (BookViewAdmin) Loaded more books. Total count: \(allBooks.count)")
+            case .failure(let error):
+                self.errorMessage = "Failed to load more books: \(error.localizedDescription)"
+                self.showError = true
+                print("[ERROR] (BookViewAdmin) Failed to load more books: \(error)")
+            }
+        }
+    }
+    
     private func preloadBookCover(for book: BookModel) {
         guard let urlString = book.coverImageUrl,
               let url = URL(string: urlString) else {

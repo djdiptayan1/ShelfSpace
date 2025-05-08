@@ -224,32 +224,63 @@ import SwiftUI
 struct LibrarianTabbar: View {
     @State private var selectedTab = 0
     @Environment(\.colorScheme) private var colorScheme
-    @StateObject private var themeManager = ThemeManager()
+    @EnvironmentObject private var appState: AppState
+    
+    // Add state for managing presentation of login screen
+    @State private var navigateToLogin = false
     
     var body: some View {
-        TabView(selection: $selectedTab) {
-            HomeViewLibrarian()
-                .tag(0)
-                .tabItem {
-                    Label("Books", systemImage: "book.closed")
+        Group {
+            if navigateToLogin {
+                // When navigateToLogin is true, show the login screen
+                ContentView()
+            } else {
+                TabView(selection: $selectedTab) {
+                    // ...existing code...
+                    HomeViewLibrarian()
+                        .tag(0)
+                        .tabItem {
+                            Image(systemName: "house")
+                            Text("Home")
+                        }
+                    
+                    RequestViewLibrarian()
+                        .tag(1)
+                        .tabItem {
+                            Image(systemName: "arrow.right.arrow.left")
+                            Text("Requests")
+                        }
+                    
+                    UsersViewLibrarian()
+                        .tag(2)
+                        .tabItem {
+                            Image(systemName: "person.3")
+                            Text("Users")
+                        }
                 }
-
-            UsersViewLibrarian()
-                .tag(1)
-                .tabItem {
-                    Label("Users", systemImage: "person.2.fill")
+                .accentColor(Color.primary(for: colorScheme))
+                .toolbarBackground(Color.TabbarBackground(for: colorScheme), for: .tabBar)
+                .toolbarBackground(.visible, for: .tabBar)
+                .toolbarColorScheme(colorScheme, for: .tabBar)
+                .onReceive(NotificationCenter.default.publisher(for: Notification.Name("UserDidLogout"))) { _ in
+                    print("Received logout notification in LibrarianTabbar")
+                    // Set navigateToLogin to true when we receive the logout notification
+                    navigateToLogin = true
                 }
-
-            RequestViewLibrarian()
-                .tag(2)
-                .tabItem {
-                    Label("Requests", systemImage: "tray.full.fill")
-                }
+            }
         }
-        .accentColor(Color.primary(for: colorScheme))
-        .toolbarBackground(Color.TabbarBackground(for: colorScheme), for: .tabBar)
-        .toolbarBackground(.visible, for: .tabBar)
-        .toolbarColorScheme(colorScheme, for: .tabBar)
+        .onAppear {
+            // Check if we're logged in when view appears
+            if !appState.isLoggedIn {
+                navigateToLogin = true
+            }
+        }
+        .onChange(of: appState.isLoggedIn) { isLoggedIn in
+            // React to changes in the login state
+            if !isLoggedIn {
+                navigateToLogin = true
+            }
+        }
     }
 }
 
