@@ -749,8 +749,7 @@ struct SearchResultCard: View {
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
                                 .background(
-                                    Color.primary(for: colorScheme).opacity(
-                                        0.15)
+                                    Color.gray.opacity(0.2)
                                 )
                                 .foregroundColor(Color.text(for: colorScheme))
                                 .cornerRadius(6)
@@ -923,7 +922,7 @@ struct NewArrivalCard: View {
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
                                 .background(
-                                    Color.primary(for: colorScheme).opacity(0.2)
+                                    Color.gray.opacity(0.2)
                                 )
                                 .foregroundColor(Color.text(for: colorScheme))
                                 .cornerRadius(8)
@@ -1041,7 +1040,7 @@ struct RecommendationCard: View {
             if let image = loadedImage {
                 Image(uiImage: image)
                     .resizable()
-                    .aspectRatio(contentMode: .fit)
+                    .aspectRatio(contentMode: .fill)
                     .frame(width: 190, height: 200)
                     .background(Color.gray.opacity(0.2))
                     .cornerRadius(16)
@@ -1084,7 +1083,7 @@ struct RecommendationCard: View {
                             .padding(.vertical, 4)
                             .lineLimit(1)
                             .background(
-                                Color.primary(for: colorScheme).opacity(0.2)
+                                Color.gray.opacity(0.2)
                             )
                             .foregroundColor(Color.text(for: colorScheme))
                             .cornerRadius(8)
@@ -1193,22 +1192,10 @@ struct TopSellingCard: View {
 
     var body: some View {
         VStack(spacing: 5) {
-            Text("\(index)")
-                .font(.title3)
-                .fontWeight(.bold)
-                .frame(width: 32, height: 32)
-                .background(Circle().fill(Color.primary(for: colorScheme)))
-                .shadow(
-                    color: Color.primary(for: colorScheme).opacity(0.3),
-                    radius: 4, x: 0, y: 2
-                )
-                .foregroundColor(Color.TabbarBackground(for: colorScheme))
-            //                .foregroundColor(Color.TabbarBackground(for: colorScheme)))
-
             if let image = loadedImage {
                 Image(uiImage: image)
                     .resizable()
-                    .aspectRatio(contentMode: .fit)
+                    .aspectRatio(contentMode: .fill)
                     .frame(width: 180, height: 180)
                     .background(Color.gray.opacity(0.2))
                     .cornerRadius(12)
