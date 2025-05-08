@@ -288,7 +288,7 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
         fetchBooks(
             manager: homePaginationManager,
             page: isInitialFetchForManager ? 1 : nil, // Explicitly 1 for first, nil for loadMore to pick next
-            limit: 30, // Fetching more per page for HomeView to reduce calls, API must support this limit
+            limit: 200, // Fetching more per page for HomeView to reduce calls, API must support this limit
             isLoadingMore: !isInitialFetchForManager
         ) { result in
             DispatchQueue.main.async { // Ensure UI updates are on main thread
