@@ -23,6 +23,9 @@ struct APIUserResponse: Codable {
     let role: UserRole
     let name: String
     let library_id : String
+    let age: Int?
+    let phone_number: String?
+    let gender: String?
     let is_active: Bool
     let interests: [String]?
     let wishlist_book_ids:[UUID]
@@ -123,7 +126,10 @@ class LoginManager {
                     borrowed_book_ids: decodedResponse.borrowed_book_ids,
                     reserved_book_ids: decodedResponse.reserved_book_ids,
                     wishlist_book_ids:decodedResponse.wishlist_book_ids,
-                    interests: decodedResponse.interests
+                    age: decodedResponse.age,
+                    phone_number: decodedResponse.phone_number,
+                    interests: decodedResponse.interests,
+                    gender: decodedResponse.gender
                 )
 
                 // Cache the user data
@@ -276,7 +282,10 @@ class LoginManager {
                 borrowed_book_ids: decodedResponse.borrowed_book_ids,
                 reserved_book_ids: decodedResponse.reserved_book_ids,
                 wishlist_book_ids:decodedResponse.wishlist_book_ids,
-                interests: decodedResponse.interests
+                age: decodedResponse.age,
+                phone_number: decodedResponse.phone_number,
+                interests: decodedResponse.interests,
+                gender: decodedResponse.gender
             )
             
             // Cache the user data
