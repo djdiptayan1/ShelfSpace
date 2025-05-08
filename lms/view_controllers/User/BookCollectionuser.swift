@@ -107,67 +107,72 @@ struct BookCollectionuser: View {
     
     // MARK: - Body
     var body: some View {
-        ZStack {
-            // Background
-            ReusableBackground(colorScheme: colorScheme)
-                .edgesIgnoringSafeArea(.all)
-            
-            VStack(spacing: 20) {
-                // Collections Title
-                Text("Collections")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .foregroundColor(Color.text(for: colorScheme))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal)
-                    .padding(.top, 16)
+        NavigationView {
+            ZStack {
+                // Background
+                ReusableBackground(colorScheme: colorScheme)
+                    .edgesIgnoringSafeArea(.all)
                 
-                // MARK: - Tab Bar (Apple Mail-style)
-                tabBarView
-                
-                // MARK: - Book Collection Grid
-                ScrollView {
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
-                        // Filter books based on the selected tab
-                        ForEach(finalBooks.prefix(6)) { book in
-                            BookCardView(book: book, tab: selectedTab, colorScheme: colorScheme)
+                VStack(spacing: 20) {
+                    // Collections Title
+                    Text("Collections")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                        .foregroundColor(Color.text(for: colorScheme))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal)
+                        .padding(.top, 16)
+                    
+                    // MARK: - Tab Bar (Apple Mail-style)
+                    tabBarView
+                    
+                    // MARK: - Book Collection Grid
+                    ScrollView {
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
+                            // Filter books based on the selected tab
+                            ForEach(finalBooks.prefix(6)) { book in
+                                NavigationLink(destination: BookDetailView(book: book))
+                                {
+                                    BookCardView(book: book, tab: selectedTab, colorScheme: colorScheme)
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.bottom, 16)
+                    }
+                    
+                    Spacer()
+                }
+            }
+            .onAppear(){
+                Task{
+                    borrows = try await BorrowHandler.shared.getBorrows()
+                }
+            }
+            .onAppear(){
+                Task{
+                    
+                    self.wishlistBooks = try await getWishList()
+                }
+            }
+            .onAppear(){
+                Task{
+                    let reservations = try await ReservationHandler.shared.getReservations()
+                    //get books from borrows
+                    requestedBooks = reservations.compactMap(\.book)
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .gesture(
+                DragGesture()
+                    .onEnded { gesture in
+                        if gesture.translation.width > 100 {
+                            // Swipe from left to right (standard iOS back gesture)
+                            self.presentationMode.wrappedValue.dismiss()
                         }
                     }
-                    .padding(.horizontal)
-                    .padding(.bottom, 16)
-                }
-                
-                Spacer()
-            }
+            )
         }
-        .onAppear(){
-            Task{
-                borrows = try await BorrowHandler.shared.getBorrows()
-            }
-        }
-        .onAppear(){
-            Task{
-
-                self.wishlistBooks = try await getWishList()
-            }
-        }
-        .onAppear(){
-            Task{
-                let reservations = try await ReservationHandler.shared.getReservations()
-                //get books from borrows
-                requestedBooks = reservations.compactMap(\.book)
-            }
-        }
-        .navigationBarTitleDisplayMode(.inline)
-        .gesture(
-            DragGesture()
-                .onEnded { gesture in
-                    if gesture.translation.width > 100 {
-                        // Swipe from left to right (standard iOS back gesture)
-                        self.presentationMode.wrappedValue.dismiss()
-                    }
-                }
-        )
     }
     
     // MARK: - Tab Bar View
@@ -214,6 +219,7 @@ struct BookCollectionuser: View {
         .padding(.vertical, 6)
         .padding(.horizontal)
     }
+        
 }
 
 // MARK: - Book Card Component
