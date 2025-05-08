@@ -33,6 +33,8 @@ struct ExploreBooksView: View {
         return allBooks.filter { book in
             let matchesSearch = searchText.isEmpty ||
                 book.title.lowercased().contains(searchText.lowercased())
+                (book.authorNames?.contains { $0.lowercased().contains(searchText.lowercased()) } ?? false) ||
+                (book.genreNames?.contains { $0.lowercased().contains(searchText.lowercased()) } ?? false)
             let matchesGenre = selectedGenres.isEmpty ||
                 !selectedGenres.isDisjoint(with: book.genreNames ?? [])
             return matchesSearch && matchesGenre

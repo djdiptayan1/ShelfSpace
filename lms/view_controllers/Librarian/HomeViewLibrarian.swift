@@ -61,22 +61,34 @@ struct HomeViewLibrarian: View {
         NavigationView {
             ZStack {
                 ReusableBackground(colorScheme: colorScheme)
+                    .accessibilityHidden(true) // Background doesn't need VoiceOver
+                
                 VStack(spacing: 0) {
                     headerSection
                         .padding(.bottom, 12)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityHeading(.h1)
 
                     ScrollView {
                         VStack(spacing: 16) {
                             SearchBar(searchText: $searchText, colorScheme: colorScheme)
+                                .accessibilityLabel("Search books")
+                                .accessibilityHint("Type to search for books by title or ISBN")
+                            
                             CategoryFilterView(
                                 selectedCategory: $selectedCategory,
                                 colorScheme: colorScheme
                             )
+                            .accessibilityLabel("Filter by category")
+                            .accessibilityValue(selectedCategory.rawValue)
+                            
                             if isLoading {
                                 LoadingAnimationView(colorScheme: colorScheme)
+                                    .accessibilityLabel("Loading books")
                             } else {
                                 if books.isEmpty {
                                     EmptyBookListView(colorScheme: colorScheme)
+                                        .accessibilityLabel("No books available")
                                 } else {
                                     BookList(
                                         books: filteredBooks,
@@ -110,6 +122,7 @@ struct HomeViewLibrarian: View {
                                         },
                                         onDelete: deleteBook
                                     )
+                                    .accessibilityLabel("List of books")
                                     
                                     // Add pagination loader at the bottom
                                     if !isFiltering {
@@ -118,6 +131,7 @@ struct HomeViewLibrarian: View {
                                             if isLoadingMore {
                                                 ProgressView()
                                                     .padding()
+                                                    .accessibilityLabel("Loading more books")
                                             }
                                             Spacer()
                                         }
@@ -134,6 +148,11 @@ struct HomeViewLibrarian: View {
                     .refreshable {
                         await loadBooks()
                     }
+                    .accessibilityScrollAction { edge in
+                        // Provide feedback when scrolling
+                        UIAccessibility.post(notification: .announcement,
+                                           argument: edge == .top ? "Scrolled to top" : "Scrolled to bottom")
+                    }
                 }
 
                 // Floating Action Button at bottom right
@@ -149,10 +168,12 @@ struct HomeViewLibrarian: View {
                                 .font(.title2)
                                 .foregroundColor(.white)
                                 .frame(width: 56, height: 56)
-                                .background(Color.blue)
+                                .background(Color.accentColor)
                                 .clipShape(Circle())
                                 .shadow(radius: 4)
                         }
+                        .accessibilityLabel("Add new book")
+                        .accessibilityHint("Double tap to open the book creation form")
                         .padding(.trailing, 16)
                         .padding(.bottom, 16)
                     }
@@ -165,6 +186,7 @@ struct HomeViewLibrarian: View {
                 BookAddViewLibrarian(onSave: { newBook in
                     addNewBook(newBook)
                 })
+                .accessibilityLabel("Add new book form")
             }
             .sheet(isPresented: $isEditingBook) {
                 BookDetailsStep(
@@ -206,22 +228,26 @@ struct HomeViewLibrarian: View {
                         }
                     }
                 )
+                .accessibilityLabel("Edit book details")
             }
             .sheet(isPresented: $isShowingProfile) {
                 Group {
                     if isPrefetchingProfile {
                         ProgressView("Loading Profile...")
                             .padding()
+                            .accessibilityLabel("Loading profile information")
                     } else if let user = prefetchedUser, let library = prefetchedLibrary {
                         ProfileView(prefetchedUser: user, prefetchedLibrary: library)
                             .navigationBarItems(trailing: Button("Done") {
                                 isShowingProfile = false
                             })
+                            .accessibilityLabel("Profile information")
                     } else {
                         VStack(spacing: 16) {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .font(.largeTitle)
                                 .foregroundColor(.orange)
+                                .accessibilityHidden(true)
                             Text("Could Not Load Profile")
                                 .font(.headline)
                             if let errorMsg = prefetchError {
@@ -234,8 +260,10 @@ struct HomeViewLibrarian: View {
                                 Task { await prefetchProfileData() }
                             }
                             .buttonStyle(.borderedProminent)
+                            .accessibilityLabel("Retry loading profile")
                         }
                         .padding()
+                        .accessibilityElement(children: .combine)
                     }
                 }
             }
@@ -244,11 +272,14 @@ struct HomeViewLibrarian: View {
             } message: {
                 Text(errorMessage ?? "An unknown error occurred")
             }
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Librarian Home Screen")
             .task {
                 await loadBooks()
                 await prefetchProfileData()
             }
         }
+        .navigationViewStyle(.stack)
     }
     
     // Helper to check if filtering is active
@@ -267,6 +298,8 @@ struct HomeViewLibrarian: View {
                     .fontWeight(.bold)
                     .foregroundColor(Color.text(for: colorScheme))
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Welcome \(prefetchedUser?.name ?? "user"), \(prefetchedLibrary?.name ?? "library")")
 
             Spacer()
 
@@ -274,11 +307,12 @@ struct HomeViewLibrarian: View {
                 Image(systemName: "person.circle.fill")
                     .resizable()
                     .frame(width: 44, height: 44)
-                    .foregroundColor(
-                        Color.primary(for: colorScheme).opacity(0.8))
+                    .foregroundColor(Color.primary(for: colorScheme).opacity(0.8))
             }
+            .accessibilityLabel("User profile")
+            .accessibilityHint("Double tap to view your profile information")
         }
-        .task{
+        .task {
             await prefetchProfileData()
         }
         .padding(.horizontal)
@@ -287,17 +321,22 @@ struct HomeViewLibrarian: View {
                 if isPrefetchingProfile {
                     ProgressView("Loading Profile...")
                         .padding()
+                        .accessibilityLabel("Loading profile information")
                 } else if let user = prefetchedUser {
                     ProfileView()
                         .navigationBarItems(
                             trailing: Button("Done") {
                                 showProfileSheet = false
-                            })
+                            }
+                            .accessibilityLabel("Done")
+                        )
+                        .accessibilityLabel("Profile information")
                 } else {
                     VStack(spacing: 16) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.largeTitle)
                             .foregroundColor(.orange)
+                            .accessibilityHidden(true)
                         Text("Could Not Load Profile")
                             .font(.headline)
                         if let errorMsg = prefetchError {
@@ -310,8 +349,10 @@ struct HomeViewLibrarian: View {
                             Task { await prefetchProfileData() }
                         }
                         .buttonStyle(.borderedProminent)
+                        .accessibilityLabel("Retry loading profile")
                     }
                     .padding()
+                    .accessibilityElement(children: .combine)
                 }
             }
         }
@@ -327,9 +368,11 @@ struct HomeViewLibrarian: View {
                 for book in fetchedBooks where book.coverImageUrl != nil {
                     self.preloadBookCover(for: book)
                 }
+                UIAccessibility.post(notification: .announcement, argument: "Books loaded successfully")
             case let .failure(error):
                 self.errorMessage = error.localizedDescription
                 self.showError = true
+                UIAccessibility.post(notification: .announcement, argument: "Failed to load books")
             }
         }
     }
@@ -347,10 +390,12 @@ struct HomeViewLibrarian: View {
                     self.books = allBooks
                 }
                 print("[DEBUG] (HomeViewLibrarian) Loaded more books. Total count: \(allBooks.count)")
+                UIAccessibility.post(notification: .announcement, argument: "Loaded more books")
             case .failure(let error):
                 self.errorMessage = "Failed to load more books: \(error.localizedDescription)"
                 self.showError = true
                 print("[ERROR] (HomeViewLibrarian) Failed to load more books: \(error)")
+                UIAccessibility.post(notification: .announcement, argument: "Failed to load more books")
             }
         }
     }
@@ -383,6 +428,7 @@ struct HomeViewLibrarian: View {
             withAnimation {
                 books.remove(at: index)
             }
+            UIAccessibility.post(notification: .announcement, argument: "Book removed")
         }
     }
 
@@ -390,6 +436,7 @@ struct HomeViewLibrarian: View {
         withAnimation {
             books.append(book)
         }
+        UIAccessibility.post(notification: .announcement, argument: "New book added")
     }
     
     private func updateBook(_ updatedBook: BookModel) {
@@ -397,6 +444,7 @@ struct HomeViewLibrarian: View {
             withAnimation {
                 books[index] = updatedBook
             }
+            UIAccessibility.post(notification: .announcement, argument: "Book updated")
         }
     }
 

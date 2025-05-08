@@ -14,7 +14,7 @@ struct BorrowModel: Codable, Identifiable, Equatable {
     let borrow_date: Date
     let return_date: Date?
     let status: BorrowStatus
-    let book: BookModel? // Keep the nested book object
+    var book: BookModel? // Keep the nested book object
 
     // Define CodingKeys to map JSON keys to Swift properties
     enum CodingKeys: String, CodingKey {

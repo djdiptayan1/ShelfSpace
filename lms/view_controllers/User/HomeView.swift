@@ -40,7 +40,6 @@ struct HomeView: View {
     @State private var topSelling: [BookModel] = []
     @State private var allBooksForHomePage: [BookModel] = [] // Holds all books after fetching
 
-
     // Loading states
     @State private var isLoadingAllBooksForHome = false // For the multi-page fetch process
     @State private var initialLoadDone = false // To prevent .task from re-running full load unnecessarily
@@ -53,8 +52,13 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
             return allBooksForHomePage // Search operates on all loaded books
         }
         return allBooksForHomePage.filter { book in
-            let matchesSearch = searchText.isEmpty || book.title.lowercased().contains(searchText.lowercased())
-            let matchesGenre = selectedGenres.isEmpty || !selectedGenres.isDisjoint(with: book.genreNames ?? [])
+           let matchesSearch = searchText.isEmpty ||
+               book.title.lowercased().contains(searchText.lowercased()) ||
+               (book.authorNames?.contains { $0.lowercased().contains(searchText.lowercased()) } ?? false) ||
+               (book.genreNames?.contains { $0.lowercased().contains(searchText.lowercased()) } ?? false)
+                                           
+            let matchesGenre = selectedGenres.isEmpty ||
+              !selectedGenres.isDisjoint(with: book.genreNames ?? [])
             return matchesSearch && matchesGenre
         }
     }

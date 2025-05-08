@@ -44,14 +44,8 @@ struct BookCollectionuser: View {
     @State private var requestedBooks: [BookModel] = []
     @State private var wishlistBooks: [BookModel] = []
     @State private var borrows: [BorrowModel] = []
-    private var currentBooks:[BookModel]{
-        let filtered = borrows.filter{$0.status == .borrowed}
-        return filtered.compactMap(\.book)
-    }
-    private var returnedBooks:[BookModel]{
-        let filtered = borrows.filter{$0.status == .returned}
-        return filtered.compactMap(\.book)
-    }
+    @State private var currentBooks:[BookModel] = []
+    @State private var returnedBooks:[BookModel] = []
 
 
     @State private var demoBooks: [BookModel] = [
@@ -147,11 +141,18 @@ struct BookCollectionuser: View {
             .onAppear(){
                 Task{
                     borrows = try await BorrowHandler.shared.getBorrows()
+                    let currentFiltered = borrows.filter{$0.status == .borrowed}
+                    let returnedFiltered = borrows.filter{$0.status == .returned}
+                    let currentBookIds = currentFiltered.compactMap(\.book_id)
+                    let returnedBookIds = returnedFiltered.compactMap(\.book_id)
+                    if let cachedBooks = BookHandler.shared.getCachedData(){
+                        currentBooks = cachedBooks.filter{currentBookIds.contains($0.id)}
+                        returnedBooks = cachedBooks.filter{returnedBookIds.contains($0.id)}
+                    }
                 }
             }
             .onAppear(){
                 Task{
-                    
                     self.wishlistBooks = try await getWishList()
                 }
             }
@@ -159,7 +160,11 @@ struct BookCollectionuser: View {
                 Task{
                     let reservations = try await ReservationHandler.shared.getReservations()
                     //get books from borrows
-                    requestedBooks = reservations.compactMap(\.book)
+                    let currentBookIds = reservations.compactMap(\.book_id)
+
+                    if let cachedBooks = BookHandler.shared.getCachedData(){
+                        requestedBooks = cachedBooks.filter{currentBookIds.contains($0.id)}
+                    }
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
