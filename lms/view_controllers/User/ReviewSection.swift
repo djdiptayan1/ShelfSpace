@@ -59,6 +59,7 @@ struct ReviewsSection: View {
     }
     
     var body: some View {
+      
         VStack(alignment: .leading, spacing: 16) {
             // Header with review count and write review button
             if(!isUserReviewed){
@@ -195,6 +196,7 @@ struct WriteReviewView: View {
     @State private var isSubmitting = false
     
     var body: some View {
+        
         NavigationView {
             Form {
                 Section(header: Text("Rate this book")) {
@@ -225,20 +227,21 @@ struct WriteReviewView: View {
                 Section {
                     Button(action: {
                         submitReview()
-                    }) {
+                           
+                    }
+                    ) {
                         if isSubmitting {
                             ProgressView()
                         } else {
                             Text("Submit Review")
                                 .frame(maxWidth: .infinity, alignment: .center)
                                 .foregroundColor(Color.text(for: colorScheme))
-                                .background(Color.primary(for: colorScheme).opacity(0.6))
                         }
                     }
                     .disabled(userRating == 0 || reviewText.isEmpty || reviewText.count > 500 || isSubmitting)
                     .listRowBackground(
                         (userRating == 0 || reviewText.isEmpty || reviewText.count > 500 || isSubmitting) ?
-                            Color.gray : Color.blue
+                        Color.gray : Color.primary(for:  colorScheme).opacity(0.8)
                     )
                 }
             }
