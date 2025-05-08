@@ -332,7 +332,7 @@ struct LoginView: View {
                 } label: {
                     Text("Forgot Password?")
                         .font(.system(size: 14, weight: .medium, design: .rounded))
-                        .foregroundColor(Color.primary(for: colorScheme))
+                        .foregroundColor(Color.primary(for: colorScheme).opacity(0.6))
                 }
             }
             .padding(.horizontal, isHorizontal ? 0 : 24)
@@ -345,7 +345,7 @@ struct LoginView: View {
             } label: {
                 ZStack {
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.accent(for: colorScheme))
+                        .fill(Color.primary(for: colorScheme).opacity(0.8))
 
                     if state.isProcessing {
                         ProgressView()
@@ -373,7 +373,7 @@ struct LoginView: View {
                 } label: {
                     Text("Register")
                         .font(.system(size: 14, weight: .semibold, design: .rounded))
-                        .foregroundColor(Color.primary(for: colorScheme))
+                        .foregroundColor(Color.primary(for: colorScheme).opacity(0.6))
                 }
             }
             .padding(.top, 12)

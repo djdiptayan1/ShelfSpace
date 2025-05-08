@@ -84,12 +84,12 @@ struct ExploreBooksView: View {
                         }
                         .padding(.top)
                         .padding(.bottom, 8)
-                        .background(
-                            ReusableBackground(colorScheme: colorScheme)
-                                .edgesIgnoringSafeArea(.top)
-                                .shadow(
-                                    color: Color.primary(for: colorScheme)
-                                        .opacity(0.4), radius: 5, x: 0, y: 3)
+                        .background(ReusableBackground(colorScheme : colorScheme)
+//                            ReusableBackground(colorScheme: colorScheme)
+//                                .edgesIgnoringSafeArea(.top)
+//                                .shadow(
+//                                    color: Color.primary(for: colorScheme)
+//                                        .opacity(0.4), radius: 5, x: 0, y: 3)
                         )
                         .zIndex(1)
                         
@@ -267,7 +267,7 @@ struct ImprovedBookCard: View {
                                 .font(.system(size: 10, weight: .medium))
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
-                                .background(Color.primary(for: colorScheme).opacity(0.1))
+                                .background(Color.gray.opacity(0.15))/*primary(for: colorScheme).opacity(0.1))*/
                                 .foregroundColor(Color.text(for: colorScheme).opacity(0.8))
                                 .cornerRadius(4)
                         }
@@ -359,8 +359,8 @@ struct GenreChipk: View {
             .padding(.vertical, 8)
             .background(
                 isSelected ?
-                    Color.primary(for: colorScheme).opacity(0.3) :
-                    Color.primary(for: colorScheme).opacity(0.1)
+                    Color.primary(for: colorScheme).opacity(0.5) :
+                    Color.primary(for: colorScheme).opacity(0.2)
             )
             .foregroundColor(
                 isSelected ?

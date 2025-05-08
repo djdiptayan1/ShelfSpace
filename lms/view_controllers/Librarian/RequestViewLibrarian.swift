@@ -90,11 +90,21 @@ struct RequestViewLibrarian: View {
                             reservation: selectedReservation,
                             mode: checkInOutMode,
                             onComplete: { success in
-                                if success {
-                                    borrowRequests.removeAll { $0.id == selectedBorrow?.id ?? nil }
-                                }
                                 showCheckInOutModal = false
-                                selectedBorrow = nil
+
+                                            if success {
+                                                if checkInOutMode == .checkOut {
+                                                    if let reservationId = selectedReservation?.id {
+                                                        reservation.removeAll { $0.id == reservationId }
+                                                    }
+                                                    
+                                                } else {
+
+                                                    if let borrowId = selectedBorrow?.id {
+                                                        borrowRequests.removeAll { $0.id == borrowId }
+                                                    }
+                                                }
+                                            }
                             }
                         )
                     }
@@ -368,18 +378,19 @@ struct RequestViewLibrarian: View {
     private func fetchBorrowRequests() {
         isLoading = true
         fetchError = nil
-        
+
         Task {
             do {
-                let borrows = try await BorrowHandler.shared.getBorrows()
-                reservation = try await ReservationHandler.shared.getReservations()
-                // Debug print to verify book object
-                if let first = borrows.first {
-                    print("DEBUG: First borrow: \(first)")
-                    print("DEBUG: First borrow.book: \(String(describing: first.book))")
-                }
+                // Fetch initial data
+                let fetchedBorrows = try await BorrowHandler.shared.getBorrows()
+                let fetchedReservations = try await ReservationHandler.shared.getReservations()
+
+                let enrichedBorrows = await enrichBorrowModels(fetchedBorrows)
+                let enrichedReservations = await enrichReservationModels(fetchedReservations)
+
                 await MainActor.run {
-                    self.borrowRequests = borrows
+                    self.borrowRequests = enrichedBorrows
+                    self.reservation = enrichedReservations
                     self.isLoading = false
                 }
             } catch {
@@ -390,6 +401,37 @@ struct RequestViewLibrarian: View {
             }
         }
     }
+    private func enrichBorrowModels(_ borrows: [BorrowModel]) async -> [BorrowModel] {
+        guard let cachedBooks = BookHandler.shared.getCachedData(), !cachedBooks.isEmpty else {
+            return borrows
+        }
+        var updatedBorrows = borrows
+        for i in 0..<updatedBorrows.count {
+            if updatedBorrows[i].book == nil && updatedBorrows[i].status != .returned { // Only enrich if book data is missing
+                if let foundBook = cachedBooks.first(where: { $0.id == updatedBorrows[i].book_id }) {
+                    updatedBorrows[i].book = foundBook
+                }
+            }
+        }
+        return updatedBorrows
+    }
+    private func enrichReservationModels(_ reservations: [ReservationModel]) async -> [ReservationModel] {
+        guard let cachedBooks = BookHandler.shared.getCachedData(), !cachedBooks.isEmpty else {
+            return reservations
+        }
+        var updatedReservations = reservations
+        for i in 0..<updatedReservations.count {
+            // Assuming ReservationModel has book_id and book properties
+            if updatedReservations[i].book == nil { // Only enrich if book data is missing
+                if let foundBook = cachedBooks.first(where: { $0.id == updatedReservations[i].book_id }) { // Adjust book_id property name if different
+                    updatedReservations[i].book = foundBook
+                }
+            }
+        }
+        return updatedReservations
+    }
+
+
     }
 
 // MARK: - Borrow Request Card View
@@ -400,11 +442,11 @@ struct BorrowRequestCardView: View {
     let type: BorrowRequestType
     let onProcess: () -> Void
     let onReject: () -> Void
-    var book:BookModel{
+    var book:BookModel?{
         if(type == .checkOut){
-            return reservation!.book!
+            return reservation?.book
         }
-        return borrow!.book!
+        return borrow?.book
     }
     var borrowId:UUID{
         if(type == .checkOut){
@@ -469,11 +511,11 @@ struct BorrowRequestCardView: View {
                 
                 // Book Details
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(book.title ?? "Unknown Title")
+                    Text(book?.title ?? "Unknown Title")
                         .font(.headline)
                         .lineLimit(2)
                     
-                    if let isbn = book.isbn {
+                    if let isbn = book?.isbn {
                         HStack {
                             Image(systemName: "barcode")
                                 .font(.caption)
@@ -488,9 +530,9 @@ struct BorrowRequestCardView: View {
                             Image(systemName: "books.vertical")
                             .font(.caption)
                             .foregroundColor(.secondary)
-                            Text("\(book.availableCopies) of \(book.totalCopies) available")
+                            Text("\(book?.availableCopies ?? 0) of \(book?.totalCopies) available")
                                 .font(.caption)
-                                .foregroundColor(book.availableCopies > 0 ? .green : .red)
+                                .foregroundColor(book?.availableCopies ?? 0 > 0 ? .green : .red)
                         }
                     
                     
@@ -552,7 +594,7 @@ struct BorrowRequestCardView: View {
     
     private var bookCover: some View {
         Group {
-            if let coverUrl = book.coverImageUrl, 
+            if let coverUrl = book?.coverImageUrl, 
                let url = URL(string: coverUrl.replacingOccurrences(of: "http://", with: "https://")) {
                 AsyncImage(url: url) { phase in
                     switch phase {
@@ -660,7 +702,7 @@ struct BorrowRequestCardView: View {
     
     // Add a simple helper to get book ISBN safely
     private var bookIsbn: String {
-        return book.isbn ?? "No ISBN"
+        return book?.isbn ?? "No ISBN"
     }
 }
 

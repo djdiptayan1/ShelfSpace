@@ -14,43 +14,43 @@ struct BookData {
     var bookInfo: BookInfo?
     var bookCover: UIImage?
     var bookCoverUrl: String?
-    
+
     var bookTitle: String
     var description: String
     var totalCopies: Int
     var availableCopies: Int
     var reservedCopies: Int
-    
+
     var authorNames: [String] = [] // For UI input
     var genreNames: [String] = []
-    
+
     var publishedDate: Date
     var authorIds: [UUID]
     var genreIds: [UUID]
     var libraryId: UUID?
-    
+
     var publisher: String
     var pageCount: String
     var language: String
     var categories: [String]
-    
+
     init(isbn: String = "") {
         self.isbn = isbn
         self.bookInfo = nil
         self.bookCover = nil
-        
+
         self.bookTitle = ""
         self.description = ""
         self.totalCopies = 1
         self.availableCopies = 1
         self.reservedCopies = 0
-        
+
         self.publishedDate = Date()
         self.authorNames = []
         self.authorIds = []
         self.genreIds = []
         self.libraryId = nil
-        
+
         self.publisher = ""
         self.pageCount = ""
         self.language = ""
@@ -71,9 +71,9 @@ struct ISBNInputStep: View {
     @State private var keyboardHeight: CGFloat = 0
     @State private var isValidISBN: Bool = false
     @State private var showValidationHint: Bool = false
-    
+
     private let bookInfoService = BookInfoService()
-    
+
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
@@ -82,7 +82,8 @@ struct ISBNInputStep: View {
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 40)
-                
+                    .padding(.top, -40)
+
                 // ISBN Input Card
                 VStack(spacing: 20) {
                     // Manual Input Card
@@ -91,13 +92,13 @@ struct ISBNInputStep: View {
                             Image(systemName: "keyboard")
                                 .foregroundColor(.blue)
                                 .font(.system(size: 20))
-                            
+
                             Text("Manual Entry")
                                 .font(.headline)
                                 .foregroundColor(Color.text(for: colorScheme))
                         }
                         .padding(.bottom, 4)
-                        
+
                         HStack {
                             TextField("Enter ISBN number", text: $bookData.isbn)
                                 .keyboardType(.numberPad)
@@ -108,20 +109,20 @@ struct ISBNInputStep: View {
                                 .onChange(of: bookData.isbn) { newValue in
                                     // Remove any non-digit characters
                                     let filteredValue = newValue.filter { $0.isNumber }
-                                    
+
                                     // Only update if different to avoid cursor jumps
                                     if filteredValue != bookData.isbn {
                                         bookData.isbn = filteredValue
                                     }
-                                    
+
                                     // Limit to 13 digits
                                     if bookData.isbn.count > 13 {
                                         bookData.isbn = String(bookData.isbn.prefix(13))
                                     }
-                                    
+
                                     // Validate ISBN
                                     validateISBN()
-                                    
+
                                     // Show validation hint when user starts typing
                                     if !bookData.isbn.isEmpty {
                                         showValidationHint = true
@@ -138,7 +139,7 @@ struct ISBNInputStep: View {
                                         }
                                     }
                                 )
-                            
+
                             Button(action: {
                                 bookData.isbn = ""
                                 isValidISBN = false
@@ -150,7 +151,7 @@ struct ISBNInputStep: View {
                             }
                             .disabled(bookData.isbn.isEmpty)
                         }
-                        
+
                         if showValidationHint {
                             Text(getValidationMessage())
                                 .font(.caption)
@@ -169,11 +170,11 @@ struct ISBNInputStep: View {
                             .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
                     )
                     .padding(.horizontal, 20)
-                    
+
                     Text("OR")
                         .font(.headline)
                         .foregroundColor(.secondary)
-                    
+
                     // Barcode Scanner Card
                     Button(action: {
                         showBarcodeScanner = true
@@ -183,16 +184,16 @@ struct ISBNInputStep: View {
                                 Image(systemName: "barcode.viewfinder")
                                     .foregroundColor(.blue)
                                     .font(.system(size: 20))
-                                
+
                                 Text("Scan Barcode")
                                     .font(.headline)
                                     .foregroundColor(Color.text(for: colorScheme))
                             }
                             .padding(.bottom, 4)
-                            
+
                             HStack {
                                 Spacer()
-                                
+
                                 Image(systemName: "camera.fill")
                                     .font(.system(size: 36))
                                     .foregroundColor(.blue)
@@ -201,10 +202,10 @@ struct ISBNInputStep: View {
                                         Circle()
                                             .fill(Color.blue.opacity(0.1))
                                     )
-                                
+
                                 Spacer()
                             }
-                            
+
                             Text("Scan the book's barcode using your camera")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
@@ -219,10 +220,9 @@ struct ISBNInputStep: View {
                     }
                     .padding(.horizontal, 20)
                 }
-                .padding(.top, 20)
-                
-                Spacer(minLength: 60)
-                
+
+//                Spacer(minLength: 20)
+
                 // Continue Button
                 Button(action: {
                     Task {
@@ -241,7 +241,7 @@ struct ISBNInputStep: View {
                         } else {
                             Text("Continue")
                                 .fontWeight(.semibold)
-                            
+
                             Image(systemName: "arrow.right")
                         }
                     }
@@ -250,21 +250,26 @@ struct ISBNInputStep: View {
                     .padding(.vertical, 16)
                     .background(
                         (bookData.isbn.isEmpty || !isValidISBN || isLoading) ?
-                        LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.5), Color.blue.opacity(0.3)]), startPoint: .leading, endPoint: .trailing) :
-                        LinearGradient(gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.8)]), startPoint: .leading, endPoint: .trailing)
+                            LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.5), Color.blue.opacity(0.3)]), startPoint: .leading, endPoint: .trailing) :
+                            LinearGradient(gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.8)]), startPoint: .leading, endPoint: .trailing)
                     )
                     .cornerRadius(16)
                     .shadow(color: Color.blue.opacity(0.3), radius: 5, x: 0, y: 3)
                 }
                 .disabled(bookData.isbn.isEmpty || !isValidISBN || isLoading)
                 .padding(.horizontal, 20)
-                .padding(.bottom, 32)
+                .padding(.top, 12)
+                .padding(.bottom, 20)
                 .opacity((bookData.isbn.isEmpty || !isValidISBN || isLoading) ? 0.6 : 1.0)
-                
+
                 // Add extra padding at the bottom when keyboard is shown
-                Color.clear.frame(height: keyboardHeight > 0 ? keyboardHeight - 40 : 0)
+                if keyboardHeight > 0 {
+                    Color.clear.frame(height: keyboardHeight * 0.6)
+                }
             }
-            .frame(minHeight: UIScreen.main.bounds.height)
+//            .padding(.top, -40)
+            .padding(.bottom, 20)
+            .frame(minHeight: UIScreen.main.bounds.height - 90)
         }
         .scrollDismissesKeyboard(.interactively)
         .alert("Error", isPresented: $showError) {
@@ -276,7 +281,7 @@ struct ISBNInputStep: View {
             BarcodeScannerView(scannedCode: $bookData.isbn, onScanComplete: { code in
                 Task {
                     validateISBN() // Validate scanned ISBN
-                    
+
                     // Only fetch if valid
                     if isValidISBN {
                         await fetchBookInfo()
@@ -292,18 +297,18 @@ struct ISBNInputStep: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 isISBNFocused = true
             }
-            
+
             // Set up keyboard observers
             NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
                 if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
                     keyboardHeight = keyboardFrame.height
                 }
             }
-            
+
             NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
                 keyboardHeight = 0
             }
-            
+
             // Validate initial ISBN if any
             validateISBN()
         }
@@ -313,22 +318,22 @@ struct ISBNInputStep: View {
             NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
         }
     }
-    
+
     // New method to validate ISBN
     private func validateISBN() {
         let isbn = bookData.isbn.trimmingCharacters(in: .whitespacesAndNewlines)
-        
+
         // Basic length validation
         isValidISBN = isbn.count == 10 || isbn.count == 13
-        
+
         // Only show validation feedback if user has entered something
         showValidationHint = !isbn.isEmpty
     }
-    
+
     // Helper method to get the appropriate validation message
     private func getValidationMessage() -> String {
         let isbn = bookData.isbn
-        
+
         if isbn.isEmpty {
             return "Enter the 10 or 13-digit ISBN number"
         } else if isbn.count < 10 {
@@ -341,11 +346,11 @@ struct ISBNInputStep: View {
             return "ISBN must be exactly 10 or 13 digits"
         }
     }
-    
+
     private func fetchBookInfo() async {
         isLoading = true
         defer { isLoading = false }
-        
+
         do {
             print("🔍 Fetching book info for ISBN: \(bookData.isbn)")
             if let info = try await bookInfoService.fetchBookInfo(isbn: bookData.isbn) {
@@ -366,7 +371,7 @@ struct ISBNInputStep: View {
                         print("- \(identifier.type): \(identifier.identifier)")
                     }
                 }
-                
+
                 // Update book data with fetched info
                 bookData.bookInfo = info
                 bookData.bookTitle = info.title
@@ -377,7 +382,7 @@ struct ISBNInputStep: View {
                 bookData.language = info.language ?? ""
                 bookData.bookCoverUrl = info.imageLinks?.thumbnail
                 bookData.categories = info.categories ?? []
-                
+
                 if let dateString = info.publishedDate {
                     let formatter = DateFormatter()
                     formatter.dateFormat = "yyyy-MM-dd"
@@ -385,7 +390,7 @@ struct ISBNInputStep: View {
                         bookData.publishedDate = date
                     }
                 }
-                
+
                 // Try to load book cover from Google Books first
                 if let thumbnailURL = info.imageLinks?.thumbnail {
                     print("\n📸 Loading book cover from Google Books: \(thumbnailURL)")
@@ -393,7 +398,7 @@ struct ISBNInputStep: View {
                     bookData.bookCover = try await bookInfoService.loadImage(from: thumbnailURL)
                     print("✅ Book cover loaded successfully from Google Books")
                 }
-                
+
                 // If no cover from Google Books, try OpenLibrary
                 if bookData.bookCover == nil {
                     print("\n📸 Trying to load book cover from OpenLibrary")
@@ -402,20 +407,20 @@ struct ISBNInputStep: View {
                         for identifier in identifiers {
                             if identifier.type == "ISBN_10" || identifier.type == "ISBN_13" {
                                 if let cover = try await bookInfoService.loadCoverFromOpenLibrary(isbn: identifier.identifier) {
-                                        bookData.bookCoverUrl = cover.url
-                                       bookData.bookCover = cover.image
-                                        print("✅ Book cover loaded successfully from OpenLibrary")
-                                        break
+                                    bookData.bookCoverUrl = cover.url
+                                    bookData.bookCover = cover.image
+                                    print("✅ Book cover loaded successfully from OpenLibrary")
+                                    break
                                 }
                             }
                         }
                     }
                 }
-                
+
                 if bookData.bookCover == nil {
                     print("\n⚠️ No book cover available from any source")
                 }
-                
+
                 onContinue()
             } else {
                 print("\n⚠️ No book found with ISBN: \(bookData.isbn)")
@@ -438,7 +443,7 @@ struct ISBNInputStep: View {
     struct PreviewWrapper: View {
         @State private var bookData = BookData()
         @State private var showBarcodeScanner = false
-        
+
         var body: some View {
             ISBNInputStep(
                 bookData: $bookData,
@@ -448,6 +453,6 @@ struct ISBNInputStep: View {
             )
         }
     }
-    
+
     return PreviewWrapper()
 }
