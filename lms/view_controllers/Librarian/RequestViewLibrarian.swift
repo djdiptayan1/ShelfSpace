@@ -530,7 +530,7 @@ struct BorrowRequestCardView: View {
                             Image(systemName: "books.vertical")
                             .font(.caption)
                             .foregroundColor(.secondary)
-                            Text("\(book?.availableCopies ?? 0) of \(book?.totalCopies) available")
+                            Text("\(book?.availableCopies ?? 0) of \(book?.totalCopies ?? 0) available")
                                 .font(.caption)
                                 .foregroundColor(book?.availableCopies ?? 0 > 0 ? .green : .red)
                         }
