@@ -207,7 +207,7 @@ struct ProfileIcon: View {
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .foregroundColor(.teal)
-                .frame(width: 44, height: 44)
+                .frame(width: 38, height: 38)
         }
         .padding([.trailing], 20)
         .padding([.top], 5)
