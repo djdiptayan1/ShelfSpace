@@ -65,6 +65,8 @@ struct ExploreBooksView: View {
                                     selectedGenres = []
                                 }
                             )
+                            .accessibilityLabel("Search books")
+                            .accessibilityHint("Type to search for books by title, author or genre")
                             .onChange(of: searchText) { _ in
                                 // Real-time search as user types
                             }
@@ -85,10 +87,15 @@ struct ExploreBooksView: View {
                                                 selectedGenres.insert(category.displayName)
                                             }
                                         }
+                                        .accessibilityLabel("\(category.displayName) genre")
+                                        .accessibilityHint(selectedGenres.contains(category.displayName) ? "Selected. Double tap to deselect." : "Not selected. Double tap to select.")
+                                        .accessibilityAddTraits(selectedGenres.contains(category.displayName) ? .isSelected : [])
                                     }
                                 }
                                 .padding(.horizontal)
+                                .accessibilityElement(children: .combine)
                             }
+                            .accessibilityLabel("Genre filters")
                         }
                         .padding(.top)
                         .padding(.bottom, 8)
@@ -99,6 +106,7 @@ struct ExploreBooksView: View {
                         if isLoadingInitial && allBooks.isEmpty {
                             ProgressView("Loading Books...")
                                 .frame(maxHeight: .infinity)
+                                .accessibilityLabel("Loading books")
                         } else if !filteredBooks.isEmpty || isFiltering { // Show grid if there are books or if filtering (even if results are empty)
                             ScrollView {
                                 LazyVGrid(
@@ -108,6 +116,9 @@ struct ExploreBooksView: View {
                                     ForEach(filteredBooks) { book in // Relies on BookModel being Identifiable via 'id'
                                         NavigationLink(destination: BookDetailView(book: book)) { // Assumed BookDetailView
                                             ImprovedBookCard(book: book, colorScheme: colorScheme)
+                                                .accessibilityElement(children: .combine)
+                                                .accessibilityLabel("\(book.title), by \(book.authorNames?.joined(separator: ", ") ?? "unknown author"). Genres: \(book.genreNames?.joined(separator: ", ") ?? "no genres")")
+                                                .accessibilityHint("Double tap to view details")
                                         }
                                         .buttonStyle(PlainButtonStyle())
                                     }
@@ -122,6 +133,7 @@ struct ExploreBooksView: View {
                                                     triggerLoadMoreBooks()
                                                 }
                                                 .padding()
+                                                .accessibilityLabel("Loading more books")
                                             Spacer()
                                         }
                                         .gridCellColumns(2) // Span across both columns
@@ -132,13 +144,16 @@ struct ExploreBooksView: View {
                                             .foregroundColor(.gray)
                                             .padding()
                                             .gridCellColumns(2)
+                                            .accessibilityLabel("No more books to load")
                                     }
                                 }
                                 .padding()
                             }
+                            .accessibilityLabel("Books grid")
                         } else if !isLoadingInitial && allBooks.isEmpty && !isFiltering {
                             Text("No books found in the library currently.")
                                 .frame(maxHeight: .infinity)
+                                .accessibilityLabel("No books found")
                         }
                     }
                 }
@@ -146,6 +161,7 @@ struct ExploreBooksView: View {
                 .navigationBarHidden(true)
                 .alert("Error", isPresented: $showError, actions: { Button("OK", role: .cancel) { } }, message: { Text(errorMessage ?? "An unknown error occurred") })
             }
+            .accessibilityElement(children: .contain)
         }
         .foregroundColor(Color.text(for: colorScheme)) // Assumed Color.text definition
         .task {
@@ -230,55 +246,7 @@ struct ExploreBooksView: View {
     }
 }
 
-    // private func loadBooks() async {
-    //     isLoading = true
-    //     // Load cached books first for instant display
-    //     allBooks = BookHandler.shared.getCachedData() ?? []
-
-    //     fetchBooks { result in
-    //         isLoading = false
-
-    //         switch result {
-    //         case let .success(fetchedBooks):
-    //             // Update books without animation
-    //             self.allBooks = fetchedBooks
-
-    //             // Preload book covers for better UX
-    //             for book in fetchedBooks where book.coverImageUrl != nil {
-    //                 self.preloadBookCover(for: book)
-    //             }
-    //         case let .failure(error):
-    //             self.errorMessage = error.localizedDescription
-    //             self.showError = true
-    //         }
-    //     }
-    // }
-
-    // private func loadMoreBooks() {
-    //     // Guard against multiple loading requests or filtering state
-    //     guard !isFiltering && !isLoadingMore else { return }
-
-    //     isLoadingMore = true
-    //     lms.loadMoreBooks { result in
-    //         self.isLoadingMore = false
-
-    //         switch result {
-    //         case let .success(updatedBooks):
-    //             // Only update if we got new books (when count increases)
-    //             if updatedBooks.count > self.allBooks.count {
-    //                 // No animation when updating the collection
-    //                 self.allBooks = updatedBooks
-    //                 print("[DEBUG] (ExploreBooksView) Loaded more books. Total count: \(updatedBooks.count)")
-    //             }
-    //         case let .failure(error):
-    //             self.errorMessage = "Failed to load more books: \(error.localizedDescription)"
-    //             self.showError = true
-    //             print("[ERROR] (ExploreBooksView) Failed to load more books: \(error)")
-    //         }
-    //     }
-    // }
-
-    private func preloadBookCover(for book: BookModel) {
+private func preloadBookCover(for book: BookModel) {
         guard let urlString = book.coverImageUrl,
               let url = URL(string: urlString) else {
             return
@@ -286,8 +254,6 @@ struct ExploreBooksView: View {
 
         URLSession.shared.dataTask(with: url).resume()
     }
-
-// MARK: - Improved Book Card
 
 struct ImprovedBookCard: View {
     let book: BookModel
@@ -317,6 +283,7 @@ struct ImprovedBookCard: View {
                     Image(systemName: "book.fill")
                         .font(.system(size: 30))
                         .foregroundColor(.white.opacity(0.7))
+                        .accessibilityHidden(true)
                 }
 
                 // The actual book cover image
@@ -327,12 +294,14 @@ struct ImprovedBookCard: View {
                         .frame(width: UIScreen.main.bounds.width / 2.5, height: 200)
                         .clipped()
                         .cornerRadius(8)
+                        .accessibilityHidden(true)
                 }
             }
             .frame(width: UIScreen.main.bounds.width / 2.5, height: 200)
             .cornerRadius(8)
             .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
             .padding(.bottom, 8)
+            .accessibilityHidden(true)
 
             // Text content container - Separated from image
             VStack(alignment: .leading, spacing: 4) {
@@ -356,6 +325,7 @@ struct ImprovedBookCard: View {
                                 .background(Color.gray.opacity(0.15)) /* primary(for: colorScheme).opacity(0.1)) */
                                 .foregroundColor(Color.text(for: colorScheme).opacity(0.8))
                                 .cornerRadius(4)
+                                .accessibilityHidden(true)
                         }
                     }
                     .frame(height: 20, alignment: .leading)
@@ -438,6 +408,7 @@ struct GenreChipk: View {
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 14, height: 14)
+                    .accessibilityHidden(true)
 
                 Text(genre)
                     .font(.system(size: 14, weight: .medium))
@@ -483,3 +454,53 @@ struct ExploreBooksView_Previews: PreviewProvider {
         }
     }
 }
+
+    // private func loadBooks() async {
+    //     isLoading = true
+    //     // Load cached books first for instant display
+    //     allBooks = BookHandler.shared.getCachedData() ?? []
+
+    //     fetchBooks { result in
+    //         isLoading = false
+
+    //         switch result {
+    //         case let .success(fetchedBooks):
+    //             // Update books without animation
+    //             self.allBooks = fetchedBooks
+
+    //             // Preload book covers for better UX
+    //             for book in fetchedBooks where book.coverImageUrl != nil {
+    //                 self.preloadBookCover(for: book)
+    //             }
+    //         case let .failure(error):
+    //             self.errorMessage = error.localizedDescription
+    //             self.showError = true
+    //         }
+    //     }
+    // }
+
+    // private func loadMoreBooks() {
+    //     // Guard against multiple loading requests or filtering state
+    //     guard !isFiltering && !isLoadingMore else { return }
+
+    //     isLoadingMore = true
+    //     lms.loadMoreBooks { result in
+    //         self.isLoadingMore = false
+
+    //         switch result {
+    //         case let .success(updatedBooks):
+    //             // Only update if we got new books (when count increases)
+    //             if updatedBooks.count > self.allBooks.count {
+    //                 // No animation when updating the collection
+    //                 self.allBooks = updatedBooks
+    //                 print("[DEBUG] (ExploreBooksView) Loaded more books. Total count: \(updatedBooks.count)")
+    //             }
+    //         case let .failure(error):
+    //             self.errorMessage = "Failed to load more books: \(error.localizedDescription)"
+    //             self.showError = true
+    //             print("[ERROR] (ExploreBooksView) Failed to load more books: \(error)")
+    //         }
+    //     }
+    // }
+
+    
