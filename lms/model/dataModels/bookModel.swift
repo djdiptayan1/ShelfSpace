@@ -33,6 +33,10 @@ struct BookModel: Identifiable, Codable {
     var coverImageData: Data?     // Local cache (for UI only)
     
     var bookCover: UIImage? = nil
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
     
 
     enum CodingKeys: String, CodingKey {

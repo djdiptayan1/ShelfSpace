@@ -20,6 +20,9 @@ struct Book: Identifiable {
 // MARK: - Main View
 struct HomeView: View {
     // MARK: - Properties
+
+    @StateObject private var homePaginationManager = BookPaginationManager()
+
     @State private var searchText = ""
     @State private var showSearchResults = false
     @State private var selectedGenres: Set<String> = []
@@ -32,50 +35,45 @@ struct HomeView: View {
     @State private var prefetchError: String? = nil
     @State private var isLoading = false
 
-    // Sample data
-    let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
-    // Combined books data for search
-    var allBooks: [BookModel] {
-        return newArrivals
-    }
+    // Local copies for UI display, derived from homePaginationManager.books
+    @State private var newArrivals: [BookModel] = []
+    @State private var topSelling: [BookModel] = []
+    @State private var allBooksForHomePage: [BookModel] = [] // Holds all books after fetching
+
+    // Loading states
+    @State private var isLoadingAllBooksForHome = false // For the multi-page fetch process
+    @State private var initialLoadDone = false // To prevent .task from re-running full load unnecessarily
+
+let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
 
     // Filtered books based on search text or selected genres
-    var filteredBooks: [BookModel] {
+   var filteredBooksForSearch: [BookModel] { // For search results within HomeView
         if searchText.isEmpty && selectedGenres.isEmpty {
-            return allBooks
+            return allBooksForHomePage // Search operates on all loaded books
         }
-
-        return allBooks.filter { book in
-            let matchesSearch =
-                searchText.isEmpty
-                || book.title.lowercased().contains(searchText.lowercased())
-
-            let matchesGenre =
-                selectedGenres.isEmpty
-                || !selectedGenres.isDisjoint(with: book.genreNames ?? [])
-
+        return allBooksForHomePage.filter { book in
+           let matchesSearch = searchText.isEmpty ||
+               book.title.lowercased().contains(searchText.lowercased()) ||
+               (book.authorNames?.contains { $0.lowercased().contains(searchText.lowercased()) } ?? false) ||
+               (book.genreNames?.contains { $0.lowercased().contains(searchText.lowercased()) } ?? false)
+                                           
+            let matchesGenre = selectedGenres.isEmpty ||
+              !selectedGenres.isDisjoint(with: book.genreNames ?? [])
             return matchesSearch && matchesGenre
         }
     }
 
-    @State private var newArrivals: [BookModel] = []
-
-    @State private var topSelling: [BookModel] = []
-
     private var recommendations: [BookModel] {
-        if prefetchedUser == nil {
-            return allBooks
-        }
-        let selectedGenres = Set(prefetchedUser!.interests ?? [])
-        print(prefetchedUser!)
-        return allBooks.filter { book in
-            
-            let matchesGenre = selectedGenres.isEmpty ||
-                !selectedGenres.isDisjoint(with: book.genreNames ?? [])
-
-            return  matchesGenre
-        }
+    if prefetchedUser == nil {
+        return allBooksForHomePage // <--- Change 'allBooks' to 'allBooksForHomePage'
     }
+    let selectedUserGenres = Set(prefetchedUser!.interests ?? []) // Renamed for clarity
+    // print(prefetchedUser!) // Be careful printing optionals directly
+    return allBooksForHomePage.filter { book in // <--- Change 'allBooks' to 'allBooksForHomePage'
+        let bookGenres = Set(book.genreNames ?? []) // Make it a Set for efficient disjoint check
+        return selectedUserGenres.isEmpty || !selectedUserGenres.isDisjoint(with: bookGenres)
+    }
+}
 
     // MARK: - MAIN BODY
 
@@ -145,7 +143,10 @@ struct HomeView: View {
                         .zIndex(1)
 
                         // Content based on search/filter state
-                        if showSearchResults || !selectedGenres.isEmpty {
+                        if isLoadingAllBooksForHome && allBooksForHomePage.isEmpty {
+                            ProgressView("Loading Library Books...")
+                                .frame(maxHeight: .infinity)
+                        } else if showSearchResults || !selectedGenres.isEmpty {
                             ScrollView {
                                 VStack(spacing: 0) {
                                     // Always include the categories section in the scrollable area
@@ -153,7 +154,7 @@ struct HomeView: View {
                                     
                                     // Search results view
                                     VStack {
-                                        if filteredBooks.isEmpty {
+                                        if filteredBooksForSearch.isEmpty {
                                             VStack(spacing: 16) {
                                                 Image(systemName: "magnifyingglass")
                                                     .resizable()
@@ -183,7 +184,7 @@ struct HomeView: View {
                                                     .padding(.horizontal)
 
                                                 Text(
-                                                    "Found \(filteredBooks.count) book\(filteredBooks.count > 1 ? "s" : "")"
+                                                    "Found \(filteredBooksForSearch.count) book\(filteredBooksForSearch.count > 1 ? "s" : "")"
                                                 )
                                                 .font(.subheadline)
                                                 .foregroundColor(
@@ -192,7 +193,7 @@ struct HomeView: View {
                                                 .padding(.horizontal)
 
                                                 LazyVStack(spacing: 16) {
-                                                    ForEach(filteredBooks) { book in
+                                                    ForEach(filteredBooksForSearch) { book in
                                                         NavigationLink(
                                                             destination: BookDetailView(book: book)
                                                         ) {
@@ -215,7 +216,11 @@ struct HomeView: View {
                             // Regular home view content
                             ScrollView {
                                 VStack(alignment: .leading, spacing: 24) {
-                                    categoriesSection
+                                    if !newArrivals.isEmpty { categoriesSection } // Show categories if content loaded
+//                                    if isLoadingAllBooksForHome && !allBooksForHomePage.isEmpty {
+//                                        ProgressView("Loading more books...") // Shows if still fetching subsequent pages
+//                                            .padding()
+//                                    }
                                     newArrivalsSection(geometry: geometry)
                                     recommendationsSection(geometry: geometry)
                                     topSellingSection(geometry: geometry)
@@ -227,10 +232,15 @@ struct HomeView: View {
                     }
                 }
                 .refreshable {
-                    await loadBooks()
+                    print("HomeView: Refresh triggered.")
+                    await loadAllBooksRecursive(isRefresh: true)
                 }
-                .task {
-                    await loadBooks()
+               .task {
+                    if !initialLoadDone { // Only run the full load sequence once per .task lifetime unless refreshed
+                        print("HomeView: .task triggered, loading all books.")
+                        await loadAllBooksRecursive()
+                        initialLoadDone = true
+                    }
                 }
                 .navigationBarHidden(true)
             }
@@ -238,14 +248,98 @@ struct HomeView: View {
         .foregroundColor(Color.text(for: colorScheme))
     }
 
-    // MARK: - SECTION FOR VIEW COMPONENT
+    private func loadAllBooksRecursive(isRefresh: Bool = false) async {
+        // If already loading all books and not a refresh, don't start another sequence.
+        if isLoadingAllBooksForHome && !isRefresh {
+            print("HomeView: Already in the process of loading all books.")
+            return
+        }
+        
+        isLoadingAllBooksForHome = true
+        if isRefresh {
+            homePaginationManager.reset() // Ensure a clean slate for the manager on refresh
+            allBooksForHomePage = [] // Clear local holder too
+            // Reset derived arrays
+            newArrivals = []
+            topSelling = []
+        }
+        
+        // Attempt to load from cache first, only if not refreshing.
+        // This might load a partial or full list if previously cached.
+        if !isRefresh, let cached = BookHandler.shared.getCachedData() {
+            if !cached.isEmpty {
+                self.allBooksForHomePage = cached
+                // Update derived arrays immediately from cache
+                updateDerivedBookLists(from: cached)
+                print("HomeView: Loaded \(cached.count) books from HOME cache.")
+                // If cache seems complete (e.g., based on a stored total), could potentially skip network.
+                // For simplicity, we'll still try to fetch to ensure data is up-to-date or fetch missing.
+            }
+        }
 
-    // Header Section
+        await fetchNextPageForHomeLoop()
+    }
+
+    private func fetchNextPageForHomeLoop() async {
+        // Determine if this is the first page or a subsequent "load more" operation for the manager
+        let isInitialFetchForManager = homePaginationManager.books.isEmpty && homePaginationManager.currentPage == 1
+        
+        // Use the global fetchBooks
+        fetchBooks(
+            manager: homePaginationManager,
+            page: isInitialFetchForManager ? 1 : nil, // Explicitly 1 for first, nil for loadMore to pick next
+            limit: 30, // Fetching more per page for HomeView to reduce calls, API must support this limit
+            isLoadingMore: !isInitialFetchForManager
+        ) { result in
+            DispatchQueue.main.async { // Ensure UI updates are on main thread
+                switch result {
+                case .success(let booksFromManager):
+                    self.allBooksForHomePage = booksFromManager // Update local state from manager
+                    self.updateDerivedBookLists(from: booksFromManager)
+                    BookHandler.shared.cacheData(booksFromManager) // Cache all fetched books for home
+
+                    print("HomeView: Page \(self.homePaginationManager.currentPage)/\(self.homePaginationManager.totalPages) fetched. Total in manager: \(booksFromManager.count)")
+
+                    if self.homePaginationManager.hasMorePages() {
+                        // Recursively call to fetch the next page if manager indicates more are available
+                        // Ensure we don't get into a tight loop if isLoading state isn't managed perfectly by fetchBooks quickly enough.
+                        if !self.homePaginationManager.isLoading { // Check if manager is ready for next call
+                            Task {
+                                await self.fetchNextPageForHomeLoop()
+                            }
+                        } else {
+                             print("HomeView: Manager is still loading, deferring next fetchNextPageForHomeLoop call.")
+                             // Optionally, schedule with a slight delay if necessary
+                        }
+                    } else {
+                        self.isLoadingAllBooksForHome = false // All pages loaded
+                        print("HomeView: All books loaded for home. Total: \(self.allBooksForHomePage.count)")
+                    }
+
+                case .failure(let error):
+                    self.isLoadingAllBooksForHome = false
+                    // Handle error (e.g., update UI, show alert)
+                    print("[ERROR] HomeView: Failed to load books: \(error.localizedDescription)")
+                    // self.prefetchError = error.localizedDescription; self.showError = true (if using common error display)
+                }
+            }
+        }
+    }
+
+    private func updateDerivedBookLists(from books: [BookModel]) {
+        self.newArrivals = Array(books.prefix(10))
+        // The 'recommendations' computed property will automatically update
+        // when 'allBooksForHomePage' (which is 'books' here) or 'prefetchedUser' changes.
+        // So, no need to set self.recommendations here.
+        // self.recommendations = Array(tempRecommendations.prefix(10)) // <--- REMOVE THIS LINE
+        self.topSelling = Array(books.suffix(10).reversed())
+    }
+
     private func loadBooks() async {
         isLoading = true
         self.newArrivals = BookHandler.shared.getCachedData() ?? []
         self.topSelling = BookHandler.shared.getCachedData() ?? []
-        fetchBooks { result in
+        fetchBooks(manager: homePaginationManager) { result in
             defer { isLoading = false }
 
             switch result {

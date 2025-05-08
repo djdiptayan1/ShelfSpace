@@ -3,7 +3,10 @@ import NavigationBarLargeTitleItems
 import SwiftUI
 
 struct HomeViewLibrarian: View {
+    @StateObject private var homePaginationManager = BookPaginationManager()
+    
     @Environment(\.colorScheme) private var colorScheme
+    
     @State private var isShowingProfile = false
     @State private var prefetchedUser: User? = nil
     @State private var prefetchedLibrary: Library? = nil
@@ -357,7 +360,7 @@ struct HomeViewLibrarian: View {
 
     private func loadBooks() async {
         isLoading = true
-        fetchBooks { result in
+        fetchBooks(manager: homePaginationManager) { result in
             defer { isLoading = false }
             switch result {
             case let .success(fetchedBooks):
@@ -378,7 +381,7 @@ struct HomeViewLibrarian: View {
         guard !isFiltering && !isLoadingMore else { return }
         
         isLoadingMore = true
-        lms.loadMoreBooks { result in
+        lms.loadMoreBooks(manager: homePaginationManager) { result in
             self.isLoadingMore = false
             
             switch result {
