@@ -39,12 +39,15 @@ struct BorrowingSettingsView: View {
                                 .font(.system(size: 17, weight: .regular))
                                 .foregroundColor(.red)
                         }
+                        .accessibilityLabel("Cancel")
+                        .accessibilityHint("Dismiss the borrowing settings screen")
 
                         Spacer()
 
                         Text("Borrowing Settings")
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(Color.text(for: colorScheme))
+                            .accessibilityAddTraits(.isHeader)
 
                         Spacer()
 
@@ -57,10 +60,13 @@ struct BorrowingSettingsView: View {
                                 .foregroundColor(Color.primary(for: colorScheme))
                         }
                         .disabled(policyViewModel.isLoading)
+                        .accessibilityLabel("Save")
+                        .accessibilityHint("Save your borrowing settings")
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 16)
                     .padding(.bottom, 10)
+
                     ScrollView {
                         VStack(alignment: .leading, spacing: 30) {
                             // Maximum Books Borrowable Card
@@ -68,17 +74,23 @@ struct BorrowingSettingsView: View {
                                 Text("Maximum Books Borrowable")
                                     .font(.system(size: 18, weight: .semibold, design: .rounded))
                                     .foregroundColor(Color.text(for: colorScheme))
+                                    .accessibilityAddTraits(.isHeader)
 
                                 Text("\(Int(maxBooksBorrowable)) Books")
                                     .font(.system(size: 36, weight: .bold, design: .rounded))
                                     .foregroundColor(Color.primary(for: colorScheme))
                                     .frame(maxWidth: .infinity, alignment: .center)
                                     .padding(.vertical, 10)
+                                    .accessibilityLabel("Selected maximum books borrowable")
+                                    .accessibilityValue("\(Int(maxBooksBorrowable)) books")
 
                                 // iOS-style slider
                                 Slider(value: $maxBooksBorrowable, in: 1 ... 15, step: 1)
                                     .accentColor(Color.primary(for: colorScheme))
                                     .padding(.vertical, 10)
+                                    .accessibilityLabel("Maximum number of books")
+                                    .accessibilityValue("\(Int(maxBooksBorrowable))")
+                                    .accessibilityHint("Adjust the number of books a user can borrow")
 
                                 HStack {
                                     Text("1 Book")
@@ -106,17 +118,23 @@ struct BorrowingSettingsView: View {
                                 Text("Reissue Period")
                                     .font(.system(size: 18, weight: .semibold, design: .rounded))
                                     .foregroundColor(Color.text(for: colorScheme))
+                                    .accessibilityAddTraits(.isHeader)
 
                                 Text("\(Int(reissuePeriodDays)) Days")
                                     .font(.system(size: 36, weight: .bold, design: .rounded))
                                     .foregroundColor(Color.primary(for: colorScheme))
                                     .frame(maxWidth: .infinity, alignment: .center)
                                     .padding(.vertical, 10)
+                                    .accessibilityLabel("Selected reissue period")
+                                    .accessibilityValue("\(Int(reissuePeriodDays)) days")
 
                                 // iOS-style slider
                                 Slider(value: $reissuePeriodDays, in: 1 ... 60, step: 1)
                                     .accentColor(Color.primary(for: colorScheme))
                                     .padding(.vertical, 10)
+                                    .accessibilityLabel("Reissue period")
+                                    .accessibilityValue("\(Int(reissuePeriodDays))")
+                                    .accessibilityHint("Adjust the number of days allowed for reissue")
 
                                 HStack {
                                     Text("1 Day")
@@ -177,6 +195,7 @@ struct BorrowingSettingsView: View {
                         .view()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(Color.black.opacity(0.1))
+                        .accessibilityHidden(true)
                     }
                 }
             )

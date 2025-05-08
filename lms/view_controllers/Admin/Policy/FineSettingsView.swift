@@ -8,17 +8,18 @@
 import Foundation
 import SwiftUI
 import DotLottie
+
 // Update for FineSettingsView
 struct FineSettingsView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.presentationMode) var presentationMode
     @EnvironmentObject var policyViewModel: PolicyViewModel
-    
+
     // State variables for UI
     @State private var fineAmount: Double = 10
 //    @State private var gracePeriodDays: Double = 3
     @State private var showingSaveAlert: Bool = false
-    
+
     // Initialize from ViewModel
     init(viewModel: PolicyViewModel? = nil) {
         if let vm = viewModel {
@@ -26,13 +27,13 @@ struct FineSettingsView: View {
             // If you had grace period in your model, you'd set it here too
         }
     }
-    
+
     var body: some View {
         NavigationView {
             ZStack {
                 // Background layer
                 ReusableBackground(colorScheme: colorScheme)
-                
+
                 // Content layer
                 VStack {
                     // Header
@@ -45,15 +46,18 @@ struct FineSettingsView: View {
                                 .font(.system(size: 17, weight: .regular))
                                 .foregroundColor(.red)
                         }
-                        
+                        .accessibilityLabel("Cancel")
+                        .accessibilityHint("Dismiss fine settings without saving changes")
+
                         Spacer()
-                        
+
                         Text("Fine Settings")
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(Color.text(for: colorScheme))
-                        
+                            .accessibilityAddTraits(.isHeader)
+
                         Spacer()
-                        
+
                         // Save button
                         Button(action: {
                             saveSettings()
@@ -63,11 +67,13 @@ struct FineSettingsView: View {
                                 .foregroundColor(Color.primary(for: colorScheme))
                         }
                         .disabled(policyViewModel.isLoading)
+                        .accessibilityLabel("Save")
+                        .accessibilityHint("Save the fine settings")
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 16)
                     .padding(.bottom, 10)
-                    
+
                     ScrollView {
                         VStack(alignment: .leading, spacing: 30) {
                             // Fine Amount Card
@@ -75,25 +81,31 @@ struct FineSettingsView: View {
                                 Text("Fine Amount Per Day")
                                     .font(.system(size: 18, weight: .semibold, design: .rounded))
                                     .foregroundColor(Color.text(for: colorScheme))
-                                
+                                    .accessibilityAddTraits(.isHeader)
+
                                 Text("₹\(Int(fineAmount))")
                                     .font(.system(size: 36, weight: .bold, design: .rounded))
                                     .foregroundColor(Color.primary(for: colorScheme))
                                     .frame(maxWidth: .infinity, alignment: .center)
                                     .padding(.vertical, 10)
-                                
+                                    .accessibilityLabel("Selected fine amount per day")
+                                    .accessibilityValue("₹\(Int(fineAmount))")
+
                                 // iOS-style picker wheel effect
                                 Slider(value: $fineAmount, in: 1...50, step: 1)
                                     .accentColor(Color.primary(for: colorScheme))
                                     .padding(.vertical, 10)
-                                
+                                    .accessibilityLabel("Fine amount per day")
+                                    .accessibilityValue("₹\(Int(fineAmount))")
+                                    .accessibilityHint("Adjust the fine amount using the slider")
+
                                 HStack {
                                     Text("₹1")
                                         .font(.system(size: 14))
                                         .foregroundColor(Color.text(for: colorScheme).opacity(0.6))
-                                    
+
                                     Spacer()
-                                    
+
                                     Text("₹50")
                                         .font(.system(size: 14))
                                         .foregroundColor(Color.text(for: colorScheme).opacity(0.6))
@@ -107,31 +119,31 @@ struct FineSettingsView: View {
                                           Color.white.opacity(0.9))
                                     .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
                             )
-                            
+
                             // Grace Period Card
 //                            VStack(alignment: .leading, spacing: 15) {
 //                                Text("Grace Period")
 //                                    .font(.system(size: 18, weight: .semibold, design: .rounded))
 //                                    .foregroundColor(Color.text(for: colorScheme))
-//                                
+//
 //                                Text("\(Int(gracePeriodDays)) Days")
 //                                    .font(.system(size: 36, weight: .bold, design: .rounded))
 //                                    .foregroundColor(Color.primary(for: colorScheme))
 //                                    .frame(maxWidth: .infinity, alignment: .center)
 //                                    .padding(.vertical, 10)
-//                                
+//
 //                                // iOS-style picker wheel effect
 //                                Slider(value: $gracePeriodDays, in: 0...14, step: 1)
 //                                    .accentColor(Color.primary(for: colorScheme))
 //                                    .padding(.vertical, 10)
-//                                
+//
 //                                HStack {
 //                                    Text("0 Days")
 //                                        .font(.system(size: 14))
 //                                        .foregroundColor(Color.text(for: colorScheme).opacity(0.6))
-//                                    
+//
 //                                    Spacer()
-//                                    
+//
 //                                    Text("14 Days")
 //                                        .font(.system(size: 14))
 //                                        .foregroundColor(Color.text(for: colorScheme).opacity(0.6))
@@ -203,13 +215,13 @@ struct FineSettingsView: View {
             }
         }
     }
-    
+
     private func saveSettings() {
         // Using fineAmount and gracePeriodDays for save action
         if let currentPolicy = policyViewModel.currentPolicy {
             var updatedPolicy = currentPolicy
             updatedPolicy.fine_per_day = Decimal(fineAmount)
-            
+
             policyViewModel.savePolicy(policy: updatedPolicy) { success in
                 if success {
                     showingSaveAlert = true

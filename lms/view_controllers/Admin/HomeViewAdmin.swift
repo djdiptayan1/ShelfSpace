@@ -55,9 +55,12 @@ struct HomeViewAdmin: View {
         NavigationView {
             ZStack {
                 ReusableBackground(colorScheme: colorScheme)
+                    .accessibilityHidden(true)
 
                 ScrollView {
                     AdminAnalyticsView(refreshID: analyticsRefreshID)
+                        .accessibilityElement(children: .contain)
+                        .accessibilityLabel("Library Analytics Dashboard")
                 }
                 .refreshable {
                     // Pull to refresh: update the refreshID to trigger a refresh in AdminAnalyticsView
@@ -76,17 +79,22 @@ struct HomeViewAdmin: View {
                 if isPrefetchingProfile {
                     ProgressView("Loading Profile...")
                         .padding()
+                        .accessibilityLabel("Loading profile information")
                 } else if let _ = prefetchedUser { // Check if user is fetched, ProfileView likely uses its own data or environment
                     ProfileView() // Assuming ProfileView can access the user data via LoginManager or environment
                         .navigationBarItems(
                             trailing: Button("Done") {
                                 showProfileSheet = false
-                            })
+                            }
+                            .accessibilityLabel("Done")
+                            .accessibilityHint("Closes the profile view")
+                        )
                 } else {
                     VStack(spacing: 16) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.largeTitle)
                             .foregroundColor(.orange)
+                            .accessibilityHidden(true)
                         Text("Could Not Load Profile")
                             .font(.headline)
                         if let errorMsg = prefetchError {
@@ -99,8 +107,11 @@ struct HomeViewAdmin: View {
                             Task { await prefetchProfileData() }
                         }
                         .buttonStyle(.borderedProminent)
+                        .accessibilityLabel("Retry loading profile")
                     }
                     .padding()
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Profile loading failed. \(prefetchError ?? "")")
                 }
             }
         }
@@ -201,7 +212,7 @@ struct ProfileIcon: View {
         .padding([.trailing], 20)
         .padding([.top], 5)
         .accessibilityLabel("Profile")
-        .accessibilityHint("Opens the profile sheet")
+        .accessibilityHint("Double tap to open profile settings")
         .accessibilityAddTraits(.isButton)
     }
 }
@@ -217,7 +228,7 @@ struct AdminAnalyticsView: View {
     // Always initialize with cached data from disk (now guaranteed to be loaded during splash)
     @State private var analyticsData: LibraryAnalytics? = AnalyticsHandler.shared.getCachedAnalytics()
     // Never show loading state on first display - data should be prefetched
-    @State private var isLoading = false 
+    @State private var isLoading = false
     @State private var error: Error?
     @State private var hasAttemptedInitialLoad = false
     let refreshID: UUID // Add this property to trigger refresh
@@ -247,9 +258,11 @@ struct AdminAnalyticsView: View {
                         .background(Color.teal)
                         .foregroundColor(.white)
                         .cornerRadius(8)
-                        .accessibilityLabel("Retry")
-                        .accessibilityHint("Attempts to reload the data")
+                        .accessibilityLabel("Retry loading analytics")
+                        .accessibilityHint("Attempts to reload the library analytics data")
                     }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Error loading analytics. \(error.localizedDescription)")
                     Spacer()
                 }
                 .padding(.vertical, 30)
@@ -261,26 +274,33 @@ struct AdminAnalyticsView: View {
                 // Fine Reports Section
                 Text("Fine reports")
                     .font(.headline)
+                    .accessibilityAddTraits(.isHeader)
 
                 HStack(spacing: 16) {
                     NavigationLink(destination: TotalFinesDetailView()) {
                         FineBox(title: "Total fines", value: "₹\(analytics.dashboard.fineReports.totalFines)")
                             .foregroundColor(.teal)
                             .accessibilityLabel("Total fines, ₹\(analytics.dashboard.fineReports.totalFines)")
-                            .accessibilityHint("View details about total fines")
+                            .accessibilityHint("Double tap to view details about total fines")
                     }
+                    .accessibilityElement(children: .combine)
+                    
                     NavigationLink(destination: OverdueBooksDetailView()) {
                         FineBox(title: "Overdue books", value: "\(analytics.dashboard.fineReports.overdueBooks)")
                             .foregroundColor(.teal)
                             .accessibilityLabel("Overdue books, \(analytics.dashboard.fineReports.overdueBooks) books")
-                            .accessibilityHint("View details about overdue books")
+                            .accessibilityHint("Double tap to view details about overdue books")
                     }
+                    .accessibilityElement(children: .combine)
                 }
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel("Fine reports section")
 
                 // Circulation Statistics Section
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Circulation statistics")
                         .font(.headline)
+                        .accessibilityAddTraits(.isHeader)
 
                     NavigationLink(destination: CirculationStatsDetailView()) {
                         Chart {
@@ -305,8 +325,10 @@ struct AdminAnalyticsView: View {
                         }
                         .frame(height: 150)
                         .accessibilityLabel("Circulation statistics chart")
-                        .accessibilityValue("Shows daily circulation for the past week")
+                        .accessibilityValue("Shows daily circulation for the past week: \(analytics.dashboard.circulationStatistics.dailyCirculation.map { "\($0.dayOfWeek): \($0.count) circulations" }.joined(separator: ", "))")
+                        .accessibilityHint("Double tap to view detailed circulation statistics")
                     }
+                    .accessibilityElement(children: .combine)
 
                     // Most borrowed book info
                     if let mostBorrowedBook = analytics.dashboard.mostBorrowedBook {
@@ -345,43 +367,57 @@ struct AdminAnalyticsView: View {
                                 }
                             }
                         }
-                        .padding(12) // Consider if this padding should be inside or outside the conditional block
+                        .padding(12)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("Most borrowed book: \(mostBorrowedBook.title). Borrowed \(mostBorrowedBook.borrowCount ?? 0) times. Genre: \(mostBorrowedBook.genreNames?.first ?? "Unknown")")
                     }
                 }
                 .padding()
                 .background(Color(.systemBackground)) // Adapts to light/dark mode
                 .cornerRadius(12)
                 .shadow(color: .black.opacity(0.05), radius: 4)
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel("Circulation statistics section")
 
                 // Catalog Insights Section
                 Text("Catalog insights")
                     .font(.headline)
+                    .accessibilityAddTraits(.isHeader)
 
                 HStack(spacing: 16) {
                     NavigationLink(destination: TotalBooksDetailView()) {
                         CatalogInsightBox(title: "Total Books", value: "\(analytics.dashboard.catalogInsights.totalBooks)")
                             .foregroundColor(.teal)
                             .accessibilityLabel("Total books, \(analytics.dashboard.catalogInsights.totalBooks) books")
-                            .accessibilityHint("View details about total books")
+                            .accessibilityHint("Double tap to view details about total books")
                     }
+                    .accessibilityElement(children: .combine)
+                    
                     NavigationLink(destination: NewBooksDetailView()) {
                         CatalogInsightBox(title: "New books", value: "\(analytics.dashboard.catalogInsights.newBooks)")
                             .foregroundColor(.teal)
                             .accessibilityLabel("New books, \(analytics.dashboard.catalogInsights.newBooks) books")
-                            .accessibilityHint("View details about new books")
+                            .accessibilityHint("Double tap to view details about new books")
                     }
+                    .accessibilityElement(children: .combine)
+                    
                     NavigationLink(destination: BorrowedBooksDetailView()) {
                         CatalogInsightBox(title: "Borrowed", value: "\(analytics.dashboard.catalogInsights.borrowedBooks)")
                             .foregroundColor(.teal)
                             .accessibilityLabel("Borrowed books, \(analytics.dashboard.catalogInsights.borrowedBooks) books")
-                            .accessibilityHint("View details about borrowed books")
+                            .accessibilityHint("Double tap to view details about borrowed books")
                     }
+                    .accessibilityElement(children: .combine)
                 }
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel("Catalog insights section")
 
                 Spacer() // Pushes content to the top
             }
         }
-        .padding() // Overall padding for the VStack
+        .padding()
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Library analytics dashboard")
         .onAppear {
             if !hasAttemptedInitialLoad {
                 hasAttemptedInitialLoad = true
@@ -479,6 +515,7 @@ struct CirculationStatsDetailView: View {
                     .onAppear {
                         fetchAnalytics()
                     }
+                    .accessibilityLabel("Loading circulation statistics details")
             } else if let error = error {
                 VStack {
                     Image(systemName: "exclamationmark.triangle")
@@ -493,9 +530,11 @@ struct CirculationStatsDetailView: View {
                         fetchAnalytics()
                     }
                     .padding()
-                    .accessibilityLabel("Retry")
-                    .accessibilityHint("Attempts to reload the data")
+                    .accessibilityLabel("Retry loading circulation statistics")
+                    .accessibilityHint("Attempts to reload the circulation data")
                 }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Error loading circulation statistics. \(error.localizedDescription)")
             } else if let analytics = analyticsData {
                 DetailViewTemplate(title: "Circulation Stats", value: "\(analytics.details.circulation.total)") {
                     SectionHeaderView(title: "Daily Circulation")
@@ -510,8 +549,8 @@ struct CirculationStatsDetailView: View {
                         }
                     }
                     .frame(height: 200)
-                    .accessibilityLabel("Circulation statistics chart")
-                    .accessibilityValue("Shows daily circulation for the past week")
+                    .accessibilityLabel("Daily circulation chart")
+                    .accessibilityValue("Shows circulation by day: \(analytics.details.circulation.daily.map { "\($0.dayOfWeek): \($0.count) books" }.joined(separator: ", "))")
 
                     // Most Borrowed Book Section
                     if let mostBorrowedBook = analytics.details.circulation.mostBorrowedBook {
@@ -562,6 +601,8 @@ struct CirculationStatsDetailView: View {
                             .padding()
                             .background(Color(.secondarySystemBackground))
                             .cornerRadius(12)
+                            .accessibilityElement(children: .combine)
+                            .accessibilityLabel("Most borrowed book: \(mostBorrowedBook.title). Borrowed \(mostBorrowedBook.borrowCount ?? 0) times. \(mostBorrowedBook.description ?? ""). Genres: \(mostBorrowedBook.genreNames?.joined(separator: ", ") ?? "None")")
                         }
                     }
 
@@ -572,6 +613,8 @@ struct CirculationStatsDetailView: View {
                             DetailItemView(title: item.dayOfWeek, value: "\(item.count)")
                         }
                     }
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel("Weekly circulation breakdown")
 
                     SectionHeaderView(title: "Monthly Trends")
 
@@ -580,16 +623,20 @@ struct CirculationStatsDetailView: View {
                         DetailItemView(title: "Last Month", value: "\(analytics.details.circulation.monthlyTrends.lastMonth)")
                         DetailItemView(title: "Growth", value: "\(analytics.details.circulation.monthlyTrends.growthRate)")
                     }
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel("Monthly trends: This month \(analytics.details.circulation.monthlyTrends.currentMonth), Last month \(analytics.details.circulation.monthlyTrends.lastMonth), Growth \(analytics.details.circulation.monthlyTrends.growthRate)")
                 }
             } else {
                 Text("No data available") // Should ideally not be reached if placeholder logic is robust
                     .onAppear {
                         fetchAnalytics() // Fetch if we somehow land here with no data
                     }
+                    .accessibilityLabel("No circulation data available")
             }
         }
-        .navigationTitle("Circulation Details") // Example title
+        .navigationTitle("Circulation Details")
         .navigationBarTitleDisplayMode(.inline)
+        .accessibilityElement(children: .contain)
     }
     
     private func fetchAnalytics() {
@@ -627,6 +674,7 @@ struct TotalBooksDetailView: View {
                     .onAppear {
                         fetchAnalytics()
                     }
+                    .accessibilityLabel("Loading total books details")
             } else if let error = error {
                 VStack {
                     Image(systemName: "exclamationmark.triangle")
@@ -641,9 +689,11 @@ struct TotalBooksDetailView: View {
                         fetchAnalytics()
                     }
                     .padding()
-                    .accessibilityLabel("Retry")
-                    .accessibilityHint("Attempts to reload the data")
+                    .accessibilityLabel("Retry loading book details")
+                    .accessibilityHint("Attempts to reload the book data")
                 }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Error loading book details. \(error.localizedDescription)")
             } else if let analytics = analyticsData {
                 DetailViewTemplate(title: "Total Books", value: "\(analytics.details.books.total)") {
                     SectionHeaderView(title: "Collection Breakdown")
@@ -655,10 +705,13 @@ struct TotalBooksDetailView: View {
                             Text("No genre data available.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
+                                .accessibilityLabel("No genre data available")
                         } else {
                             ForEach(sortedGenres, id: \.key) { genre, count in
                                 DetailItemView(title: genre, value: "\(count)")
                             }
+                            .accessibilityElement(children: .contain)
+                            .accessibilityLabel("Books by genre: \(sortedGenres.map { "\($0.key): \($0.value) books" }.joined(separator: ", "))")
                         }
                     }
 
@@ -669,6 +722,8 @@ struct TotalBooksDetailView: View {
                         DetailItemView(title: "Checked Out", value: "\(analytics.details.books.byStatus.borrowed)")
                         DetailItemView(title: "Reserved", value: "\(analytics.details.books.byStatus.reserved)")
                     }
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel("Book status: Available \(analytics.details.books.byStatus.available), Checked out \(analytics.details.books.byStatus.borrowed), Reserved \(analytics.details.books.byStatus.reserved)")
 
                     SectionHeaderView(title: "Collection Growth")
 
@@ -683,6 +738,7 @@ struct TotalBooksDetailView: View {
                         Text("No growth data available for chart.")
                             .font(.caption)
                             .foregroundColor(.secondary)
+                            .accessibilityLabel("No growth data available")
                     } else {
                         Chart {
                             ForEach(growthData) { data in
@@ -694,6 +750,8 @@ struct TotalBooksDetailView: View {
                             }
                         }
                         .frame(height: 200)
+                        .accessibilityLabel("Collection growth chart")
+                        
                     }
                 }
             } else {
@@ -701,10 +759,12 @@ struct TotalBooksDetailView: View {
                     .onAppear {
                         fetchAnalytics()
                     }
+                    .accessibilityLabel("No book data available")
             }
         }
         .navigationTitle("Total Books Details")
         .navigationBarTitleDisplayMode(.inline)
+        .accessibilityElement(children: .contain)
     }
     
     private func fetchAnalytics() {
@@ -739,6 +799,7 @@ struct NewBooksDetailView: View {
                     .onAppear {
                         fetchAnalytics()
                     }
+                    .accessibilityLabel("Loading new books details")
             } else if let error = error {
                 VStack {
                     Image(systemName: "exclamationmark.triangle")
@@ -753,9 +814,11 @@ struct NewBooksDetailView: View {
                         fetchAnalytics()
                     }
                     .padding()
-                    .accessibilityLabel("Retry")
-                    .accessibilityHint("Attempts to reload the data")
+                    .accessibilityLabel("Retry loading new books")
+                    .accessibilityHint("Attempts to reload the new books data")
                 }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Error loading new books. \(error.localizedDescription)")
             } else if let analytics = analyticsData {
                 DetailViewTemplate(title: "New Books", value: "\(analytics.details.newBooks.total)") {
                     SectionHeaderView(title: "Recent Additions")
@@ -765,6 +828,7 @@ struct NewBooksDetailView: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .padding()
+                            .accessibilityLabel("No recent book additions")
                     } else {
                         VStack(spacing: 12) {
                             ForEach(analytics.details.newBooks.recent.prefix(5), id: \.bookId) { book in
@@ -776,6 +840,8 @@ struct NewBooksDetailView: View {
                                 )
                             }
                         }
+                        .accessibilityElement(children: .contain)
+                        .accessibilityLabel("Recent additions: \(analytics.details.newBooks.recent.prefix(5).map { $0.title }.joined(separator: ", "))")
                     }
 
                     SectionHeaderView(title: "Categories")
@@ -786,12 +852,15 @@ struct NewBooksDetailView: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .padding()
+                            .accessibilityLabel("No category data for new books")
                     } else {
                         VStack(spacing: 12) {
                             ForEach(sortedCategories, id: \.key) { category, count in
                                 DetailItemView(title: category.isEmpty ? "Uncategorized" : category, value: "\(count)")
                             }
                         }
+                        .accessibilityElement(children: .contain)
+                        .accessibilityLabel("New books by category: \(sortedCategories.map { "\($0.key.isEmpty ? "Uncategorized" : $0.key): \($0.value) books" }.joined(separator: ", "))")
                     }
                 }
             } else {
@@ -799,10 +868,12 @@ struct NewBooksDetailView: View {
                     .onAppear {
                         fetchAnalytics()
                     }
+                    .accessibilityLabel("No new books data available")
             }
         }
         .navigationTitle("New Books Details")
         .navigationBarTitleDisplayMode(.inline)
+        .accessibilityElement(children: .contain)
     }
     
     private func fetchAnalytics() {

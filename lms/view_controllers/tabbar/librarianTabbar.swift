@@ -241,21 +241,27 @@ struct LibrarianTabbar: View {
                         .tag(0)
                         .tabItem {
                             Image(systemName: "house")
+                                .accessibilityHidden(true)
                             Text("Home")
+                                .accessibilityLabel("Home Tab")
                         }
                     
                     RequestViewLibrarian()
                         .tag(1)
                         .tabItem {
                             Image(systemName: "arrow.right.arrow.left")
+                                .accessibilityHidden(true)
                             Text("Requests")
+                                .accessibilityLabel("Requests Tab")
                         }
                     
                     UsersViewLibrarian()
                         .tag(2)
                         .tabItem {
                             Image(systemName: "person.3")
+                                .accessibilityHidden(true)
                             Text("Users")
+                                .accessibilityLabel("Users Tab")
                         }
                 }
                 .accentColor(Color.primary(for: colorScheme))
