@@ -87,13 +87,11 @@ struct BookDetailView: View {
                                 ? "bookmark.fill" : "bookmark"
                         )
                         .font(.system(size: 22))
-                        .foregroundColor(isBookmarked ? .gray : .gray)
+                        .foregroundColor(isBookmarked ? Color.primary(for: colorScheme).opacity(0.6) : Color.primary(for: colorScheme).opacity(0.6))
                     }
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 10)
-//                .background(Color.background(for: colorScheme).opacity(0.8)) // Using your color system
-
                 // Main content
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
@@ -156,14 +154,14 @@ struct BookDetailView: View {
 
                         // Genre tags in a horizontal scroll - styling similar to the teal buttons in the image
                         ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
+                            HStack(spacing: 9) {
                                 ForEach(book.genreNames ?? [], id: \.self) { genre in
                                     Text(genre)
-                                        .font(.system(size: 14))
-                                        .padding(.horizontal,12)
-                                        .padding(.vertical, 12)
+                                        .font(.system(size: 14).bold())
+                                        .padding(.horizontal,10)
+                                        .padding(.vertical,10)
                                         .background(
-                                            Color.gray.opacity(0.2)
+                                            Color.gray.opacity(0.15)
                                         )
                                         .foregroundColor(Color.text(for: colorScheme))
                                         .cornerRadius(8)
@@ -488,7 +486,7 @@ struct BookDetailView: View {
         case .available:
             return "Borrow"
         case .reading:
-            return "Return Book"
+            return "Return to libraray"
         case .requested:
             return "Cancel Request"
         case .completed:
@@ -504,13 +502,13 @@ struct BookDetailView: View {
     private var actionButtonColor: Color {
         switch bookStatus {
         case .available,.loading:
-            return Color.secondary(for: colorScheme)
+            return Color.primary(for: colorScheme).opacity(0.6)
         case .reading:
-            return .indigo
+            return .gray.opacity(0.2)
         case .requested,.notAvailable:
-            return .gray
+            return .red.opacity(0.8)
         case .completed:
-            return .yellow
+            return .gray.opacity(0.2)
 
         }
     }
@@ -542,6 +540,23 @@ enum BookStatus {
 
         }
     }
+//    var displayTextcolor: Color {
+//        switch self {
+//        case .available:
+//            return Color.primary(for: colorScheme)
+//        case .reading:
+//            return "Reading"
+//        case .requested:
+//            return "Requested"
+//        case .loading:
+//            return "Loading..."
+//        case .notAvailable:
+//            return "Not Available"
+//        case .completed:
+//           return "Completed"
+//
+//        }
+//    }
 }
 
 

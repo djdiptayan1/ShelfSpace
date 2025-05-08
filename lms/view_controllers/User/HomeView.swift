@@ -298,10 +298,10 @@ struct HomeView: View {
     private var headerSection: some View {
         HStack {
             VStack(alignment: .leading) {
-                Text("Welcome ," + (prefetchedUser != nil ? prefetchedUser!.name : "loading..."))
+                Text("Welcome, " + (prefetchedUser != nil ? prefetchedUser!.name : "loading"))
                     .font(.headline)
                     .foregroundColor(Color.text(for: colorScheme))
-                Text((prefetchedLibrary?.name ?? "loading..."))
+                Text((prefetchedLibrary?.name ?? "loading"))
                     .font(.title)
                     .fontWeight(.bold)
                     .foregroundColor(Color.text(for: colorScheme))

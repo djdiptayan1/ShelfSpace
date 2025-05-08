@@ -37,7 +37,7 @@ struct TwoFactorAuthView: View {
                     
                     Text("Enter the 6-digit verification code sent to \(email)")
                         .font(.system(size: 16))
-                        .foregroundColor(Color.secondary(for: colorScheme))
+                        .foregroundColor(Color.primary(for: colorScheme))
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
                 }
@@ -82,7 +82,7 @@ struct TwoFactorAuthView: View {
                 Button(action: verifyCode) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.accent(for: colorScheme))
+                            .fill(Color.primary(for: colorScheme).opacity(0.8))
                             .frame(height: 56)
                         
                         if isVerifying {

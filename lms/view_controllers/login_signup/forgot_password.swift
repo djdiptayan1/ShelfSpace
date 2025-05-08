@@ -18,7 +18,7 @@ struct ForgotPasswordView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                ReusableBackground(colorScheme: colorScheme)
+             ReusableBackground(colorScheme: colorScheme)
                 
                 VStack(spacing: 24) {
                     VStack {
@@ -83,7 +83,7 @@ struct ForgotPasswordView: View {
                     } label: {
                         ZStack {
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.secondary(for: colorScheme))
+                                .fill(Color.primary(for: colorScheme).opacity(0.8))
                             
                             if isSubmitting {
                                 ProgressView()

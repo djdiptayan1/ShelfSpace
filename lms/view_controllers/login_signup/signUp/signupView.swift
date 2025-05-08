@@ -149,8 +149,8 @@ struct signupView: View {
                         } label: {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.secondary(for: colorScheme))
-
+                                    .fill(Color.primary(for: colorScheme).opacity(0.8))
+                                
                                 if viewModel.isLoading {
                                     ProgressView()
                                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
@@ -163,10 +163,11 @@ struct signupView: View {
                             }
                             .frame(height: 54)
                             .padding(.horizontal, 24)
+                            
                         }
                         .disabled(viewModel.isLoading || !viewModel.isStep1Valid)
                         .opacity(viewModel.isStep1Valid ? 1 : 0.7)
-
+                       
                         Spacer()
                     }
                     .padding(.top, geometry.size.height * 0.05)

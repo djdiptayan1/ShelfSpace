@@ -74,7 +74,7 @@ struct ReviewsSection: View {
                         .foregroundColor(Color.text(for: colorScheme))
                         .padding(.horizontal)
                         .padding(.vertical)
-                        .background(Color.accent(for: colorScheme))
+                        .background(Color.primary(for: colorScheme).opacity(0.6))
                         .cornerRadius(8)
                     }
                     .frame(maxWidth: .infinity) // Makes the button take full width
@@ -151,29 +151,29 @@ struct ReviewItemView: View {
                 .lineSpacing(6)
             
             // Action buttons
-            HStack(spacing: 20) {
-                Button(action: {
-                    // Helpful button action
-                }) {
-                    HStack {
-                        Image(systemName: "hand.thumbsup")
-                        Text("Helpful")
-                    }
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-                }
-                
-                Button(action: {
-                    // Report button action
-                }) {
-                    HStack {
-                        Image(systemName: "flag")
-                        Text("Report")
-                    }
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-                }
-            }
+//            HStack(spacing: 20) {
+//                Button(action: {
+//                    // Helpful button action
+//                }) {
+//                    HStack {
+//                        Image(systemName: "hand.thumbsup")
+//                        Text("Helpful")
+//                    }
+//                    .font(.subheadline)
+//                    .foregroundColor(.gray)
+//                }
+//                
+//                Button(action: {
+//                    // Report button action
+//                }) {
+//                    HStack {
+//                        Image(systemName: "flag")
+//                        Text("Report")
+//                    }
+//                    .font(.subheadline)
+//                    .foregroundColor(.gray)
+//                }
+//            }
             .padding(.top, 4)
         }
         .padding()
@@ -185,6 +185,7 @@ struct ReviewItemView: View {
 // MARK: - Write Review View
 struct WriteReviewView: View {
     let book: BookModel
+    @Environment(\.colorScheme) var colorScheme
     @Environment(\.presentationMode) var presentationMode
     
     @Binding var reviews: [ReviewModel]
@@ -230,7 +231,8 @@ struct WriteReviewView: View {
                         } else {
                             Text("Submit Review")
                                 .frame(maxWidth: .infinity, alignment: .center)
-                                .foregroundColor(.white)
+                                .foregroundColor(Color.text(for: colorScheme))
+                                .background(Color.primary(for: colorScheme).opacity(0.6))
                         }
                     }
                     .disabled(userRating == 0 || reviewText.isEmpty || reviewText.count > 500 || isSubmitting)
