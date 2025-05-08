@@ -24,6 +24,8 @@ struct UsersViewAdmin: View {    // Use @StateObject to create and own the ViewM
                     }
                     .pickerStyle(SegmentedPickerStyle())
                     .padding()
+                    .accessibilityLabel("User Type Picker")
+                    .accessibilityValue(viewModel.selectedSegment == 0 ? "Librarians selected" : "Members selected")
 
                     // Display the appropriate list based on selection
                     if viewModel.selectedSegment == 0 {
@@ -33,9 +35,9 @@ struct UsersViewAdmin: View {    // Use @StateObject to create and own the ViewM
                     }
                 }
                 // Example: Load initial data or handle user activity if needed
-                 .onAppear {
-                     viewModel.fetchUsersoflibrary()
-                 }
+                .onAppear {
+                    viewModel.fetchUsersoflibrary()
+                }
             }
             .navigationTitle("Users")
             .navigationBarTitleDisplayMode(.large)
@@ -50,6 +52,8 @@ struct UsersViewAdmin: View {    // Use @StateObject to create and own the ViewM
                             .font(.title2)
                             .foregroundColor(Color.primary(for: colorScheme)) // Use color helper
                     }
+                    .accessibilityLabel("Add User")
+                    .accessibilityHint("Adds a new \(viewModel.selectedSegment == 0 ? "librarian" : "member")")
                 }
             }
             // Present the AddUserView sheet
@@ -93,6 +97,8 @@ struct UsersViewAdmin: View {    // Use @StateObject to create and own the ViewM
             ForEach(viewModel.activeLibrarians) { user in
                 LibrarianRow(user: user, viewModel: viewModel)
                     .id(user.id.uuidString + (user.is_active ?? false ? "-active" : "-inactive"))
+                    .accessibilityLabel("Librarian \(user.name)")
+                    .accessibilityHint(user.is_active ?? false ? "Active" : "Inactive")
             }
         }
         .id(viewModel.activeLibrarians.map { $0.id.uuidString + ($0.is_active ?? false ? "-active" : "-inactive") }.joined())
@@ -100,12 +106,14 @@ struct UsersViewAdmin: View {    // Use @StateObject to create and own the ViewM
         .overlay {
             if viewModel.activeLibrarians.isEmpty {
                 EmptyStateView(type: "Librarians", colorScheme: colorScheme)
+                    .accessibilityLabel("No librarians available")
             }
         }
         .refreshable {
             print("Refreshing librarians...")
             viewModel.fetchUsersoflibrary()
         }
+        .accessibilityLabel("Librarians List")
     }
 
     private var membersListView: some View {
@@ -113,6 +121,8 @@ struct UsersViewAdmin: View {    // Use @StateObject to create and own the ViewM
             ForEach(viewModel.activeMembers) { user in
                 MemberRow(user: user, viewModel: viewModel)
                     .id(user.id.uuidString + (user.is_active ?? false ? "-active" : "-inactive"))
+                    .accessibilityLabel("Member \(user.name)")
+                    .accessibilityHint(user.is_active ?? false ? "Active" : "Inactive")
             }
         }
         .id(viewModel.activeMembers.map { $0.id.uuidString + ($0.is_active ?? false ? "-active" : "-inactive") }.joined())
@@ -120,25 +130,27 @@ struct UsersViewAdmin: View {    // Use @StateObject to create and own the ViewM
         .overlay {
             if viewModel.activeMembers.isEmpty {
                 EmptyStateView(type: "Members", colorScheme: colorScheme)
+                    .accessibilityLabel("No members available")
             }
         }
         .refreshable {
             print("Refreshing members...")
             viewModel.fetchUsersoflibrary()
         }
+        .accessibilityLabel("Members List")
     }
 
-     // Helper function to add mock data for previews/testing
-     private func addMockData() {
-         #if DEBUG // Only include mock data in Debug builds
-         viewModel.users = [
+    // Helper function to add mock data for previews/testing
+    private func addMockData() {
+        #if DEBUG // Only include mock data in Debug builds
+        viewModel.users = [
             User(id: UUID(), email: "librarian1@example.com", role: .librarian, name: "Alice (Mock)", is_active: true, library_id: "MAINLIB", profileImage: UIImage(systemName: "person.crop.circle.fill")?.jpegData(compressionQuality: 0.8)),
             User(id: UUID(), email: "member1@example.com", role: .member, name: "Bob (Mock)", is_active: true, library_id: "MAINLIB"),
             User(id: UUID(), email: "librarian2@example.com", role: .librarian, name: "Charles (Mock)", is_active: false, library_id: "BRANCHLIB"), // Inactive
             User(id: UUID(), email: "member2@example.com", role: .member, name: "Diana (Mock)", is_active: true, library_id: "MAINLIB", profileImage: UIImage(systemName: "person.crop.circle")?.jpegData(compressionQuality: 0.8))
-         ]
-         #endif
-     }
+        ]
+        #endif
+    }
 }
 
 // MARK: - Preview Provider

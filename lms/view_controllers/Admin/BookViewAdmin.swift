@@ -55,45 +55,43 @@ struct BookViewAdmin: View {
                         VStack(spacing: 16) {
                             // Search bar (scrolls with content)
                             SearchBar(searchText: $searchText, colorScheme: colorScheme)
+                                .accessibilityLabel("Search for books")
 
                             // Category filter (scrolls with content)
                             CategoryFilterView(
                                 selectedCategory: $selectedCategory,
                                 colorScheme: colorScheme
                             )
+                            .accessibilityLabel("Category filter")
 
                             // Loading or Book List (scrolls below search & filter)
                             if isLoading {
                                 LoadingAnimationView(colorScheme: colorScheme)
                                     .padding(.top, 100)
-
+                                    .accessibilityLabel("Loading books")
                             } else {
                                 if books.isEmpty {
                                     EmptyBookListView(colorScheme: colorScheme)
+                                        .accessibilityLabel("No books found")
                                 } else {
                                     BookList(
                                         books: filteredBooks,
                                         colorScheme: colorScheme,
                                         onEdit: { book in
                                             bookData = BookAddViewAdmin.bookData(from: book)
-                                            // Load cover image from URL if needed
                                             if bookData.bookCover == nil, let urlStringRaw = book.coverImageUrl {
                                                 let urlString = urlStringRaw.hasPrefix("http://") ? urlStringRaw.replacingOccurrences(of: "http://", with: "https://") : urlStringRaw
                                                 if let url = URL(string: urlString) {
-                                                    print("[DEBUG] (BookViewAdmin) Attempting to load cover image from URL: \(urlString)")
                                                     Task {
                                                         do {
                                                             let (data, _) = try await URLSession.shared.data(from: url)
                                                             if let image = UIImage(data: data) {
-                                                                print("[DEBUG] (BookViewAdmin) Successfully loaded cover image from URL")
                                                                 await MainActor.run {
                                                                     bookData.bookCover = image
                                                                 }
-                                                            } else {
-                                                                print("[DEBUG] (BookViewAdmin) Failed to create UIImage from data")
                                                             }
                                                         } catch {
-                                                            print("[DEBUG] (BookViewAdmin) Failed to load cover image from URL: \(error)")
+                                                            print("[DEBUG] Failed to load cover image from URL: \(error)")
                                                         }
                                                     }
                                                 }
@@ -103,22 +101,21 @@ struct BookViewAdmin: View {
                                         },
                                         onDelete: deleteBook
                                     )
-                                    
-                                    // Bottom loader for pagination
+                                    .accessibilityLabel("List of books")
+
                                     if !filteredBooks.isEmpty {
                                         HStack {
                                             Spacer()
                                             if isLoadingMore {
                                                 ProgressView()
                                                     .padding()
+                                                    .accessibilityLabel("Loading more books")
                                             }
                                             Spacer()
                                         }
                                         .id("BottomLoader")
                                         .onAppear {
-                                            // When this appears, load more content if needed
                                             if !searchText.isEmpty || selectedCategory != .all {
-                                                // Don't load more when filtering
                                                 return
                                             }
                                             loadMoreBooks()
@@ -138,6 +135,7 @@ struct BookViewAdmin: View {
                 }
             }
             .navigationTitle("Books")
+            .accessibilityLabel("Books")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
@@ -147,6 +145,7 @@ struct BookViewAdmin: View {
                         Image(systemName: "plus")
                             .foregroundColor(Color.primary(for: colorScheme))
                     }
+                    .accessibilityLabel("Add a new book")
                 }
             }
             .sheet(isPresented: $showingAddBookSheet) {
@@ -163,7 +162,6 @@ struct BookViewAdmin: View {
                         Task {
                             isLoading = true
                             defer { isLoading = false }
-                            
                             let updatedBook = BookModel(
                                 id: editingBookId ?? UUID(),
                                 libraryId: bookData.libraryId ?? UUID(),
@@ -181,7 +179,6 @@ struct BookViewAdmin: View {
                                 coverImageUrl: bookData.bookCoverUrl,
                                 coverImageData: bookData.bookCover?.jpegData(compressionQuality: 0.8)
                             )
-                            
                             do {
                                 let apiBook = try await updateBookAPI(book: updatedBook)
                                 updateBook(apiBook)
@@ -202,8 +199,7 @@ struct BookViewAdmin: View {
             }
             .task {
                 await loadBooks()
-            }
-        }
+            }        }
     }
     
     private func loadBooks() async {

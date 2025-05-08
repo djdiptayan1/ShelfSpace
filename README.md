@@ -108,7 +108,7 @@ Once registered, you can use the ShelfSpace iOS app to fully manage your library
 
 ## 🔧 Configuration
 
-The application connects to a backend API hosted on Vercel. You'll need to configure the appropriate API keys in the `Config.swift` file.
+The application connects to a backend API hosted on Microsoft Azure. You'll need to configure the appropriate API keys in the `Config.swift` file.
 
 ## 🤝 Contributing
 
@@ -128,6 +128,8 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - **Nayaki Maneeth Reddy** - [maneethreddy](https://github.com/maneethreddy)
 - **Rakshith** - [R-Langer77](https://github.com/R-Langer77)
 - **Vansh Vineet Bhatia** - [v4vanshh](https://github.com/v4vanshh)
+- **Sneha Gorai** - [Tani2413](https://github.com/Tani2413)
+- **Niharika Shukla** - [niihariika](https://github.com/niihariika)
 
 ## 📊 Future Enhancements
 

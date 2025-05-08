@@ -170,7 +170,7 @@
 //    
 //    private func fetchLibraryData(libraryId: String) async throws -> Library {
 //             guard let token = try? LoginManager.shared.getCurrentToken(), // Make sure LoginManager is accessible
-//                   let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/libraries/\(libraryId)") else {
+//                   let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/libraries/\(libraryId)") else {
 //                 throw URLError(.badURL)
 //             }
 //
@@ -241,21 +241,27 @@ struct LibrarianTabbar: View {
                         .tag(0)
                         .tabItem {
                             Image(systemName: "house")
+                                .accessibilityHidden(true)
                             Text("Home")
+                                .accessibilityLabel("Home Tab")
                         }
                     
                     RequestViewLibrarian()
                         .tag(1)
                         .tabItem {
                             Image(systemName: "arrow.right.arrow.left")
+                                .accessibilityHidden(true)
                             Text("Requests")
+                                .accessibilityLabel("Requests Tab")
                         }
                     
                     UsersViewLibrarian()
                         .tag(2)
                         .tabItem {
                             Image(systemName: "person.3")
+                                .accessibilityHidden(true)
                             Text("Users")
+                                .accessibilityLabel("Users Tab")
                         }
                 }
                 .accentColor(Color.primary(for: colorScheme))

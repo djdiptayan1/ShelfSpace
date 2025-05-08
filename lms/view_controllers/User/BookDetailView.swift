@@ -219,10 +219,15 @@ struct BookDetailView: View {
             }
             .onAppear(){
                 Task{
+                    let wishlists = try await getWishList()
+                    isBookmarked = wishlists.contains(where: {$0.id == book.id})
+                }
+            }
+            .onAppear(){
+                Task{
                     self.isBorrowLoading = true
                     user = try await LoginManager.shared.getCurrentUser()
                     if let user = user{
-                        self.isBookmarked = user.wishlist_book_ids.contains(book.id)
                         isReserved = user.reserved_book_ids.contains(book.id)
                         isBorrowed = user.borrowed_book_ids.contains(book.id)
                         if isBorrowed{
@@ -241,17 +246,13 @@ struct BookDetailView: View {
                         }else{
                             bookStatus = .available
                         }
-                    }
-                }
-            }
-            .onAppear(){
-                Task{
-                    if let borrow = try await BorrowHandler.shared.getBorrowForBookId(book.id){
-                        if borrow.status == .borrowed{
-                            bookStatus = .reading
-                        }
-                        else{
-                            bookStatus = .completed(dueDate: Date())
+                        if let borrow = try await BorrowHandler.shared.getBorrowForBookId(book.id){
+                            if borrow.status == .borrowed{
+                                bookStatus = .reading
+                            }
+                            else{
+                                bookStatus = .completed(dueDate: Date())
+                            }
                         }
                     }
                 }
@@ -379,7 +380,7 @@ struct BookDetailView: View {
             // Action based on current status
             Task {
                 switch bookStatus {
-                case .available:
+                case .available,.completed:
                     withAnimation {
                         isBorrowLoading = true
                     }
@@ -428,8 +429,6 @@ struct BookDetailView: View {
                             isBorrowLoading = false
                         }
                     }
-                case .completed:
-                    break
                 case .notAvailable,.loading:
                     break
                 }
@@ -490,7 +489,7 @@ struct BookDetailView: View {
         case .requested:
             return "Cancel Request"
         case .completed:
-            return "Completed"
+            return "Borrow again"
 
         case .notAvailable:
             return "Not Available"
@@ -501,14 +500,12 @@ struct BookDetailView: View {
 
     private var actionButtonColor: Color {
         switch bookStatus {
-        case .available,.loading:
+        case .available,.loading,.completed:
             return Color.primary(for: colorScheme).opacity(0.6)
         case .reading:
             return .gray.opacity(0.2)
         case .requested,.notAvailable:
             return .red.opacity(0.8)
-        case .completed:
-            return .gray.opacity(0.2)
 
         }
     }

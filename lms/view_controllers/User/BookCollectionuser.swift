@@ -44,8 +44,10 @@ struct BookCollectionuser: View {
     @State private var requestedBooks: [BookModel] = []
     @State private var wishlistBooks: [BookModel] = []
     @State private var borrows: [BorrowModel] = []
+    @State private var reservations:[ReservationModel] = []
     @State private var currentBooks:[BookModel] = []
     @State private var returnedBooks:[BookModel] = []
+    @State private var policy:Policy?
 
 
     @State private var demoBooks: [BookModel] = [
@@ -127,7 +129,7 @@ struct BookCollectionuser: View {
                             ForEach(finalBooks.prefix(6)) { book in
                                 NavigationLink(destination: BookDetailView(book: book))
                                 {
-                                    BookCardView(book: book, tab: selectedTab, colorScheme: colorScheme)
+                                    BookCardView(book: book, tab: selectedTab, colorScheme: colorScheme,reservation: $reservations,borrows: $borrows,policy: $policy)
                                 }
                             }
                         }
@@ -139,32 +141,18 @@ struct BookCollectionuser: View {
                 }
             }
             .onAppear(){
-                Task{
-                    borrows = try await BorrowHandler.shared.getBorrows()
-                    let currentFiltered = borrows.filter{$0.status == .borrowed}
-                    let returnedFiltered = borrows.filter{$0.status == .returned}
-                    let currentBookIds = currentFiltered.compactMap(\.book_id)
-                    let returnedBookIds = returnedFiltered.compactMap(\.book_id)
-                    if let cachedBooks = BookHandler.shared.getCachedData(){
-                        currentBooks = cachedBooks.filter{currentBookIds.contains($0.id)}
-                        returnedBooks = cachedBooks.filter{returnedBookIds.contains($0.id)}
-                    }
+                fetchPolicy(libraryId: UUID()) { policy in
+                    self.policy = policy
                 }
             }
+            .onAppear {
+                        Task {
+                            await loadBookData()
+                        }
+                    }
             .onAppear(){
                 Task{
                     self.wishlistBooks = try await getWishList()
-                }
-            }
-            .onAppear(){
-                Task{
-                    let reservations = try await ReservationHandler.shared.getReservations()
-                    //get books from borrows
-                    let currentBookIds = reservations.compactMap(\.book_id)
-
-                    if let cachedBooks = BookHandler.shared.getCachedData(){
-                        requestedBooks = cachedBooks.filter{currentBookIds.contains($0.id)}
-                    }
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -179,6 +167,85 @@ struct BookCollectionuser: View {
             )
         }
     }
+    func loadBookData() async {
+            do {
+                async let borrowsData = BorrowHandler.shared.getBorrows()
+                async let reservationsData = ReservationHandler.shared.getReservations()
+
+                self.borrows = try await borrowsData
+                self.reservations = try await reservationsData
+
+                let currentFilteredBorrows = borrows.filter { $0.status == .borrowed }
+                let returnedFilteredBorrows = borrows.filter { $0.status == .returned }
+
+                let borrowCurrentBookIds = Set(currentFilteredBorrows.compactMap(\.book_id))
+                let borrowReturnedBookIds = Set(returnedFilteredBorrows.compactMap(\.book_id))
+                let reservationBookIds = Set(reservations.compactMap(\.book_id))
+
+                var allUniqueBookIds = Set<UUID>()
+                allUniqueBookIds.formUnion(borrowCurrentBookIds)
+                allUniqueBookIds.formUnion(borrowReturnedBookIds)
+                allUniqueBookIds.formUnion(reservationBookIds)
+
+                if allUniqueBookIds.isEmpty {
+                    print("ℹ️ No book IDs to process from borrows or reservations.")
+                    currentBooks = []
+                    returnedBooks = []
+                    requestedBooks = []
+                    return
+                }
+
+                print("ℹ️ All unique book IDs to resolve: \(allUniqueBookIds.map { $0.uuidString }.joined(separator: ", "))")
+
+                var resolvedBooks: [UUID: BookModel] = [:]
+
+                if let cachedBooksArray = BookHandler.shared.getCachedData() {
+                    for book in cachedBooksArray {
+                        if allUniqueBookIds.contains(book.id) {
+                            resolvedBooks[book.id] = book
+                            print("✅ Found book \(book.id) in cache: \(book.title)")
+                        }
+                    }
+                }
+
+                let missingBookIds = allUniqueBookIds.filter { resolvedBooks[$0] == nil }
+
+                if !missingBookIds.isEmpty {
+                    print("ℹ️ Missing \(missingBookIds.count) books from cache. Fetching them: \(missingBookIds.map { $0.uuidString }.joined(separator: ", "))")
+                    var newlyFetchedBooks: [BookModel] = []
+
+                    try await withThrowingTaskGroup(of: BookModel?.self) { group in
+                        for bookId in missingBookIds {
+                            group.addTask {
+                                print("🚀 Fetching book with ID: \(bookId)")
+                                return try await fetchBookFromId(bookId)
+                            }
+                        }
+
+                        for try await fetchedBook in group {
+                            if let book = fetchedBook {
+                                newlyFetchedBooks.append(book)
+                                resolvedBooks[book.id] = book
+                            }
+                        }
+                    }
+                    
+                } else {
+                    print("✅ All required books were found in the cache.")
+                }
+
+                currentBooks = borrowCurrentBookIds.compactMap { resolvedBooks[$0] }
+                returnedBooks = borrowReturnedBookIds.compactMap { resolvedBooks[$0] }
+                requestedBooks = reservationBookIds.compactMap { resolvedBooks[$0] }
+
+                print("✅ Successfully loaded book data. Current: \(currentBooks.count), Returned: \(returnedBooks.count), Requested: \(requestedBooks.count)")
+
+            } catch {
+                print("❌ Error in loadBookData: \(error.localizedDescription)")
+                error.logDetails() // Make sure this extension is available
+            }
+        }
+
     
     // MARK: - Tab Bar View
     private var tabBarView: some View {
@@ -201,11 +268,11 @@ struct BookCollectionuser: View {
                         
                         if expandedTab && selectedTab == tab {
                             Text(tab.rawValue)
-                                .font(.system(size: 13))
+                                .font(.system(size: 12))
                                 .transition(.opacity)
                         }
                     }
-                    .padding(.vertical, 15)
+                    .padding(.vertical, 12)
                     .padding(.horizontal, 15)
                     .background(
                         ZStack {
@@ -234,19 +301,35 @@ struct BookCardView: View {
     let book: BookModel
     let tab: BookCollectionTab
     let colorScheme: ColorScheme
+    private var dueDate:Date?{
+        if let res = reservation.first(where: { $0.book_id == book.id }),tab == .request{
+            return res.expires_at
+        }
+        if tab == .current, let borrow = borrows.first(where: { $0.book_id == book.id }){
+                if let days = policy?.max_borrow_days {
+                    let newDate = Calendar.current.date(byAdding: .day, value: days, to: borrow.borrow_date)
+                    return newDate
+            }
+        }
+        return nil
+    }
     @State private var loadedImage: UIImage? = nil
     @State private var isLoading: Bool = false
     @State private var loadError: Bool = false
+    @Binding var reservation:[ReservationModel]
+    @Binding var borrows:[BorrowModel]
+    @Binding var policy:Policy?
+    
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 2) {
             // Book Image Container
-            ZStack(alignment: .topTrailing) {
+            ZStack(alignment: .top) {
                 if let image = loadedImage {
                     Image(uiImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .frame(width: 135,height: 200)
+                        .frame(width: 134,height: 200)
                         .clipped()
                         .cornerRadius(8)
                 }else{
@@ -260,36 +343,24 @@ struct BookCardView: View {
                                 .foregroundColor(Color.text(for: colorScheme).opacity(0.5))
                                 .font(.caption2)
                         )
-                    
-                    // Bookmark Button
-                    //                Button(action: {}) {
-                    //                    Image(systemName: "bookmark.fill")
-                    //                        .foregroundColor(Color.primary(for: colorScheme))
-                    //                        .padding(8)
-                    //                        .background(Color.TabbarBackground(for: colorScheme))
-                    //                        .clipShape(Circle())
-                    //                        .shadow(color: colorScheme == .dark ? Color.white.opacity(0.05) : Color.gray.opacity(0.3),
-                    //                                radius: 2, x: 0, y: 1)
-                    //                        .padding(8)
-                    //                }
                 }
             }
             .onAppear(){
                 loadCoverImage()
             }
-            
             // Book Title - limited to 3 lines
             Text(book.title)
-                .font(.headline)
+                .font(.system(size: 14))
                 .fontWeight(.semibold)
                 .foregroundColor(Color.text(for: colorScheme))
                 .lineLimit(3)
-                .frame(height: 80, alignment: .top)
+                .frame(height:60, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
+            
             
             // Author Name
             Text((book.authorNames?.isEmpty ?? true ? "" : book.authorNames?[0]) ?? "")
-                .font(.subheadline)
+                .font(.system(size:12))
                 .foregroundColor(Color.text(for: colorScheme).opacity(0.7))
             
             // Due Date Information (conditional based on tab)
@@ -298,15 +369,17 @@ struct BookCardView: View {
                     Image(systemName: "calendar")
                         .font(.caption)
                         .foregroundColor(Color.secondary(for: colorScheme))
-                    Text("Due: 12th Jun")
-                        .font(.caption)
-                        .foregroundColor(.orange)
+                    if dueDate != nil{
+                        Text("Due: \(dueDate!.shortFormatted)")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                    }
                 }
             }
             
             // Status Tags
             HStack(spacing: 6) {
-                if tab == .current {
+                if tab == .current, dueDate != nil, dueDate! < Date() {
                     Text("Overdue")
                         .font(.caption)
                         .padding(.horizontal, 8)
@@ -382,5 +455,12 @@ struct bookCollectionuser_Previews: PreviewProvider {
                 .preferredColorScheme(.dark)
                 .previewDisplayName("Dark Mode")
         }
+    }
+}
+extension Date {
+    var shortFormatted: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "d MMM"
+        return formatter.string(from: self)
     }
 }
