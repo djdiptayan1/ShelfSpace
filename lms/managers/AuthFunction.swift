@@ -57,7 +57,7 @@ class LoginManager {
 
                 // Get the token back from Keychain
                 print("User ID: \(response.user.id)")
-                guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/users/\(response.user.id)") else {
+                guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/users/\(response.user.id)") else {
                     print("Invalid URL constructed")
                     throw LoginError.unknownError
                 }
@@ -170,7 +170,7 @@ class LoginManager {
 
     func fetchLibraryData(libraryId: String) async throws -> Library {
         guard let token = try? getCurrentToken(),
-              let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/libraries/\(libraryId)") else {
+              let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/libraries/\(libraryId)") else {
             throw URLError(.badURL)
         }
         
@@ -256,7 +256,7 @@ class LoginManager {
             let accessToken = try KeychainManager.shared.getToken()
             let supabaseUser = try await supabase.auth.user()
             
-            guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/users/\(supabaseUser.id)") else {
+            guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/users/\(supabaseUser.id)") else {
                 throw URLError(.badURL)
             }
             
@@ -382,7 +382,7 @@ class LoginManager {
 
     func generateOTP(email: String) async throws -> Bool {
         print("🔑 Starting OTP generation for email: \(email)")
-        guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/otp/generate") else {
+        guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/otp/generate") else {
             print("❌ Invalid URL")
             throw URLError(.badURL)
         }
@@ -425,7 +425,7 @@ class LoginManager {
     }
 
     func verifyOTP(email: String, otp: String) async throws -> Bool {
-        guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/otp/verify") else {
+        guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/otp/verify") else {
             throw URLError(.badURL)
         }
 

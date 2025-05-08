@@ -131,7 +131,7 @@ class UsersViewModel: ObservableObject {
                 let token = try KeychainManager.shared.getToken()
                 
                 // Construct the URL with the user's ID
-                guard let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/users/\(userId)") else {
+                guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/users/\(userId)") else {
                     throw URLError(.badURL)
                 }
                 

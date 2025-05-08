@@ -162,7 +162,7 @@ struct SplashScreenView: View {
     
     private func fetchLibraryData(libraryId: String) async throws -> Library {
         guard let token = try? LoginManager.shared.getCurrentToken(),
-              let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/libraries/\(libraryId)") else {
+              let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/libraries/\(libraryId)") else {
             throw URLError(.badURL)
         }
         
