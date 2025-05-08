@@ -12,7 +12,7 @@ struct ReservationModel: Codable,Identifiable {
     let book_id:UUID
     let reserved_at:Date
     let expires_at:Date
-    let book:BookModel?
+    var book:BookModel?
     
     enum CodingKeys: String,CodingKey {
         case id = "reservation_id"
