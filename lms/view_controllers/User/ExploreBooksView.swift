@@ -184,7 +184,7 @@ struct ExploreBooksView: View {
                 }
             }
         }
-        fetchBooks(manager: explorePaginationManager, page: 1, limit: 15) { result in
+        fetchBooks(manager: explorePaginationManager, page: 1, limit: 200) { result in
             isLoadingInitial = false
             switch result {
             case .success(let booksFromManager):
@@ -214,7 +214,7 @@ struct ExploreBooksView: View {
         print("ExploreBooksView: Calling loadMoreBooks for manager. Current page: \(explorePaginationManager.currentPage)")
 
         // Use the global loadMoreBooks with our specific manager
-        loadMoreBooks(manager: explorePaginationManager, limit: 15) { result in
+        loadMoreBooks(manager: explorePaginationManager, limit: 200) { result in
             isLoadingMore = false
             switch result {
             case .success(let updatedBooksFromManager):
