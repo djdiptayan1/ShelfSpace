@@ -338,12 +338,13 @@ struct ImprovedBookCard: View {
             VStack(alignment: .leading, spacing: 4) {
                 // Title with fixed height to ensure consistent spacing
                 Text(book.title)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(Color.text(for: colorScheme))
-                    .lineLimit(1)
+                    .lineLimit(2)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .frame(height: 18)
-
+                    .frame(height:35)
+                
+               
                 // Genre tags in a fixed height container
                 if let genres = book.genreNames, !genres.isEmpty {
                     HStack(spacing: 4) {

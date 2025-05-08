@@ -86,7 +86,7 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
 
                     VStack(spacing: 0) {
                         // Sticky header with search
-                        VStack(spacing: 16) {
+                        VStack(spacing: 12) {
                             if !showSearchResults && selectedGenres.isEmpty {
                                 headerSection
                             }
@@ -553,7 +553,7 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
     private var categoriesSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
+                HStack(spacing: 8) {
                     // First show selected genres
                     ForEach(categories.filter { selectedGenres.contains($0.displayName) }, id: \.self) { category in
                         genreButton(for: category)
@@ -564,10 +564,10 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
                         genreButton(for: category)
                     }
                 }
-                .padding(.horizontal)
+               .padding(.horizontal)
             }
             .scrollDisabled(false) // Ensure horizontal scroll is enabled
-            .frame(height: 80) // Fixed height to prevent vertical stretching
+            .frame(height:60) // Fixed height to prevent vertical stretching
         }
     }
     
@@ -590,21 +590,21 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
                 Image(systemName: category.iconName)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 25, height: 25)
+                    .frame(width: 22, height: 22)
                     .foregroundColor(
                         selectedGenres.contains(category.displayName) ?
                             Color.primary(for: colorScheme) :
                             Color.primary(for: colorScheme).opacity(0.7))
 
                 Text(category.displayName)
-                    .font(.subheadline)
+                    .font(.system(size: 14))
                     .foregroundColor(
                         selectedGenres.contains(category.displayName) ?
                             Color.text(for: colorScheme) :
                             Color.text(for: colorScheme).opacity(0.8))
             }
             .padding(.vertical, 12)
-            .padding(.horizontal, 18)
+            .padding(.horizontal, 15)
             .background(
                 selectedGenres.contains(category.displayName) ?
                     Color.primary(for: colorScheme).opacity(0.15) :
@@ -631,8 +631,10 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
                         .buttonStyle(PlainButtonStyle())
                     }
                 }
-                .padding([.top, .horizontal])
-                .padding(.bottom, 18)
+//                .padding([.top, .horizontal])
+                .padding(.horizontal)
+               .padding(.bottom,12)
+               .padding(.top,12)
             }
         }
     }
@@ -651,13 +653,16 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
                             RecommendationCard(
                                 book: book, colorScheme: colorScheme
                             )
-                            .frame(width: (geometry.size.width - 180))
+                            .frame(width: 160)
                         }
                         .buttonStyle(PlainButtonStyle())
                     }
                 }
-                .padding([.top, .horizontal])
-                .padding(.bottom, 18)
+//                .padding([.top, .horizontal])
+//                .padding(.bottom, 18)
+                .padding(.horizontal)
+                .padding(.bottom,8)
+                .padding(.top,8)
             }
         }
     }
@@ -677,11 +682,14 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
                                 index: index + 1, book: book,
                                 colorScheme: colorScheme
                             )
-                            .frame(width: (geometry.size.width - 210))
+                            .frame(width: 160)
                         }
                         .buttonStyle(PlainButtonStyle())
                     }
-                    .padding([.bottom, .top, .horizontal])
+//                    .padding([.bottom, .top, .horizontal])
+                    .padding(.horizontal)
+                    .padding(.bottom,8)
+                    .padding(.top,8)
                 }
             }
         }
@@ -693,7 +701,7 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
     ) -> some View {
         HStack {
             Text(title)
-                .font(.title2)
+                .font(.system(size: 19.5))
                 .fontWeight(.bold)
                 .foregroundColor(Color.text(for: colorScheme))
 
@@ -968,7 +976,7 @@ struct NewArrivalCard: View {
                         .resizable()
                         .background(Color.gray.opacity(0.2))
                         .aspectRatio(contentMode: .fill)
-                        .frame(width: 130, height: 180)
+                        .frame(width: 100, height: 140)
                         .cornerRadius(10)
                         .clipped()
                         .shadow(
@@ -985,7 +993,7 @@ struct NewArrivalCard: View {
                                 endPoint: .bottomTrailing
                             )
                         )
-                        .frame(width: 130,height: 180)
+                        .frame(width: 100,height: 140)
 
                     Image(systemName: "book.fill")
                         .font(.system(size: 20))
@@ -994,7 +1002,7 @@ struct NewArrivalCard: View {
 
                 VStack(alignment: .leading, spacing: 20) {
                     Text(book.title)
-                        .font(.title3)
+                        .font(.system(size:16))
                         .fontWeight(.semibold)
                         .lineLimit(3)
                         .minimumScaleFactor(0.9)
@@ -1002,7 +1010,7 @@ struct NewArrivalCard: View {
                         .foregroundColor(Color.text(for: colorScheme))
 
                     Text(book.authorNames!.isEmpty ? "" : book.authorNames![0])
-                        .font(.headline)
+                        .font(.system(size: 13))
                         .foregroundColor(
                             Color.text(for: colorScheme).opacity(0.7)
                         )
@@ -1012,7 +1020,7 @@ struct NewArrivalCard: View {
                         ForEach(book.genreNames!.prefix(2), id: \.self) {
                             genre in
                             Text(genre)
-                                .font(.system(size: 16, weight: .medium))
+                                .font(.system(size: 13, weight: .medium))
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
                                 .background(
@@ -1028,19 +1036,20 @@ struct NewArrivalCard: View {
 
             Text(book.description!)
                 .lineLimit(3)
-                .foregroundColor(Color.text(for: colorScheme).opacity(0.6))
-                .font(.system(size: 17, weight: .bold, design: .default))
+                .foregroundColor(Color.text(for: colorScheme).opacity(0.8))
+                .font(.system(size: 13.5, weight: .bold, design: .default))
         }
         .onAppear {
             loadCoverImage()
         }
-        .padding(16)
+        .padding(10)
         .background(Color.TabbarBackground(for: colorScheme))
         .cornerRadius(12)
         .shadow(
             color: Color.primary(for: colorScheme).opacity(0.15), radius: 15,
             x: 0, y: 8)
     }
+    
     private func loadCoverImage() {
         // Set loading state
         isLoading = true
@@ -1135,9 +1144,9 @@ struct RecommendationCard: View {
                 Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-                    .frame(width: 190, height: 200)
+                    .frame(width: 140, height:140)
                     .background(Color.gray.opacity(0.2))
-                    .cornerRadius(16)
+                    .cornerRadius(12)
                     .clipped()
                     .shadow(
                         color: Color.primary(for: colorScheme).opacity(0.25),
@@ -1159,20 +1168,21 @@ struct RecommendationCard: View {
                     .foregroundColor(.white.opacity(0.7))
             }
 
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing:8) {
                 Text(book.title.count < 20 ? book.title + "\n" : book.title)
-                    .font(.headline)
+                    .font(.system(size: 14).bold())
                     .lineLimit(2)
                     .foregroundColor(Color.text(for: colorScheme))
+                    .frame(width: 140)
 
                 Text(book.authorNames!.isEmpty ? "" : book.authorNames![0])
-                    .font(.subheadline)
+                    .font(.system(size: 12))
                     .foregroundColor(Color.text(for: colorScheme).opacity(0.8))
 
                 HStack(spacing: 6) {
                     ForEach(book.genreNames!.prefix(2), id: \.self) { genre in
                         Text(genre)
-                            .font(.system(size: 16, weight: .medium))
+                            .font(.system(size: 12, weight: .medium))
                             .padding(.horizontal, 10)
                             .padding(.vertical, 4)
                             .lineLimit(1)
@@ -1180,15 +1190,17 @@ struct RecommendationCard: View {
                                 Color.gray.opacity(0.2)
                             )
                             .foregroundColor(Color.text(for: colorScheme))
-                            .cornerRadius(8)
+                        
+                            .cornerRadius(4)
                     }
                 }
-            }
+            }                    .frame(width: 140)
+
         }
         .onAppear {
             loadCoverImage()
         }
-        .padding(12)
+        .padding(10)
         .background(Color.TabbarBackground(for: colorScheme))
         .cornerRadius(18)
         .shadow(
@@ -1290,7 +1302,7 @@ struct TopSellingCard: View {
                 Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-                    .frame(width: 180, height: 180)
+                    .frame(width: 140, height: 140)
                     .background(Color.gray.opacity(0.2))
                     .cornerRadius(12)
                     .clipped()
@@ -1315,12 +1327,13 @@ struct TopSellingCard: View {
             }
 
             Text(book.title.count < 20 ? book.title + "\n" : book.title)
-                .font(.headline)
+                .font(.system(size: 14).bold())
                 .lineLimit(2)
                 .foregroundColor(Color.text(for: colorScheme))
+                .frame(width: 140)
 
             Text(book.authorNames!.isEmpty ? "" : book.authorNames![0])
-                .font(.subheadline)
+                .font(.system(size: 12))
                 .foregroundColor(Color.text(for: colorScheme).opacity(0.8))
         }
         .onAppear {
