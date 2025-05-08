@@ -201,11 +201,11 @@ struct BookCollectionuser: View {
                         
                         if expandedTab && selectedTab == tab {
                             Text(tab.rawValue)
-                                .font(.system(size: 13))
+                                .font(.system(size: 12))
                                 .transition(.opacity)
                         }
                     }
-                    .padding(.vertical, 15)
+                    .padding(.vertical, 12)
                     .padding(.horizontal, 15)
                     .background(
                         ZStack {
@@ -239,14 +239,14 @@ struct BookCardView: View {
     @State private var loadError: Bool = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 2) {
             // Book Image Container
-            ZStack(alignment: .topTrailing) {
+            ZStack(alignment: .top) {
                 if let image = loadedImage {
                     Image(uiImage: image)
                         .resizable()
-                        .scaledToFill()
-                        .frame(height: 200)
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 134,height: 200)
                         .clipped()
                         .cornerRadius(8)
                 }else{
@@ -260,18 +260,6 @@ struct BookCardView: View {
                                 .foregroundColor(Color.text(for: colorScheme).opacity(0.5))
                                 .font(.caption2)
                         )
-                    
-                    // Bookmark Button
-                    //                Button(action: {}) {
-                    //                    Image(systemName: "bookmark.fill")
-                    //                        .foregroundColor(Color.primary(for: colorScheme))
-                    //                        .padding(8)
-                    //                        .background(Color.TabbarBackground(for: colorScheme))
-                    //                        .clipShape(Circle())
-                    //                        .shadow(color: colorScheme == .dark ? Color.white.opacity(0.05) : Color.gray.opacity(0.3),
-                    //                                radius: 2, x: 0, y: 1)
-                    //                        .padding(8)
-                    //                }
                 }
             }
             .onAppear(){
@@ -280,16 +268,17 @@ struct BookCardView: View {
             
             // Book Title - limited to 3 lines
             Text(book.title)
-                .font(.headline)
+                .font(.system(size: 14))
                 .fontWeight(.semibold)
                 .foregroundColor(Color.text(for: colorScheme))
                 .lineLimit(3)
-                .frame(height: 80, alignment: .top)
+                .frame(height:60, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
+            
             
             // Author Name
             Text((book.authorNames?.isEmpty ?? true ? "" : book.authorNames?[0]) ?? "")
-                .font(.subheadline)
+                .font(.system(size:12))
                 .foregroundColor(Color.text(for: colorScheme).opacity(0.7))
             
             // Due Date Information (conditional based on tab)
@@ -297,7 +286,7 @@ struct BookCardView: View {
                 HStack {
                     Image(systemName: "calendar")
                         .font(.caption)
-                        .foregroundColor(Color.secondary(for: colorScheme))
+                        .foregroundColor(Color.primary(for: colorScheme))
                     Text("Due: 12th Jun")
                         .font(.caption)
                         .foregroundColor(.orange)
@@ -305,7 +294,7 @@ struct BookCardView: View {
             }
             
             // Status Tags
-            HStack(spacing: 6) {
+            HStack() {
                 if tab == .current {
                     Text("Overdue")
                         .font(.caption)
