@@ -2,6 +2,8 @@ import SwiftUI
 import DotLottie
 
 struct BookAddViewLibrarian: View {
+    @StateObject private var homePaginationManager = BookPaginationManager()
+    
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @State private var currentStep: BookAddStep = .isbn
@@ -166,6 +168,9 @@ struct BookAddViewLibrarian: View {
 
 
 struct bookViewLibrarian: View {
+    
+    @StateObject private var homePaginationManager = BookPaginationManager()
+    
     @Environment(\.colorScheme) private var colorScheme
     @State private var books: [BookModel] = []
     @State private var searchText: String = ""
@@ -278,7 +283,7 @@ struct bookViewLibrarian: View {
     
     private func loadBooks() async {
             isLoading = true
-            fetchBooks { result in
+        fetchBooks(manager: homePaginationManager) { result in
                 defer { isLoading = false }
 
                 switch result {
