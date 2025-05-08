@@ -118,6 +118,7 @@ struct BookCollectionuser: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal)
                         .padding(.top, 16)
+                        .accessibilityAddTraits(.isHeader)
                     
                     // MARK: - Tab Bar (Apple Mail-style)
                     tabBarView
@@ -130,11 +131,17 @@ struct BookCollectionuser: View {
                                 NavigationLink(destination: BookDetailView(book: book))
                                 {
                                     BookCardView(book: book, tab: selectedTab, colorScheme: colorScheme,reservation: $reservations,borrows: $borrows,policy: $policy)
+                                        .accessibilityElement(children: .combine)
                                 }
                             }
                         }
                         .padding(.horizontal)
                         .padding(.bottom, 16)
+                        .accessibilityElement(children: .contain)
+                        .accessibilityLabel("Book collection grid")
+                    }
+                    .accessibilityScrollAction { edge in
+                        // Handle scroll actions if needed
                     }
                     
                     Spacer()
@@ -165,7 +172,9 @@ struct BookCollectionuser: View {
                         }
                     }
             )
+            .accessibilityElement(children: .contain)
         }
+        .navigationViewStyle(StackNavigationViewStyle())
     }
     func loadBookData() async {
             do {
@@ -284,12 +293,17 @@ struct BookCollectionuser: View {
                         }
                     )
                     .foregroundColor(selectedTab == tab ? .white : Color.text(for: colorScheme).opacity(0.6))
+                    .accessibilityLabel(tab.rawValue)
+                    .accessibilityHint("Switch to \(tab.rawValue) tab")
+                    .accessibilityAddTraits(selectedTab == tab ? [.isButton, .isSelected] : .isButton)
                 }
             }
         }
         .padding(.horizontal)
         .padding(.vertical, 6)
         .padding(.horizontal)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Tab bar")
     }
         
 }
@@ -301,14 +315,13 @@ struct BookCardView: View {
     let book: BookModel
     let tab: BookCollectionTab
     let colorScheme: ColorScheme
-    private var dueDate:Date?{
-        if let res = reservation.first(where: { $0.book_id == book.id }),tab == .request{
+    private var dueDate: Date? {
+        if let res = reservation.first(where: { $0.book_id == book.id }), tab == .request {
             return res.expires_at
         }
-        if tab == .current, let borrow = borrows.first(where: { $0.book_id == book.id }){
-                if let days = policy?.max_borrow_days {
-                    let newDate = Calendar.current.date(byAdding: .day, value: days, to: borrow.borrow_date)
-                    return newDate
+        if tab == .current, let borrow = borrows.first(where: { $0.book_id == book.id }) {
+            if let days = policy?.max_borrow_days {
+                return Calendar.current.date(byAdding: .day, value: days, to: borrow.borrow_date)
             }
         }
         return nil
@@ -316,10 +329,20 @@ struct BookCardView: View {
     @State private var loadedImage: UIImage? = nil
     @State private var isLoading: Bool = false
     @State private var loadError: Bool = false
-    @Binding var reservation:[ReservationModel]
-    @Binding var borrows:[BorrowModel]
-    @Binding var policy:Policy?
+    @Binding var reservation: [ReservationModel]
+    @Binding var borrows: [BorrowModel]
+    @Binding var policy: Policy?
     
+    var accessibilityLabel: String {
+        var label = "\(book.title) by \(book.authorNames?.first ?? "Unknown author")"
+        if tab == .current || tab == .request, let dueDate = dueDate {
+            label += ". Due \(dueDate.shortFormatted)"
+            if dueDate < Date() {
+                label += ". Overdue"
+            }
+        }
+        return label
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -329,11 +352,12 @@ struct BookCardView: View {
                     Image(uiImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .frame(width: 134,height: 200)
+                        .frame(width: 134, height: 200)
                         .clipped()
                         .cornerRadius(8)
-                }else{
-                    RoundedRectangle(cornerRadius:10)
+                        .accessibilityHidden(true)
+                } else {
+                    RoundedRectangle(cornerRadius: 10)
                         .fill(Color.TabbarBackground(for: colorScheme))
                         .frame(height: 200)
                         .shadow(color: colorScheme == .dark ? Color.white.opacity(0.05) : Color.gray.opacity(0.3),
@@ -343,24 +367,25 @@ struct BookCardView: View {
                                 .foregroundColor(Color.text(for: colorScheme).opacity(0.5))
                                 .font(.caption2)
                         )
+                        .accessibilityHidden(true)
                 }
             }
-            .onAppear(){
+            .onAppear {
                 loadCoverImage()
             }
+            
             // Book Title - limited to 3 lines
             Text(book.title)
                 .font(.system(size: 14))
                 .fontWeight(.semibold)
                 .foregroundColor(Color.text(for: colorScheme))
                 .lineLimit(3)
-                .frame(height:60, alignment: .leading)
+                .frame(height: 60, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
-            
             
             // Author Name
             Text((book.authorNames?.isEmpty ?? true ? "" : book.authorNames?[0]) ?? "")
-                .font(.system(size:12))
+                .font(.system(size: 12))
                 .foregroundColor(Color.text(for: colorScheme).opacity(0.7))
             
             // Due Date Information (conditional based on tab)
@@ -369,7 +394,8 @@ struct BookCardView: View {
                     Image(systemName: "calendar")
                         .font(.caption)
                         .foregroundColor(Color.secondary(for: colorScheme))
-                    if dueDate != nil{
+                        .accessibilityHidden(true)
+                    if dueDate != nil {
                         Text("Due: \(dueDate!.shortFormatted)")
                             .font(.caption)
                             .foregroundColor(.orange)
@@ -379,7 +405,7 @@ struct BookCardView: View {
             
             // Status Tags
             HStack(spacing: 6) {
-                if tab == .current, dueDate != nil, dueDate! < Date() {
+                if tab == .current, let dueDate = dueDate, dueDate < Date() {
                     Text("Overdue")
                         .font(.caption)
                         .padding(.horizontal, 8)
@@ -395,7 +421,10 @@ struct BookCardView: View {
         .cornerRadius(10)
         .shadow(color: colorScheme == .dark ? Color.white.opacity(0.05) : Color.gray.opacity(0.2),
                 radius: 6, x: 0, y: 3)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityLabel)
     }
+    
     private func loadCoverImage() {
         // Set loading state
         isLoading = true
@@ -457,6 +486,7 @@ struct bookCollectionuser_Previews: PreviewProvider {
         }
     }
 }
+
 extension Date {
     var shortFormatted: String {
         let formatter = DateFormatter()
