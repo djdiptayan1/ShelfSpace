@@ -231,6 +231,12 @@ struct BookDetailView: View {
             }
             .onAppear(){
                 Task{
+                    let wishlist = try await getWishList()
+                    isBookmarked = wishlist.contains(where: { $0.id == book.id })
+                }
+            }
+            .onAppear(){
+                Task{
                     self.isBorrowLoading = true
                     user = try await LoginManager.shared.getCurrentUser()
                     let borrow = try await BorrowHandler.shared.getBorrowForBookId(book.id)
