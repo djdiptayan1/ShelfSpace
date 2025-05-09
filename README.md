@@ -2,7 +2,7 @@
 
 <div align="center">
   <img src="https://img.shields.io/badge/Platform-iOS%2016.6+-blue.svg" alt="iOS 16.6+">
-  <img src="https://img.shields.io/badge/Swift-5.0-orange.svg" alt="Swift 5.0">
+  <img src="https://img.shields.io/badge/Swift-6.1-orange.svg" alt="Swift 6.1">
   <img src="https://img.shields.io/badge/Status-Development-yellow.svg" alt="Status">
 </div>
 
