@@ -233,34 +233,29 @@ struct BookDetailView: View {
                 Task{
                     self.isBorrowLoading = true
                     user = try await LoginManager.shared.getCurrentUser()
-                    if let user = user{
-                        self.isBookmarked = user.wishlist_book_ids.contains(book.id)
-                        isReserved = user.reserved_book_ids.contains(book.id)
-                        isBorrowed = user.borrowed_book_ids.contains(book.id)
-                        if isBorrowed{
-                            bookStatus =  .reading
+                    let borrow = try await BorrowHandler.shared.getBorrowForBookId(book.id)
+                    let reserved = try await ReservationHandler.shared.getReservationForBookId(book.id)
+                    isLoading = false
+                    isBorrowLoading = false
+                    if reserved != nil{
+                        bookStatus =  .requested
+                        return
+                    }
+                    if borrow != nil{
+                        if borrow!.status == .borrowed{
+                            bookStatus = .reading
+                            return
                         }
-                        if isReserved{
-                            bookStatus =  .requested
+                        else{
+                            bookStatus = .completed(dueDate: Date())
+                            return
                         }
                     }
-                    self.isBorrowLoading = false
-                    if !isReserved && !isBorrowed{
-                        
-                        
-                        if book.availableCopies == 0{
-                            bookStatus =  .notAvailable
-                        }else{
-                            bookStatus = .available
-                        }
-                        if let borrow = try await BorrowHandler.shared.getBorrowForBookId(book.id){
-                            if borrow.status == .borrowed{
-                                bookStatus = .reading
-                            }
-                            else{
-                                bookStatus = .completed(dueDate: Date())
-                            }
-                        }
+                    if book.availableCopies == 0{
+                        bookStatus =  .notAvailable
+                    }else{
+                        bookStatus = .available
+                    
                     }
                 }
             }
