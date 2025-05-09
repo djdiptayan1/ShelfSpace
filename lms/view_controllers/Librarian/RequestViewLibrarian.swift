@@ -84,7 +84,6 @@ struct RequestViewLibrarian: View {
                 .padding(.top)
                 // --- Check In/Out Modal ---
                 .sheet(isPresented: $showCheckInOutModal, onDismiss: { selectedBorrow = nil }) {
-                    if true {
                         CheckInOutModalView(
                             borrow: selectedBorrow,
                             reservation: selectedReservation,
@@ -108,7 +107,6 @@ struct RequestViewLibrarian: View {
                             }
                         )
                         .accessibilityElement(children: .combine)
-                    }
                 }
             }
             .navigationTitle("Book Requests")
@@ -303,6 +301,7 @@ struct RequestViewLibrarian: View {
                                     type: selectedSegment,
                                     onProcess: {
                                         selectedReservation = borrow
+                                        selectedBorrow = nil
                                         checkInOutMode = (selectedSegment == .checkOut ? .checkOut : .checkIn)
                                         showCheckInOutModal = true
                                     },
