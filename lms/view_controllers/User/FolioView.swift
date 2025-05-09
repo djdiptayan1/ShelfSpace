@@ -33,6 +33,8 @@ struct FolioView: View {
         MoodChoice(name: "Relaxing", icon: "leaf.fill"),
         MoodChoice(name: "Exciting", icon: "sparkles"),
         MoodChoice(name: "Thoughtful", icon: "brain.head.profile"),
+        MoodChoice(name: "Dramatic", icon: "theatermasks.fill"),
+       
     ]
 
     var body: some View {
@@ -69,7 +71,7 @@ struct FolioView: View {
                 Spacer() // Pushes content up if it's not filling the screen
             }
             .background(ReusableBackground(colorScheme: colorScheme)) // Apply background to the VStack
-            .navigationTitle(selectedFeature == .bookChat ? "Book Chat" : "Mood Journey")
+            .navigationTitle(selectedFeature == .bookChat ? "Folio" : "Folio")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 // Toolbar for Mood Journey's back button

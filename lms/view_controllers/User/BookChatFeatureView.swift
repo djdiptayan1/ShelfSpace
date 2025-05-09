@@ -159,11 +159,9 @@ struct BookChatFeatureView: View {
             VStack(alignment: .center, spacing: 12) { // Ensure chips are centered if they wrap
                 HStack(spacing: 10) {
                     exampleChip("Suggest a mystery novel")
-                    exampleChip("Who wrote 'Dune'?")
                 }
                 HStack(spacing: 10) {
                     exampleChip("Books similar to Harry Potter")
-                    exampleChip("Popular fantasy series")
                 }
             }
             .padding(.horizontal) // Padding for the chip container
@@ -183,7 +181,7 @@ struct BookChatFeatureView: View {
                 .foregroundColor(Color.text(for: colorScheme).opacity(0.8))
                 .background(
                     Capsule()
-                        .fill(Color.accent(for: colorScheme).opacity(0.35))
+                        .fill(Color.primary(for: colorScheme).opacity(0.3))
                         .shadow(color: Color.black.opacity(colorScheme == .light ? 0.06 : 0.12),
                                 radius: inputFieldIsFocused ? 5 : 3,
                                 x: 0,
@@ -203,7 +201,7 @@ struct BookChatFeatureView: View {
                     .foregroundColor(
                         chatInput.isEmpty || isChatLoading
                             ? Color.gray.opacity(0.6) // More distinct disabled state
-                            : Color.accent(for: colorScheme)
+                            : Color.primary(for: colorScheme)
                     )
             }
             .disabled(chatInput.isEmpty || isChatLoading)
@@ -225,10 +223,10 @@ struct BookChatFeatureView: View {
                 .padding(.horizontal)
                 .background(
                     Capsule()
-                        .fill(Color.accent(for: colorScheme).opacity(0.1)) // Softer background
+                        .fill(Color.accent(for: colorScheme).opacity(0.3)) // Softer background
                 )
                 .overlay(Capsule().stroke(Color.accent(for: colorScheme).opacity(0.2), lineWidth: 0.5)) // Subtle border
-                .foregroundColor(Color.accent(for: colorScheme))
+                .foregroundColor(Color.primary(for: colorScheme))
                 .lineLimit(4) // Ensure chips stay on one line
         }
         .buttonStyle(PlainButtonStyle())
@@ -239,8 +237,8 @@ struct BookChatFeatureView: View {
             if !message.isUser {
                 // AI avatar
                 ZStack {
-                    Circle().fill(Color.accent(for: colorScheme).opacity(0.15)).frame(width: 32, height: 32) // Slightly smaller
-                    Image(systemName: "brain.head.profile").font(.system(size: 15, weight: .regular)) // Adjusted icon
+                    Circle().fill(Color.primary(for: colorScheme).opacity(0.15)).frame(width: 32, height: 32) // Slightly smaller
+                    Image(systemName: "apple.intelligence").font(.system(size: 15, weight: .regular)) // Adjusted icon
                         .foregroundColor(Color.accent(for: colorScheme))
                 }
                 .padding(.bottom, 10)
