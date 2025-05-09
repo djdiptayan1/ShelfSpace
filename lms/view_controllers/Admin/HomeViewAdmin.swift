@@ -161,7 +161,7 @@ struct HomeViewAdmin: View {
 
     private func fetchLibraryData(libraryId: String) async throws -> Library {
         guard let token = try? LoginManager.shared.getCurrentToken(),
-              let url = URL(string: "https://lms-temp-be.vercel.app/api/v1/libraries/\(libraryId)")
+              let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/libraries/\(libraryId)")
         else {
             throw URLError(.badURL)
         }
@@ -207,7 +207,7 @@ struct ProfileIcon: View {
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .foregroundColor(.teal)
-                .frame(width: 44, height: 44)
+                .frame(width: 38, height: 38)
         }
         .padding([.trailing], 20)
         .padding([.top], 5)

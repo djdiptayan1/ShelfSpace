@@ -14,7 +14,7 @@ enum BookCollectionTab: String, CaseIterable {
     case current = "Current"
     case returned = "Returned"
     case request = "Requests"
-    
+
     /// System icon name for each tab
     var icon: String {
         switch self {
@@ -34,21 +34,21 @@ enum BookCollectionTab: String, CaseIterable {
 
 struct BookCollectionuser: View {
     // MARK: - Properties
+
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.presentationMode) var presentationMode
     @Namespace private var animation
-    @State private var selectedTab: BookCollectionTab = .request
+    @State private var selectedTab: BookCollectionTab = .wishlist
     @State private var expandedTab: Bool = true
-    
+
     // Sample books data
     @State private var requestedBooks: [BookModel] = []
     @State private var wishlistBooks: [BookModel] = []
     @State private var borrows: [BorrowModel] = []
-    @State private var reservations:[ReservationModel] = []
-    @State private var currentBooks:[BookModel] = []
-    @State private var returnedBooks:[BookModel] = []
-    @State private var policy:Policy?
-
+    @State private var reservations: [ReservationModel] = []
+    @State private var currentBooks: [BookModel] = []
+    @State private var returnedBooks: [BookModel] = []
+    @State private var policy: Policy?
 
     @State private var demoBooks: [BookModel] = [
         BookModel(
@@ -86,10 +86,10 @@ struct BookCollectionuser: View {
             updatedAt: ISO8601DateFormatter().date(from: "2025-04-25T10:00:00Z"),
             coverImageUrl: "https://images.apple.com/books/images/swift-book-cover-large.jpg",
             coverImageData: nil
-        )
+        ),
     ]
     private var finalBooks: [BookModel] {
-        switch(selectedTab){
+        switch selectedTab {
         case .request:
             return requestedBooks
         case .wishlist:
@@ -100,15 +100,16 @@ struct BookCollectionuser: View {
             return returnedBooks
         }
     }
-    
+
     // MARK: - Body
+
     var body: some View {
         NavigationView {
             ZStack {
                 // Background
                 ReusableBackground(colorScheme: colorScheme)
                     .edgesIgnoringSafeArea(.all)
-                
+
                 VStack(spacing: 20) {
                     // Collections Title
                     Text("Collections")
@@ -118,62 +119,76 @@ struct BookCollectionuser: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal)
                         .padding(.top, 16)
-                    
+                        .accessibilityAddTraits(.isHeader)
+
                     // MARK: - Tab Bar (Apple Mail-style)
+
                     tabBarView
-                    
+
                     // MARK: - Book Collection Grid
+
                     ScrollView {
-                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
+                        LazyVGrid(
+                            columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 20
+                        ) {
                             // Filter books based on the selected tab
                             ForEach(finalBooks.prefix(6)) { book in
-                                NavigationLink(destination: BookDetailView(book: book))
-                                {
-                                    BookCardView(book: book, tab: selectedTab, colorScheme: colorScheme,reservation: $reservations,borrows: $borrows,policy: $policy)
+                                NavigationLink(destination: BookDetailView(book: book)) {
+                                    BookCardView(
+                                        book: book, tab: selectedTab, colorScheme: colorScheme,
+                                        reservation: $reservations, borrows: $borrows,
+                                        policy: $policy
+                                    )
+                                    .accessibilityElement(children: .combine)
                                 }
                             }
                         }
                         .padding(.horizontal)
                         .padding(.bottom, 16)
+                        .accessibilityElement(children: .contain)
+                        .accessibilityLabel("Book collection grid")
                     }
-                    
+                    .accessibilityScrollAction { _ in
+                        // Handle scroll actions if needed
+                    }
+
                     Spacer()
                 }
             }
-            .onAppear(){
+            .onAppear {
+                NotificationManager.shared.requestNotificationPermission { granted in
+                    if granted {
+                        print("Notification permission granted by user.")
+                        // If data is already loaded, and permission was just granted,
+                        // you might want to re-trigger scheduling.
+                        // However, scheduling will happen in loadBookData after data is fetched.
+                    } else {
+                        print("Notification permission denied by user.")
+                    }
+                }
+
                 fetchPolicy(libraryId: UUID()) { policy in
                     self.policy = policy
                 }
-            }
-            .onAppear(){
-                Task{
-                    borrows = try await BorrowHandler.shared.getBorrows()
-                    let currentFiltered = borrows.filter{$0.status == .borrowed}
-                    let returnedFiltered = borrows.filter{$0.status == .returned}
-                    let currentBookIds = currentFiltered.compactMap(\.book_id)
-                    let returnedBookIds = returnedFiltered.compactMap(\.book_id)
-                    if let cachedBooks = BookHandler.shared.getCachedData(){
-                        currentBooks = cachedBooks.filter{currentBookIds.contains($0.id)}
-                        returnedBooks = cachedBooks.filter{returnedBookIds.contains($0.id)}
-                    }
+
+                Task {
+                    await loadBookData()
                 }
-            }
-            .onAppear(){
-                Task{
+
+                Task {
                     self.wishlistBooks = try await getWishList()
                 }
             }
-            .onAppear(){
-                Task{
-                    reservations = try await ReservationHandler.shared.getReservations()
-                    //get books from borrows
-                    let currentBookIds = reservations.compactMap(\.book_id)
-
-                    if let cachedBooks = BookHandler.shared.getCachedData(){
-                        requestedBooks = cachedBooks.filter{currentBookIds.contains($0.id)}
-                    }
-                }
-            }
+            //            .onAppear {
+            //                Task {
+            //                    await loadBookData()
+            //                }
+            //            }
+            //            .onAppear {
+            //                Task {
+            //                    self.wishlistBooks = try await getWishList()
+            //                }
+            //            }
             .navigationBarTitleDisplayMode(.inline)
             .gesture(
                 DragGesture()
@@ -184,10 +199,119 @@ struct BookCollectionuser: View {
                         }
                     }
             )
+            .accessibilityElement(children: .contain)
+        }
+        .navigationViewStyle(StackNavigationViewStyle())
+    }
+
+    func loadBookData() async {
+        do {
+            async let borrowsData = BorrowHandler.shared.getBorrows()
+            async let reservationsData = ReservationHandler.shared.getReservations()
+
+            let rawBorrows = try await borrowsData
+
+            borrows = try await borrowsData
+            reservations = try await reservationsData
+
+            let currentFilteredBorrows = borrows.filter { $0.status == .borrowed }
+            let returnedFilteredBorrows = borrows.filter { $0.status == .returned }
+
+            let borrowCurrentBookIds = Set(currentFilteredBorrows.compactMap(\.book_id))
+            let borrowReturnedBookIds = Set(returnedFilteredBorrows.compactMap(\.book_id))
+            let reservationBookIds = Set(reservations.compactMap(\.book_id))
+
+            var allUniqueBookIds = Set<UUID>()
+            allUniqueBookIds.formUnion(borrowCurrentBookIds)
+            allUniqueBookIds.formUnion(borrowReturnedBookIds)
+            allUniqueBookIds.formUnion(reservationBookIds)
+
+            if allUniqueBookIds.isEmpty {
+                print("ℹ️ No book IDs to process from borrows or reservations.")
+                currentBooks = []
+                returnedBooks = []
+                requestedBooks = []
+                self.borrows = rawBorrows
+
+                NotificationManager.shared.scheduleNotificationsForAllBorrowedBooks(
+                    borrows: self.borrows)
+                return
+            }
+
+            print(
+                "ℹ️ All unique book IDs to resolve: \(allUniqueBookIds.map { $0.uuidString }.joined(separator: ", "))"
+            )
+
+            var resolvedBooks: [UUID: BookModel] = [:]
+
+            if let cachedBooksArray = BookHandler.shared.getCachedData() {
+                for book in cachedBooksArray {
+                    if allUniqueBookIds.contains(book.id) {
+                        resolvedBooks[book.id] = book
+                        print("✅ Found book \(book.id) in cache: \(book.title)")
+                    }
+                }
+            }
+
+            let missingBookIds = allUniqueBookIds.filter { resolvedBooks[$0] == nil }
+
+            if !missingBookIds.isEmpty {
+                print(
+                    "ℹ️ Missing \(missingBookIds.count) books from cache. Fetching them: \(missingBookIds.map { $0.uuidString }.joined(separator: ", "))"
+                )
+                var newlyFetchedBooks: [BookModel] = []
+
+                try await withThrowingTaskGroup(of: BookModel?.self) { group in
+                    for bookId in missingBookIds {
+                        group.addTask {
+                            print("🚀 Fetching book with ID: \(bookId)")
+                            return try await fetchBookFromId(bookId)
+                        }
+                    }
+
+                    for try await fetchedBook in group {
+                        if let book = fetchedBook {
+                            newlyFetchedBooks.append(book)
+                            resolvedBooks[book.id] = book
+                        }
+                    }
+                }
+
+            } else {
+                print("✅ All required books were found in the cache.")
+            }
+
+            currentBooks = borrowCurrentBookIds.compactMap { resolvedBooks[$0] }
+            returnedBooks = borrowReturnedBookIds.compactMap { resolvedBooks[$0] }
+            requestedBooks = reservationBookIds.compactMap { resolvedBooks[$0] }
+
+            var updatedBorrows: [BorrowModel] = []
+            for var borrowRecord in rawBorrows {  // Iterate over a mutable copy of each element
+                if let resolvedBook = resolvedBooks[borrowRecord.book_id] {
+                    borrowRecord.book = resolvedBook  // Assign the resolved BookModel
+                } else {
+                    // If book details couldn't be resolved, borrowRecord.book remains nil or its previous value.
+                    // NotificationManager will handle nils by potentially falling back or skipping.
+                    print(
+                        "⚠️ Warning: Could not resolve book details for borrow_id: \(borrowRecord.id) (book_id: \(borrowRecord.book_id)). Notification for this borrow might use fallback due date or be skipped if book details are essential."
+                    )
+                }
+                updatedBorrows.append(borrowRecord)
+            }
+            self.borrows = updatedBorrows
+
+            print(
+                "✅ Successfully loaded book data. Current: \(currentBooks.count), Returned: \(returnedBooks.count), Requested: \(requestedBooks.count)"
+            )
+
+        } catch {
+            print("❌ Error in loadBookData: \(error.localizedDescription)")
+            error.logDetails()  // Make sure this extension is available
         }
     }
-    
+
     // MARK: - Tab Bar View
+
     private var tabBarView: some View {
         HStack(spacing: 14) {
             ForEach(BookCollectionTab.allCases, id: \.self) { tab in
@@ -205,7 +329,7 @@ struct BookCollectionuser: View {
                     HStack(spacing: 10) {
                         Image(systemName: tab.icon)
                             .font(.headline)
-                        
+
                         if expandedTab && selectedTab == tab {
                             Text(tab.rawValue)
                                 .font(.system(size: 12))
@@ -223,44 +347,60 @@ struct BookCollectionuser: View {
                             }
                         }
                     )
-                    .foregroundColor(selectedTab == tab ? .white : Color.text(for: colorScheme).opacity(0.6))
+                    .foregroundColor(
+                        selectedTab == tab ? .white : Color.text(for: colorScheme).opacity(0.6)
+                    )
+                    .accessibilityLabel(tab.rawValue)
+                    .accessibilityHint("Switch to \(tab.rawValue) tab")
+                    .accessibilityAddTraits(
+                        selectedTab == tab ? [.isButton, .isSelected] : .isButton)
                 }
             }
         }
         .padding(.horizontal)
         .padding(.vertical, 6)
         .padding(.horizontal)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Tab bar")
     }
-        
 }
 
 // MARK: - Book Card Component
 
 struct BookCardView: View {
-    
     let book: BookModel
     let tab: BookCollectionTab
     let colorScheme: ColorScheme
-    private var dueDate:Date?{
-        if let res = reservation.first(where: { $0.book_id == book.id }),tab == .request{
+    private var dueDate: Date? {
+        if let res = reservation.first(where: { $0.book_id == book.id }), tab == .request {
             return res.expires_at
         }
-        if tab == .current, let borrow = borrows.first(where: { $0.book_id == book.id }){
-                if let days = policy?.max_borrow_days {
-                    let newDate = Calendar.current.date(byAdding: .day, value: days, to: borrow.borrow_date)
-                    return newDate
+        if tab == .current, let borrow = borrows.first(where: { $0.book_id == book.id }) {
+            if let days = policy?.max_borrow_days {
+                return Calendar.current.date(byAdding: .day, value: days, to: borrow.borrow_date)
             }
         }
         return nil
     }
+
     @State private var loadedImage: UIImage? = nil
     @State private var isLoading: Bool = false
     @State private var loadError: Bool = false
-    @Binding var reservation:[ReservationModel]
-    @Binding var borrows:[BorrowModel]
-    @Binding var policy:Policy?
-    
-    
+    @Binding var reservation: [ReservationModel]
+    @Binding var borrows: [BorrowModel]
+    @Binding var policy: Policy?
+
+    var accessibilityLabel: String {
+        var label = "\(book.title) by \(book.authorNames?.first ?? "Unknown author")"
+        if tab == .current || tab == .request, let dueDate = dueDate {
+            label += ". Due \(dueDate.shortFormatted)"
+            if dueDate < Date() {
+                label += ". Overdue"
+            }
+        }
+        return label
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             // Book Image Container
@@ -269,57 +409,63 @@ struct BookCardView: View {
                     Image(uiImage: image)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .frame(width: 134,height: 200)
+                        .frame(width: 134, height: 200)
                         .clipped()
                         .cornerRadius(8)
-                }else{
-                    RoundedRectangle(cornerRadius:10)
+                        .accessibilityHidden(true)
+                } else {
+                    RoundedRectangle(cornerRadius: 10)
                         .fill(Color.TabbarBackground(for: colorScheme))
                         .frame(height: 200)
-                        .shadow(color: colorScheme == .dark ? Color.white.opacity(0.05) : Color.gray.opacity(0.3),
-                                radius: 5, x: 0, y: 3)
+                        .shadow(
+                            color: colorScheme == .dark
+                                ? Color.white.opacity(0.05) : Color.gray.opacity(0.3),
+                            radius: 5, x: 0, y: 3
+                        )
                         .overlay(
                             Text("BOOK IMAGE")
                                 .foregroundColor(Color.text(for: colorScheme).opacity(0.5))
                                 .font(.caption2)
                         )
+                        .accessibilityHidden(true)
                 }
             }
-            .onAppear(){
+            .onAppear {
                 loadCoverImage()
             }
+
             // Book Title - limited to 3 lines
             Text(book.title)
                 .font(.system(size: 14))
                 .fontWeight(.semibold)
                 .foregroundColor(Color.text(for: colorScheme))
                 .lineLimit(3)
-                .frame(height:60, alignment: .leading)
+                .frame(height: 60, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
-            
-            
+
             // Author Name
             Text((book.authorNames?.isEmpty ?? true ? "" : book.authorNames?[0]) ?? "")
-                .font(.system(size:12))
+                .font(.system(size: 12))
                 .foregroundColor(Color.text(for: colorScheme).opacity(0.7))
-            
+
             // Due Date Information (conditional based on tab)
             if tab == .current || tab == .request {
                 HStack {
                     Image(systemName: "calendar")
                         .font(.caption)
                         .foregroundColor(Color.secondary(for: colorScheme))
-                    if dueDate != nil{
+                        .accessibilityHidden(true)
+                    if dueDate != nil {
                         Text("Due: \(dueDate!.shortFormatted)")
                             .font(.caption)
                             .foregroundColor(.orange)
                     }
                 }
             }
-            
+
             // Status Tags
             HStack(spacing: 6) {
-                if tab == .current, dueDate != nil, dueDate! < Date() {
+                if tab == .current, let dueDate = dueDate, dueDate < Date() {
                     Text("Overdue")
                         .font(.caption)
                         .padding(.horizontal, 8)
@@ -333,20 +479,25 @@ struct BookCardView: View {
         .padding()
         .background(Color.TabbarBackground(for: colorScheme).opacity(0.8))
         .cornerRadius(10)
-        .shadow(color: colorScheme == .dark ? Color.white.opacity(0.05) : Color.gray.opacity(0.2),
-                radius: 6, x: 0, y: 3)
+        .shadow(
+            color: colorScheme == .dark ? Color.white.opacity(0.05) : Color.gray.opacity(0.2),
+            radius: 6, x: 0, y: 3
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityLabel)
     }
+
     private func loadCoverImage() {
         // Set loading state
         isLoading = true
-        
+
         // First try to load from local data
         if let imageData = book.coverImageData {
             loadedImage = UIImage(data: imageData)
             isLoading = false
             return
         }
-        
+
         // If no local data, try to load from URL
         guard var urlString = book.coverImageUrl, !urlString.isEmpty else {
             isLoading = false
@@ -360,22 +511,22 @@ struct BookCardView: View {
             isLoading = false
             return
         }
-        
-        URLSession.shared.dataTask(with: url) { data, response, error in
+
+        URLSession.shared.dataTask(with: url) { data, _, error in
             DispatchQueue.main.async {
                 isLoading = false
-                
+
                 if let error = error {
                     print("Error loading image: \(error.localizedDescription)")
                     loadError = true
                     return
                 }
-                
+
                 guard let data = data, let image = UIImage(data: data) else {
                     loadError = true
                     return
                 }
-                
+
                 loadedImage = image
             }
         }.resume()
@@ -390,13 +541,14 @@ struct bookCollectionuser_Previews: PreviewProvider {
             BookCollectionuser()
                 .preferredColorScheme(.light)
                 .previewDisplayName("Light Mode")
-            
+
             BookCollectionuser()
                 .preferredColorScheme(.dark)
                 .previewDisplayName("Dark Mode")
         }
     }
 }
+
 extension Date {
     var shortFormatted: String {
         let formatter = DateFormatter()

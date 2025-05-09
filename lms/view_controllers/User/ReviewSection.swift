@@ -69,6 +69,7 @@ struct ReviewsSection: View {
                     }) {
                         HStack {
                             Image(systemName: "square.and.pencil")
+                                .accessibilityHidden(true)
                             Text("Write Review")
                             Spacer() // This will push content to the left
                         }
@@ -78,6 +79,8 @@ struct ReviewsSection: View {
                         .background(Color.primary(for: colorScheme).opacity(0.6))
                         .cornerRadius(8)
                     }
+                    .accessibilityLabel("Write a review")
+                    .accessibilityHint("Double tap to open review editor")
                     .frame(maxWidth: .infinity) // Makes the button take full width
                     .padding(.horizontal, 16) // Adds 16-point padding on both sides
                     .sheet(isPresented: $showingWriteReview) {
@@ -96,12 +99,15 @@ struct ReviewsSection: View {
                     .cornerRadius(8)
                     .padding(.horizontal)
                     .padding(.vertical)
+                    .accessibilityLabel("No reviews yet")
+                    .accessibilityHint("Be the first to review this book")
             } else {
                 VStack(spacing: 16) {
                     ForEach(reviews) { review in
                         ReviewItemView(review: review)
                     }
                 }
+                .accessibilityElement(children: .contain)
             }
         }
         .onAppear(){
@@ -110,6 +116,7 @@ struct ReviewsSection: View {
             }
         }
         .padding(.horizontal)
+        .accessibilityElement(children: .contain)
     }
 }
 
@@ -123,11 +130,13 @@ struct ReviewItemView: View {
             HStack {
                 Text(review.user?.name ?? "Anonymous")
                     .font(.headline)
+                    .accessibilityAddTraits(.isHeader)
                 
                 if true {
                     Image(systemName: "checkmark.seal.fill")
                         .foregroundColor(.green)
                         .font(.system(size: 14))
+                        .accessibilityLabel("Verified review")
                 }
                 
                 Spacer()
@@ -135,7 +144,9 @@ struct ReviewItemView: View {
                 Text(review.reviewed_at.formatted(.dateTime.day().month().year()))
                     .font(.subheadline)
                     .foregroundColor(.gray)
+                    .accessibilityLabel("Reviewed on \(review.reviewed_at.formatted(.dateTime.day().month().year()))")
             }
+            .accessibilityElement(children: .combine)
             
             // Star rating
             HStack(spacing: 4) {
@@ -143,13 +154,16 @@ struct ReviewItemView: View {
                     Image(systemName: star <= review.rating ? "star.fill" : "star")
                         .foregroundColor(.yellow)
                         .font(.system(size: 16))
+                        .accessibilityHidden(true)
                 }
             }
+            .accessibilityLabel("Rating: \(review.rating) out of 5 stars")
             
             // Review content
             Text(review.comment)
                 .font(.body)
                 .lineSpacing(6)
+                .accessibilityLabel(review.comment)
             
             // Action buttons
 //            HStack(spacing: 20) {
@@ -163,7 +177,7 @@ struct ReviewItemView: View {
 //                    .font(.subheadline)
 //                    .foregroundColor(.gray)
 //                }
-//                
+//
 //                Button(action: {
 //                    // Report button action
 //                }) {
@@ -180,6 +194,7 @@ struct ReviewItemView: View {
         .padding()
         .background(Color.white.opacity(0.7))
         .cornerRadius(12)
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -199,7 +214,7 @@ struct WriteReviewView: View {
         
         NavigationView {
             Form {
-                Section(header: Text("Rate this book")) {
+                Section(header: Text("Rate this book").accessibilityAddTraits(.isHeader)) {
                     HStack(spacing: 10) {
                         ForEach(1...5, id: \.self) { star in
                             Image(systemName: star <= userRating ? "star.fill" : "star")
@@ -208,20 +223,28 @@ struct WriteReviewView: View {
                                 .onTapGesture {
                                     userRating = star
                                 }
+                                .accessibilityLabel(star <= userRating ? "Selected \(star) star" : "Not selected \(star) star")
+                                .accessibilityHint("Double tap to rate \(star) stars")
+                                .accessibilityAddTraits(star <= userRating ? [.isButton, .isSelected] : .isButton)
                         }
                     }
                     .padding(.vertical, 8)
                     .frame(maxWidth: .infinity, alignment: .center)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Current rating: \(userRating) stars")
                 }
                 
-                Section(header: Text("Write your review")) {
+                Section(header: Text("Write your review").accessibilityAddTraits(.isHeader)) {
                     TextEditor(text: $reviewText)
                         .frame(height: 200)
+                        .accessibilityLabel("Review text")
+                        .accessibilityHint("Enter your review here")
                     
                     Text("\(reviewText.count)/500 characters")
                         .font(.caption)
                         .foregroundColor(reviewText.count > 500 ? .red : .gray)
                         .frame(maxWidth: .infinity, alignment: .trailing)
+                        .accessibilityLabel("\(reviewText.count) out of 500 characters entered")
                 }
                 
                 Section {
@@ -232,6 +255,7 @@ struct WriteReviewView: View {
                     ) {
                         if isSubmitting {
                             ProgressView()
+                                .accessibilityLabel("Submitting review")
                         } else {
                             Text("Submit Review")
                                 .frame(maxWidth: .infinity, alignment: .center)
@@ -243,6 +267,9 @@ struct WriteReviewView: View {
                         (userRating == 0 || reviewText.isEmpty || reviewText.count > 500 || isSubmitting) ?
                         Color.gray : Color.primary(for:  colorScheme).opacity(0.8)
                     )
+                    .accessibilityLabel("Submit review")
+                    .accessibilityHint(userRating == 0 ? "Select a rating first" : reviewText.isEmpty ? "Enter your review first" : reviewText.count > 500 ? "Review is too long" : "Double tap to submit your review")
+                    .accessibilityAddTraits(.isButton)
                 }
             }
             .navigationTitle("Review \(book.title)")
@@ -252,8 +279,11 @@ struct WriteReviewView: View {
                     Button("Cancel") {
                         presentationMode.wrappedValue.dismiss()
                     }
+                    .accessibilityLabel("Cancel")
+                    .accessibilityHint("Double tap to cancel writing review")
                 }
             }
+            .accessibilityElement(children: .contain)
         }
     }
     

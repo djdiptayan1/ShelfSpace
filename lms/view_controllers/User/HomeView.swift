@@ -127,6 +127,8 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
                                             .font(.system(size: 15))
                                             .foregroundColor(Color.primary(for: colorScheme))
                                     }
+                                    .accessibilityLabel("Clear all selected genres")
+                                    .accessibilityHint("Double tap to remove all genre filters")
                                 }
                                 .padding(.horizontal)
                             }
@@ -146,6 +148,7 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
                         if isLoadingAllBooksForHome && allBooksForHomePage.isEmpty {
                             ProgressView("Loading Library Books...")
                                 .frame(maxHeight: .infinity)
+                                .accessibilityLabel("Loading books")
                         } else if showSearchResults || !selectedGenres.isEmpty {
                             ScrollView {
                                 VStack(spacing: 0) {
@@ -161,10 +164,12 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
                                                     .scaledToFit()
                                                     .frame(width: 60, height: 60)
                                                     .foregroundColor(Color.secondary(for: colorScheme))
+                                                    .accessibilityHidden(true)
 
                                                 Text("No books found")
                                                     .font(.headline)
                                                     .foregroundColor(Color.text(for: colorScheme))
+                                                    .accessibilityAddTraits(.isHeader)
 
                                                 Text(
                                                     "Try searching with different keywords or browse categories"
@@ -176,12 +181,14 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
                                             }
                                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                                             .padding()
+                                            .accessibilityElement(children: .combine)
                                         } else {
                                             VStack(alignment: .leading, spacing: 8) {
                                                 Text("Search Results")
                                                     .font(.title2)
                                                     .fontWeight(.bold)
                                                     .padding(.horizontal)
+                                                    .accessibilityAddTraits(.isHeader)
 
                                                 Text(
                                                     "Found \(filteredBooksForSearch.count) book\(filteredBooksForSearch.count > 1 ? "s" : "")"
@@ -191,6 +198,7 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
                                                     Color.text(for: colorScheme).opacity(0.7)
                                                 )
                                                 .padding(.horizontal)
+                                                .accessibilityLabel("Found \(filteredBooksForSearch.count) books")
 
                                                 LazyVStack(spacing: 16) {
                                                     ForEach(filteredBooksForSearch) { book in
@@ -203,6 +211,8 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
                                                             .padding(.horizontal)
                                                         }
                                                         .buttonStyle(PlainButtonStyle())
+                                                        .accessibilityLabel("\(book.title), by \(book.authorNames?.first ?? "unknown author")")
+                                                        .accessibilityHint("Double tap to view book details")
                                                     }
                                                 }
                                                 .padding(.vertical)
@@ -211,6 +221,9 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
                                         }
                                     }
                                 }
+                            }
+                            .accessibilityScrollAction { edge in
+                                // Handle scroll actions if needed
                             }
                         } else {
                             // Regular home view content
@@ -228,6 +241,9 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
                                 }
                                 .padding(.vertical)
                             }
+                            .accessibilityScrollAction { edge in
+                                // Handle scroll actions if needed
+                            }
                         }
                     }
                 }
@@ -244,6 +260,7 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
                 }
                 .navigationBarHidden(true)
             }
+            .accessibilityElement(children: .contain)
         }
         .foregroundColor(Color.text(for: colorScheme))
     }
@@ -288,7 +305,7 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
         fetchBooks(
             manager: homePaginationManager,
             page: isInitialFetchForManager ? 1 : nil, // Explicitly 1 for first, nil for loadMore to pick next
-            limit: 30, // Fetching more per page for HomeView to reduce calls, API must support this limit
+            limit: 200, // Fetching more per page for HomeView to reduce calls, API must support this limit
             isLoadingMore: !isInitialFetchForManager
         ) { result in
             DispatchQueue.main.async { // Ensure UI updates are on main thread
@@ -395,10 +412,12 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
                 Text("Welcome, " + (prefetchedUser != nil ? prefetchedUser!.name : "loading"))
                     .font(.headline)
                     .foregroundColor(Color.text(for: colorScheme))
+                    .accessibilityLabel("Welcome, \(prefetchedUser?.name ?? "loading")")
                 Text((prefetchedLibrary?.name ?? "loading"))
                     .font(.title)
                     .fontWeight(.bold)
                     .foregroundColor(Color.text(for: colorScheme))
+                    .accessibilityAddTraits(.isHeader)
             }
 
             Spacer()
@@ -410,6 +429,8 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
                     .foregroundColor(
                         Color.primary(for: colorScheme).opacity(0.8))
             }
+            .accessibilityLabel("User Profile")
+            .accessibilityHint("Double tap to view your profile")
         }
         .onAppear(){
             Task{
@@ -443,19 +464,24 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
                 if isPrefetchingProfile {
                     ProgressView("Loading Profile...")
                         .padding()
+                        .accessibilityLabel("Loading profile")
                 } else if let user = prefetchedUser {
                     ProfileView()
                         .navigationBarItems(
                             trailing: Button("Done") {
                                 showProfileSheet = false
-                            })
+                            }
+                            .accessibilityLabel("Done")
+                        )
                 } else {
                     VStack(spacing: 16) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.largeTitle)
                             .foregroundColor(.orange)
+                            .accessibilityHidden(true)
                         Text("Could Not Load Profile")
                             .font(.headline)
+                            .accessibilityAddTraits(.isHeader)
                         if let errorMsg = prefetchError {
                             Text(errorMsg)
                                 .font(.caption)
@@ -466,8 +492,10 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
                             Task { await prefetchProfileData() }
                         }
                         .buttonStyle(.borderedProminent)
+                        .accessibilityLabel("Retry loading profile")
                     }
                     .padding()
+                    .accessibilityElement(children: .combine)
                 }
             }
         }
@@ -512,7 +540,7 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
         guard let token = try? LoginManager.shared.getCurrentToken(),
             let url = URL(
                 string:
-                    "https://lms-temp-be.vercel.app/api/v1/libraries/\(libraryId)"
+                    "https://www.anwinsharon.com/lms/api/v1/libraries/\(libraryId)"
             )
         else {
             throw URLError(.badURL)
@@ -568,6 +596,7 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
             }
             .scrollDisabled(false) // Ensure horizontal scroll is enabled
             .frame(height:60) // Fixed height to prevent vertical stretching
+            .accessibilityElement(children: .contain)
         }
     }
     
@@ -595,6 +624,7 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
                         selectedGenres.contains(category.displayName) ?
                             Color.primary(for: colorScheme) :
                             Color.primary(for: colorScheme).opacity(0.7))
+                    .accessibilityHidden(true)
 
                 Text(category.displayName)
                     .font(.system(size: 14))
@@ -611,6 +641,9 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
                     Color.clear
             )
             .cornerRadius(8)
+            .accessibilityLabel("\(category.displayName) genre")
+            .accessibilityHint(selectedGenres.contains(category.displayName) ? "Selected. Double tap to remove filter" : "Double tap to filter by this genre")
+            .accessibilityAddTraits(selectedGenres.contains(category.displayName) ? [.isSelected] : [])
         }
     }
 
@@ -629,13 +662,16 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
                                 .frame(width: geometry.size.width - 30)
                         }
                         .buttonStyle(PlainButtonStyle())
+                        .accessibilityLabel("New arrival: \(book.title), by \(book.authorNames?.first ?? "unknown author")")
+                        .accessibilityHint("Double tap to view book details")
                     }
                 }
-//                .padding([.top, .horizontal])
                 .padding(.horizontal)
-               .padding(.bottom,12)
-               .padding(.top,12)
+                .padding(.bottom,12)
+                .padding(.top,12)
+                .accessibilityElement(children: .contain)
             }
+            .accessibilityLabel("New arrivals carousel")
         }
     }
 
@@ -656,14 +692,16 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
                             .frame(width: 160)
                         }
                         .buttonStyle(PlainButtonStyle())
+                        .accessibilityLabel("Recommended: \(book.title), by \(book.authorNames?.first ?? "unknown author")")
+                        .accessibilityHint("Double tap to view book details")
                     }
                 }
-//                .padding([.top, .horizontal])
-//                .padding(.bottom, 18)
                 .padding(.horizontal)
                 .padding(.bottom,8)
                 .padding(.top,8)
+                .accessibilityElement(children: .contain)
             }
+            .accessibilityLabel("Recommended books carousel")
         }
     }
 
@@ -685,13 +723,16 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
                             .frame(width: 160)
                         }
                         .buttonStyle(PlainButtonStyle())
+                        .accessibilityLabel("Top borrowing #\(index + 1): \(book.title), by \(book.authorNames?.first ?? "unknown author")")
+                        .accessibilityHint("Double tap to view book details")
                     }
-//                    .padding([.bottom, .top, .horizontal])
                     .padding(.horizontal)
                     .padding(.bottom,8)
                     .padding(.top,8)
                 }
+                .accessibilityElement(children: .contain)
             }
+            .accessibilityLabel("Top borrowing books carousel")
         }
     }
 
@@ -704,6 +745,7 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
                 .font(.system(size: 19.5))
                 .fontWeight(.bold)
                 .foregroundColor(Color.text(for: colorScheme))
+                .accessibilityAddTraits(.isHeader)
 
             Spacer()
         }
@@ -740,10 +782,12 @@ struct SearchResultsView: View {
                         .scaledToFit()
                         .frame(width: 60, height: 60)
                         .foregroundColor(Color.secondary(for: colorScheme))
+                        .accessibilityHidden(true)
 
                     Text("No books found")
                         .font(.headline)
                         .foregroundColor(Color.text(for: colorScheme))
+                        .accessibilityAddTraits(.isHeader)
 
                     Text(
                         "Try searching with different keywords or browse categories"
@@ -755,6 +799,7 @@ struct SearchResultsView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding()
+                .accessibilityElement(children: .combine)
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 8) {
@@ -762,6 +807,7 @@ struct SearchResultsView: View {
                             .font(.title2)
                             .fontWeight(.bold)
                             .padding(.horizontal)
+                            .accessibilityAddTraits(.isHeader)
 
                         Text(
                             "Found \(books.count) book\(books.count > 1 ? "s" : "")"
@@ -771,6 +817,7 @@ struct SearchResultsView: View {
                             Color.text(for: colorScheme).opacity(0.7)
                         )
                         .padding(.horizontal)
+                        .accessibilityLabel("Found \(books.count) books")
 
                         LazyVStack(spacing: 16) {
                             ForEach(books) { book in
@@ -783,11 +830,16 @@ struct SearchResultsView: View {
                                     .padding(.horizontal)
                                 }
                                 .buttonStyle(PlainButtonStyle())
+                                .accessibilityLabel("\(book.title), by \(book.authorNames?.first ?? "unknown author")")
+                                .accessibilityHint("Double tap to view book details")
                             }
                         }
                         .padding(.vertical)
                     }
                     .padding(.vertical)
+                }
+                .accessibilityScrollAction { edge in
+                    // Handle scroll actions if needed
                 }
             }
         }
@@ -816,6 +868,7 @@ struct SearchResultCard: View {
                     .shadow(
                         color: Color.primary(for: colorScheme).opacity(0.2),
                         radius: 6, x: 0, y: 3)
+                    .accessibilityHidden(true)
             } else {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(
@@ -827,10 +880,12 @@ struct SearchResultCard: View {
                             endPoint: .bottomTrailing
                         )
                     )
+                    .accessibilityHidden(true)
 
                 Image(systemName: "book.fill")
                     .font(.system(size: 20))
                     .foregroundColor(.white.opacity(0.7))
+                    .accessibilityHidden(true)
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -838,6 +893,7 @@ struct SearchResultCard: View {
                     .font(.headline)
                     .foregroundColor(Color.text(for: colorScheme))
                     .lineLimit(2)
+                    .accessibilityAddTraits(.isHeader)
 
                 Text(book.authorNames!.isEmpty ? "" : book.authorNames![0])
                     .font(.subheadline)
@@ -858,6 +914,7 @@ struct SearchResultCard: View {
                         }
                     }
                 }
+                .accessibilityLabel("Genres: \(book.genreNames?.joined(separator: ", ") ?? "")")
 
                 if !book.description!.isEmpty {
                     Text(book.description!)
@@ -879,6 +936,8 @@ struct SearchResultCard: View {
         .shadow(
             color: Color.primary(for: colorScheme).opacity(0.1), radius: 8,
             x: 0, y: 4)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(book.title), by \(book.authorNames?.first ?? "unknown author")")
     }
     private func loadCoverImage() {
         // Set loading state
@@ -982,6 +1041,7 @@ struct NewArrivalCard: View {
                         .shadow(
                             color: Color.primary(for: colorScheme).opacity(0.3),
                             radius: 12, x: 0, y: 6)
+                        .accessibilityHidden(true)
                 } else {
                     RoundedRectangle(cornerRadius: 10)
                         .fill(
@@ -994,10 +1054,12 @@ struct NewArrivalCard: View {
                             )
                         )
                         .frame(width: 100,height: 140)
+                        .accessibilityHidden(true)
 
                     Image(systemName: "book.fill")
                         .font(.system(size: 20))
                         .foregroundColor(.white.opacity(0.7))
+                        .accessibilityHidden(true)
                 }
 
                 VStack(alignment: .leading, spacing: 20) {
@@ -1008,6 +1070,7 @@ struct NewArrivalCard: View {
                         .minimumScaleFactor(0.9)
                         .fixedSize(horizontal: false, vertical: true)
                         .foregroundColor(Color.text(for: colorScheme))
+                        .accessibilityAddTraits(.isHeader)
 
                     Text(book.authorNames!.isEmpty ? "" : book.authorNames![0])
                         .font(.system(size: 13))
@@ -1030,6 +1093,7 @@ struct NewArrivalCard: View {
                                 .cornerRadius(8)
                         }
                     }
+                    .accessibilityLabel("Genres: \(book.genreNames?.prefix(2).joined(separator: ", ") ?? "")")
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -1048,6 +1112,8 @@ struct NewArrivalCard: View {
         .shadow(
             color: Color.primary(for: colorScheme).opacity(0.15), radius: 15,
             x: 0, y: 8)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("New arrival: \(book.title), by \(book.authorNames?.first ?? "unknown author")")
     }
     
     private func loadCoverImage() {
@@ -1151,6 +1217,7 @@ struct RecommendationCard: View {
                     .shadow(
                         color: Color.primary(for: colorScheme).opacity(0.25),
                         radius: 10, x: 0, y: 5)
+                    .accessibilityHidden(true)
             } else {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(
@@ -1162,10 +1229,12 @@ struct RecommendationCard: View {
                             endPoint: .bottomTrailing
                         )
                     )
+                    .accessibilityHidden(true)
 
                 Image(systemName: "book.fill")
                     .font(.system(size: 20))
                     .foregroundColor(.white.opacity(0.7))
+                    .accessibilityHidden(true)
             }
 
             VStack(alignment: .leading, spacing:8) {
@@ -1174,6 +1243,7 @@ struct RecommendationCard: View {
                     .lineLimit(2)
                     .foregroundColor(Color.text(for: colorScheme))
                     .frame(width: 140)
+                    .accessibilityAddTraits(.isHeader)
 
                 Text(book.authorNames!.isEmpty ? "" : book.authorNames![0])
                     .font(.system(size: 12))
@@ -1194,6 +1264,7 @@ struct RecommendationCard: View {
                             .cornerRadius(4)
                     }
                 }
+                .accessibilityLabel("Genres: \(book.genreNames?.prefix(2).joined(separator: ", ") ?? "")")
             }                    .frame(width: 140)
 
         }
@@ -1206,6 +1277,8 @@ struct RecommendationCard: View {
         .shadow(
             color: Color.primary(for: colorScheme).opacity(0.15), radius: 12,
             x: 0, y: 6)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Recommended: \(book.title), by \(book.authorNames?.first ?? "unknown author")")
     }
     private func loadCoverImage() {
         // Set loading state
@@ -1309,6 +1382,7 @@ struct TopSellingCard: View {
                     .shadow(
                         color: Color.primary(for: colorScheme).opacity(0.2),
                         radius: 8, x: 0, y: 4)
+                    .accessibilityHidden(true)
             } else {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(
@@ -1320,10 +1394,12 @@ struct TopSellingCard: View {
                             endPoint: .bottomTrailing
                         )
                     )
+                    .accessibilityHidden(true)
 
                 Image(systemName: "book.fill")
                     .font(.system(size: 20))
                     .foregroundColor(.white.opacity(0.7))
+                    .accessibilityHidden(true)
             }
 
             Text(book.title.count < 20 ? book.title + "\n" : book.title)
@@ -1331,6 +1407,7 @@ struct TopSellingCard: View {
                 .lineLimit(2)
                 .foregroundColor(Color.text(for: colorScheme))
                 .frame(width: 140)
+                .accessibilityAddTraits(.isHeader)
 
             Text(book.authorNames!.isEmpty ? "" : book.authorNames![0])
                 .font(.system(size: 12))
@@ -1345,6 +1422,8 @@ struct TopSellingCard: View {
         .shadow(
             color: Color.primary(for: colorScheme).opacity(0.1), radius: 8,
             x: 0, y: 4)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Top borrowing #\(index): \(book.title), by \(book.authorNames?.first ?? "unknown author")")
     }
     private func loadCoverImage() {
         // Set loading state
@@ -1451,6 +1530,7 @@ struct SearchBarUser: View {
                             alignment: .leading
                         )
                         .padding(.leading, 12)
+                        .accessibilityHidden(true)
 
                     if !text.isEmpty {
                         Button(action: {
@@ -1464,12 +1544,15 @@ struct SearchBarUser: View {
                                 )
                                 .padding(.trailing, 12)
                         }
+                        .accessibilityLabel("Clear search")
                     }
                 }
             )
             .shadow(
                 color: Color.primary(for: colorScheme).opacity(0.1), radius: 5,
                 x: 0, y: 2)
+            .accessibilityLabel("Search books, authors, or genres")
+            .accessibilityHint("Type to search for books")
         }
         .padding(.horizontal)
     }

@@ -122,14 +122,14 @@ struct RequestViewLibrarian: View {
                     .accessibilityLabel("Refresh requests")
                 }
             }
-            .sheet(isPresented: $showCamera) {
-                if let borrow = selectedBorrow {
-                    BarcodeScannerView(scannedCode: $scannedBarcode) { barcode in
-                        handleScannedBarcode(barcode, for: borrow)
-                    }
-                    .accessibilityElement(children: .combine)
-                }
-            }
+//            .sheet(isPresented: $showCamera) {
+//                if let borrow = selectedBorrow {
+//                    BarcodeScannerView(scannedCode: $scannedBarcode) { barcode in
+//                        handleScannedBarcode(barcode, for: borrow)
+//                    }
+//                    .accessibilityElement(children: .combine)
+//                }
+//            }
             .alert("Scan Result", isPresented: $showAlert) {
                 Button("OK", role: .cancel) { }
             } message: {
