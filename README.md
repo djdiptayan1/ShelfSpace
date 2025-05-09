@@ -72,7 +72,7 @@ The app follows a modular architecture with clear separation of concerns:
 
 - iOS 16.6+
 - Xcode 14.0+
-- Swift 5.0+
+- Swift 6.1+
 
 ## 🚀 Installation
 
