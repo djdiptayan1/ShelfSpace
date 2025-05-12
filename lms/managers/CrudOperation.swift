@@ -7,6 +7,7 @@
 import Foundation
 import Supabase
 import SwiftUI
+import Combine
 
 struct ErrorResponse: Decodable {
     let success: Bool
@@ -525,8 +526,13 @@ func createBook(book: BookModel) async throws -> BookModel {
     }
 }
 
-class BookHandler:CacheHandler<[BookModel]>{
-    static let shared = BookHandler(cacheFileName: "book_cache.json")
+class BookHandler {
+    static let shared = BookHandler()
+
+     let cacheHandler = CacheHandler<[BookModel]>(cacheFileName: "book_cache.json")
+     let socketHandler = SocketHandler<BookModel>()
+
+    // delegate or wrap functionality as needed
 }
 
 // Creating a class to manage book pagination state
@@ -561,7 +567,7 @@ func fetchBookFromId(_ bookId:UUID) async throws-> BookModel?{
         throw URLError(.badURL)
     }
     var request = URLRequest(url: url)
-    request.httpMethod = "POST"
+    request.httpMethod = "GET"
     request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
     request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
@@ -703,8 +709,8 @@ func fetchBooks(
 
                 // Consider instance-specific caching key if BookHandler is enhanced
                 // For now, it uses a default or passed key.
-                // Example: BookHandler.shared.cacheData(manager.books, forKey: "manager_\(ObjectIdentifier(manager).hashValue)_books")
-                BookHandler.shared.cacheData(manager.books)
+                // Example: BookHandler.shared.cacheHandler.cacheData(manager.books, forKey: "manager_\(ObjectIdentifier(manager).hashValue)_books")
+                BookHandler.shared.cacheHandler.cacheData(manager.books)
 
 
                 print("Successfully fetched \(processedBooks.count) books. Manager updated: Page \(manager.currentPage)/\(manager.totalPages), Total items in manager: \(manager.books.count)")
@@ -1355,8 +1361,35 @@ class ReviewHandler{
     }
 
 }
+class SocketHandler<T:Codable>{
+    let messagePublisher = PassthroughSubject<SocketMessage<T>, Never>()
+    private var cancellables = Set<AnyCancellable>()
+    
+    init() {
+            setupWebSocketSubscription()
+        }
 
-class BorrowHandler{
+    
+    private func setupWebSocketSubscription() {
+        WebSocketManager.shared.messagePublisher
+            .receive(on: DispatchQueue.global(qos: .default)) // Process updates on a background thread
+            .sink { [self] event in
+                do{
+                    print(T.self)
+                    let booksResponse = try JSONUtility.shared.decode(SocketMessage<T>.self, from: event)
+                    print(booksResponse)
+                    messagePublisher.send(booksResponse)
+                }
+                catch{
+                    print(error)
+                }
+            }
+            .store(in: &cancellables)
+        
+    }
+}
+
+class BorrowHandler:SocketHandler<BorrowModel>{
     static let shared = BorrowHandler()
     var borrowCache:[BorrowModel] = []
     

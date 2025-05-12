@@ -425,7 +425,7 @@ struct RequestViewLibrarian: View {
     }
     
     private func enrichBorrowModels(_ borrows: [BorrowModel]) async -> [BorrowModel] {
-        guard let cachedBooks = BookHandler.shared.getCachedData(), !cachedBooks.isEmpty else {
+        guard let cachedBooks = BookHandler.shared.cacheHandler.getCachedData(), !cachedBooks.isEmpty else {
             return borrows
         }
         var updatedBorrows = borrows
@@ -440,7 +440,7 @@ struct RequestViewLibrarian: View {
     }
     
     private func enrichReservationModels(_ reservations: [ReservationModel]) async -> [ReservationModel] {
-        guard let cachedBooks = BookHandler.shared.getCachedData(), !cachedBooks.isEmpty else {
+        guard let cachedBooks = BookHandler.shared.cacheHandler.getCachedData(), !cachedBooks.isEmpty else {
             return reservations
         }
         var updatedReservations = reservations

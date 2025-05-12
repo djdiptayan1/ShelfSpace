@@ -283,7 +283,7 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
         
         // Attempt to load from cache first, only if not refreshing.
         // This might load a partial or full list if previously cached.
-        if !isRefresh, let cached = BookHandler.shared.getCachedData() {
+        if !isRefresh, let cached = BookHandler.shared.cacheHandler.getCachedData() {
             if !cached.isEmpty {
                 self.allBooksForHomePage = cached
                 // Update derived arrays immediately from cache
@@ -313,7 +313,7 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
                 case .success(let booksFromManager):
                     self.allBooksForHomePage = booksFromManager // Update local state from manager
                     self.updateDerivedBookLists(from: booksFromManager)
-                    BookHandler.shared.cacheData(booksFromManager) // Cache all fetched books for home
+                    BookHandler.shared.cacheHandler.cacheData(booksFromManager) // Cache all fetched books for home
 
                     print("HomeView: Page \(self.homePaginationManager.currentPage)/\(self.homePaginationManager.totalPages) fetched. Total in manager: \(booksFromManager.count)")
 
@@ -354,8 +354,8 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
 
     private func loadBooks() async {
         isLoading = true
-        self.newArrivals = BookHandler.shared.getCachedData() ?? []
-        self.topSelling = BookHandler.shared.getCachedData() ?? []
+        self.newArrivals = BookHandler.shared.cacheHandler.getCachedData() ?? []
+        self.topSelling = BookHandler.shared.cacheHandler.getCachedData() ?? []
         fetchBooks(manager: homePaginationManager) { result in
             defer { isLoading = false }
 

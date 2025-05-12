@@ -1,7 +1,8 @@
 import SwiftUI
+import Combine
 
 struct BookDetailView: View {
-    let book: BookModel
+    @State var book: BookModel
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.presentationMode) var presentationMode
 
@@ -12,6 +13,8 @@ struct BookDetailView: View {
 
     // Add bookmark state
     @State private var isBookmarked: Bool = false
+    @State private var cancellables = Set<AnyCancellable>()
+
 
     // Add tab selection state
     @State private var selectedTab: TabSection = .details
@@ -234,6 +237,16 @@ struct BookDetailView: View {
                     let wishlist = try await getWishList()
                     isBookmarked = wishlist.contains(where: { $0.id == book.id })
                 }
+            }
+            .onAppear(){
+                BookHandler.shared.socketHandler.messagePublisher
+                    .receive(on: DispatchQueue.global(qos: .default))
+                    .sink { message in
+                        print(message.type)
+                        if message.type == "bookUpdated", message.data.id == book.id{
+                            book = message.data
+                        }
+                    }.store(in: &cancellables)
             }
             .onAppear(){
                 Task{

@@ -5,6 +5,7 @@
 //  Created by Navdeep Lakhlan on 25/04/25.
 //
 import SwiftUI
+import Combine
 
 // MARK: - Enums
 
@@ -49,6 +50,8 @@ struct BookCollectionuser: View {
     @State private var currentBooks: [BookModel] = []
     @State private var returnedBooks: [BookModel] = []
     @State private var policy: Policy?
+     @State private var cancellables = Set<AnyCancellable>()
+
 
     @State private var demoBooks: [BookModel] = [
         BookModel(
@@ -199,6 +202,22 @@ struct BookCollectionuser: View {
                         }
                     }
             )
+            .onAppear(){
+                BorrowHandler.shared.messagePublisher
+                    .receive(on: DispatchQueue.global(qos: .default))
+                    .sink { message in
+                        Task{
+                            var test = currentBooks
+                            if let book = try await fetchBookFromId(message.data.book_id){
+                                if message.type == "borrow"{
+                                    self.currentBooks.append(book)
+                
+                                }
+                            }
+                        }
+                }.store(in: &cancellables)
+
+            }
             .accessibilityElement(children: .contain)
         }
         .navigationViewStyle(StackNavigationViewStyle())
@@ -244,7 +263,7 @@ struct BookCollectionuser: View {
 
             var resolvedBooks: [UUID: BookModel] = [:]
 
-            if let cachedBooksArray = BookHandler.shared.getCachedData() {
+            if let cachedBooksArray = BookHandler.shared.cacheHandler.getCachedData() {
                 for book in cachedBooksArray {
                     if allUniqueBookIds.contains(book.id) {
                         resolvedBooks[book.id] = book

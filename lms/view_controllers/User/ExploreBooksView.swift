@@ -191,7 +191,7 @@ struct ExploreBooksView: View {
         
         // Try loading from cache first, but only if not refreshing
         if !isRefresh {
-            if let cachedBooks = BookHandler.shared.getCachedData() { // Use a view-specific key
+            if let cachedBooks = BookHandler.shared.cacheHandler.getCachedData() { // Use a view-specific key
                 if !cachedBooks.isEmpty {
                     self.allBooks = cachedBooks
                     // Manually set manager state if loading from cache, or let fetch override
@@ -458,7 +458,7 @@ struct ExploreBooksView_Previews: PreviewProvider {
     // private func loadBooks() async {
     //     isLoading = true
     //     // Load cached books first for instant display
-    //     allBooks = BookHandler.shared.getCachedData() ?? []
+    //     allBooks = BookHandler.shared.cacheHandler.getCachedData() ?? []
 
     //     fetchBooks { result in
     //         isLoading = false
