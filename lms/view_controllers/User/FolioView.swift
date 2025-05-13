@@ -14,6 +14,8 @@ enum AppFeature {
 
 struct FolioView: View {
     @State private var selectedFeature: AppFeature = .moodJourney
+    @ObservedObject var themeManager = ThemeManager.shared
+
 
     // Shared error handling state
     @State private var showErrorAlert = false

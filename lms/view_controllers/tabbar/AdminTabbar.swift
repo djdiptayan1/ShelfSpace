@@ -8,9 +8,9 @@ import SwiftUI
 import Foundation
 
 struct AdminTabbar: View {
+    @ObservedObject var themeManager = ThemeManager.shared
     @State private var selectedTab = 0
     @Environment(\.colorScheme) private var colorScheme
-    @StateObject private var themeManager = ThemeManager()
     @EnvironmentObject private var appState: AppState
     
     // Add state for managing presentation of login screen
@@ -56,6 +56,13 @@ struct AdminTabbar: View {
                         }
                         .accessibilityLabel("Policies Tab")
                         .accessibilityHint("Navigates to manage library policies")
+                    ThemeEditorView()
+                        .tag(4)
+                        .tabItem {
+                            Label("Theme", systemImage: "eyedropper")
+                        }
+                        .accessibilityLabel("Theme Tab")
+                        .accessibilityHint("Navigates to theme editor")
                 }
                 .accentColor(Color.primary(for: colorScheme))
                 .toolbarBackground(Color.TabbarBackground(for: colorScheme), for: .tabBar)

@@ -8,9 +8,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @EnvironmentObject private var themeManager: ThemeManager
-    @Environment(\.colorScheme) private var colorScheme
-    
+    @Environment(\.colorScheme) private var colorScheme    
     var body: some View {
         LoginView()
     }

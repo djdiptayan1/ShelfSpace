@@ -222,6 +222,8 @@
 import SwiftUI
 
 struct LibrarianTabbar: View {
+    @ObservedObject var themeManager = ThemeManager.shared
+
     @State private var selectedTab = 0
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var appState: AppState

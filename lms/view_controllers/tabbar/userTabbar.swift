@@ -9,9 +9,10 @@ import Foundation
 import SwiftUI
 
 struct UserTabbar: View {
+    @ObservedObject var themeManager = ThemeManager.shared
+
     @State private var selectedTab = 0
     @Environment(\.colorScheme) private var colorScheme
-    @StateObject private var themeManager = ThemeManager()
     @EnvironmentObject private var appState: AppState
 
     // Add state for managing presentation of login screen

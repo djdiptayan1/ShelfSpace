@@ -1949,3 +1949,112 @@ class AnalyticsHandler {
     }
 }
 
+class ThemeHandler {
+    static let shared = ThemeHandler()
+    
+    func getTheme() async throws -> ThemeData? {
+        do {
+            // Get authentication token and library ID
+            let libraryIdString = try KeychainManager.shared.getLibraryId()
+            guard let libraryId = UUID(uuidString: libraryIdString)else {
+                throw URLError(.badURL)
+            }
+            
+            // Create URL request
+            guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/theme/\(libraryId.uuidString)") else {
+                throw BookFetchError.invalidURL
+            }
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "GET"
+            request.addValue("application/json", forHTTPHeaderField: "accept")
+            
+            // Make the network request
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            // Check response status
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw BookFetchError.unknown
+            }
+            
+            guard (200 ... 299).contains(httpResponse.statusCode) else {
+                throw BookFetchError.serverError(httpResponse.statusCode)
+            }
+            
+            // Use the JSON utility to decode the response
+            let respose = try JSONUtility.shared.decode(ThemeData.self, from: data)
+            
+            // Process books if needed
+            if (200...299).contains(httpResponse.statusCode) {
+                print("✅ got theme")
+                return respose
+            } else {
+                do {
+                    let errorResponse = try JSONUtility.shared.decode(ErrorResponse.self, from: data)
+                    print("❌ Error getting theme: \(errorResponse.errorMessage)")
+                    throw NSError(domain: "ThemeFetchError", code: httpResponse.statusCode,
+                                  userInfo: [NSLocalizedDescriptionKey: errorResponse.errorMessage])
+                } catch {
+                    let rawErrorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+                    print("❌ Error fetching theme (raw): \(rawErrorMessage)")
+                    print("Underlying decoding error (if any):")
+                    error.logDetails()
+                    throw NSError(domain: "ThemeFetchError", code: httpResponse.statusCode,
+                                  userInfo: [NSLocalizedDescriptionKey: rawErrorMessage])
+                }
+            }
+        }
+    }
+   func updateTheme(_ theme:ThemeData) async throws{
+        guard let token = try? KeychainManager.shared.getToken() else {
+            throw URLError(.userAuthenticationRequired)
+        }
+        let libraryIdString = try KeychainManager.shared.getLibraryId()
+        guard let libraryId = UUID(uuidString: libraryIdString)else {
+            throw URLError(.badURL)
+        }
+        
+        // Create URL request
+        guard let url = URL(string: "https://www.anwinsharon.com/lms/api/v1/theme/\(libraryId.uuidString)") else {
+            throw BookFetchError.invalidURL
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+       let jsonData = try JSONUtility.shared.encode(theme)
+
+        
+        request.httpBody = jsonData
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+
+        print("\u{1F4E5} Server response status code: \(httpResponse.statusCode)")
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("\u{1F4E5} Server response body: \(responseString)")
+        }
+        if (200...299).contains(httpResponse.statusCode) {
+            print("✅ Updated theme")
+
+        } else {
+            do {
+                let errorResponse = try JSONUtility.shared.decode(ErrorResponse.self, from: data)
+                print("❌ Error updating theme: \(errorResponse.errorMessage)")
+                throw NSError(domain: "UpdateThemeError", code: httpResponse.statusCode,
+                              userInfo: [NSLocalizedDescriptionKey: errorResponse.errorMessage])
+            } catch {
+                let rawErrorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+                print("❌ Error updating theme (raw): \(rawErrorMessage)")
+                print("Underlying decoding error (if any):")
+                error.logDetails()
+                throw NSError(domain: "UpdateThemeError", code: httpResponse.statusCode,
+                              userInfo: [NSLocalizedDescriptionKey: rawErrorMessage])
+            }
+        }
+    }
+}
+

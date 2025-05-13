@@ -17,6 +17,8 @@ class AppState: ObservableObject {
     @Published var currentLibrary: Library?
     @Published var prefetchError: String?
     @Published var shouldShowLogin: Bool = false
+    @StateObject private var themeManager = ThemeManager.shared
+
     
     func resetState() {
         isLoggedIn = false
