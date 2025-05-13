@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 
 // MARK: - Data Models
 struct Book: Identifiable {
@@ -34,6 +35,8 @@ struct HomeView: View {
     @State private var isPrefetchingProfile = false
     @State private var prefetchError: String? = nil
     @State private var isLoading = false
+    @State private var cancellables = Set<AnyCancellable>()
+
 
     // Local copies for UI display, derived from homePaginationManager.books
     @State private var newArrivals: [BookModel] = []
@@ -262,6 +265,24 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
             }
             .accessibilityElement(children: .contain)
         }
+        .onAppear(){
+            BookHandler.shared.socketHandler.messagePublisher
+                .receive(on: DispatchQueue.global(qos: .default))
+                .sink { message in
+                    print(message.type)
+                    if message.type == "bookUpdated" {
+                        if let bookIndex = allBooksForHomePage.firstIndex(where: { $0.id == message.data.id }){
+                            allBooksForHomePage[bookIndex] = message.data
+                        }
+                        if let newArrivalIndex = newArrivals.firstIndex(where: { $0.id == message.data.id }){
+                            newArrivals[newArrivalIndex] = message.data
+                        }
+                        if let topSellingIndex = topSelling.firstIndex(where: {$0.id == message.data.id}){
+                            topSelling[topSellingIndex] = message.data
+                        }
+                    }
+                }.store(in: &cancellables)
+        }
         .foregroundColor(Color.text(for: colorScheme))
     }
 
@@ -344,12 +365,12 @@ let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
     }
 
     private func updateDerivedBookLists(from books: [BookModel]) {
-        self.newArrivals = Array(books.prefix(10))
+        self.newArrivals = Array(books)
         // The 'recommendations' computed property will automatically update
         // when 'allBooksForHomePage' (which is 'books' here) or 'prefetchedUser' changes.
         // So, no need to set self.recommendations here.
         // self.recommendations = Array(tempRecommendations.prefix(10)) // <--- REMOVE THIS LINE
-        self.topSelling = Array(books.suffix(10).reversed())
+        self.topSelling = Array(books.reversed())
     }
 
     private func loadBooks() async {
