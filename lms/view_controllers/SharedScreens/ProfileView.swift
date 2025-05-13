@@ -4,6 +4,8 @@ struct ProfileView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var appState: AppState
+    @ObservedObject var themeManager = ThemeManager.shared
+
     
     // Add parameters for prefetched data
     let prefetchedUser: User?
@@ -280,6 +282,8 @@ struct ProfileView: View {
 // MARK: - Supporting Views
 
 struct ProfileHeaderView: View {
+    @ObservedObject var themeManager = ThemeManager.shared
+
     let user: User
     @Environment(\.colorScheme) private var colorScheme
     
@@ -342,6 +346,8 @@ struct ProfileHeaderView: View {
 }
 
 struct InfoCardView<Content: View>: View {
+    @ObservedObject var themeManager = ThemeManager.shared
+
     let title: String
     let icon: String
     let content: () -> Content

@@ -3,6 +3,7 @@ import Combine
 
 struct BookDetailView: View {
     @State var book: BookModel
+    @ObservedObject var themeManager = ThemeManager.shared
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.presentationMode) var presentationMode
 

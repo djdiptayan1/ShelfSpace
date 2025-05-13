@@ -197,6 +197,8 @@ struct HomeViewAdmin: View {
 }
 
 struct ProfileIcon: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     @Binding var showProfileSheet: Bool
 
     var body: some View {
@@ -206,7 +208,7 @@ struct ProfileIcon: View {
             Image(systemName: "person.circle.fill")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .foregroundColor(.teal)
+                .foregroundColor( Color.primary(for: colorScheme).opacity(0.8))
                 .frame(width: 38, height: 38)
         }
         .padding([.trailing], 20)
@@ -218,6 +220,7 @@ struct ProfileIcon: View {
 }
 
 struct AdminAnalyticsView: View {
+    @Environment(\.colorScheme) private var colorScheme
     struct CirculationData: Identifiable {
         let id = UUID()
         let day: String
@@ -255,7 +258,7 @@ struct AdminAnalyticsView: View {
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
-                        .background(Color.teal)
+                        .background(Color.primary(for:colorScheme))
                         .foregroundColor(.white)
                         .cornerRadius(8)
                         .accessibilityLabel("Retry loading analytics")
@@ -279,7 +282,7 @@ struct AdminAnalyticsView: View {
                 HStack(spacing: 16) {
                     NavigationLink(destination: TotalFinesDetailView()) {
                         FineBox(title: "Total fines", value: "₹\(analytics.dashboard.fineReports.totalFines)")
-                            .foregroundColor(.teal)
+                            .foregroundColor(Color.primary(for:colorScheme))
                             .accessibilityLabel("Total fines, ₹\(analytics.dashboard.fineReports.totalFines)")
                             .accessibilityHint("Double tap to view details about total fines")
                     }
@@ -287,7 +290,7 @@ struct AdminAnalyticsView: View {
                     
                     NavigationLink(destination: OverdueBooksDetailView()) {
                         FineBox(title: "Overdue books", value: "\(analytics.dashboard.fineReports.overdueBooks)")
-                            .foregroundColor(.teal)
+                            .foregroundColor(Color.primary(for:colorScheme))
                             .accessibilityLabel("Overdue books, \(analytics.dashboard.fineReports.overdueBooks) books")
                             .accessibilityHint("Double tap to view details about overdue books")
                     }
@@ -314,13 +317,13 @@ struct AdminAnalyticsView: View {
                                     x: .value("Day", item.dayOfWeek),
                                     y: .value("Value", item.count)
                                 )
-                                .foregroundStyle(Color.teal)
+                                .foregroundStyle(Color.primary(for:colorScheme))
 
                                 PointMark(
                                     x: .value("Day", item.dayOfWeek),
                                     y: .value("Value", item.count)
                                 )
-                                .foregroundStyle(Color.teal)
+                                .foregroundStyle(Color.primary(for:colorScheme))
                             }
                         }
                         .frame(height: 150)
@@ -339,12 +342,12 @@ struct AdminAnalyticsView: View {
                                 Spacer()
                                 Text("\(mostBorrowedBook.borrowCount ?? 0) borrows")
                                     .font(.subheadline)
-                                    .foregroundColor(.teal)
+                                    .foregroundColor(Color.primary(for:colorScheme))
                             }
 
                             Text(mostBorrowedBook.title)
                                 .font(.headline)
-                                .foregroundColor(.teal)
+                                .foregroundColor(Color.primary(for:colorScheme))
 
                             HStack {
                                 if !mostBorrowedBook.authorIds.isEmpty {
@@ -362,7 +365,7 @@ struct AdminAnalyticsView: View {
                                         .font(.caption)
                                         .padding(.horizontal, 8)
                                         .padding(.vertical, 4)
-                                        .background(Color.teal.opacity(0.2))
+                                        .background(Color.primary(for:colorScheme).opacity(0.2))
                                         .cornerRadius(8)
                                 }
                             }
@@ -387,7 +390,7 @@ struct AdminAnalyticsView: View {
                 HStack(spacing: 16) {
                     NavigationLink(destination: TotalBooksDetailView()) {
                         CatalogInsightBox(title: "Total Books", value: "\(analytics.dashboard.catalogInsights.totalBooks)")
-                            .foregroundColor(.teal)
+                            .foregroundColor(Color.primary(for:colorScheme))
                             .accessibilityLabel("Total books, \(analytics.dashboard.catalogInsights.totalBooks) books")
                             .accessibilityHint("Double tap to view details about total books")
                     }
@@ -395,7 +398,7 @@ struct AdminAnalyticsView: View {
                     
                     NavigationLink(destination: NewBooksDetailView()) {
                         CatalogInsightBox(title: "New books", value: "\(analytics.dashboard.catalogInsights.newBooks)")
-                            .foregroundColor(.teal)
+                            .foregroundColor(Color.primary(for:colorScheme))
                             .accessibilityLabel("New books, \(analytics.dashboard.catalogInsights.newBooks) books")
                             .accessibilityHint("Double tap to view details about new books")
                     }
@@ -403,7 +406,7 @@ struct AdminAnalyticsView: View {
                     
                     NavigationLink(destination: BorrowedBooksDetailView()) {
                         CatalogInsightBox(title: "Borrowed", value: "\(analytics.dashboard.catalogInsights.borrowedBooks)")
-                            .foregroundColor(.teal)
+                            .foregroundColor(Color.primary(for:colorScheme))
                             .accessibilityLabel("Borrowed books, \(analytics.dashboard.catalogInsights.borrowedBooks) books")
                             .accessibilityHint("Double tap to view details about borrowed books")
                     }
@@ -504,6 +507,8 @@ struct AdminAnalyticsView: View {
 // MARK: - Reusable Components
 
 struct CirculationStatsDetailView: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     @State private var analyticsData: LibraryAnalytics?
     @State private var isLoading = true
     @State private var error: Error?
@@ -545,7 +550,7 @@ struct CirculationStatsDetailView: View {
                                 x: .value("Day", data.dayOfWeek),
                                 y: .value("Books", data.count)
                             )
-                            .foregroundStyle(Color.teal)
+                            .foregroundStyle(Color.primary(for:colorScheme))
                         }
                     }
                     .frame(height: 200)
@@ -562,7 +567,7 @@ struct CirculationStatsDetailView: View {
                                     Text(mostBorrowedBook.title)
                                         .font(.title3)
                                         .bold()
-                                        .foregroundColor(.teal)
+                                        .foregroundColor(Color.primary(for:colorScheme))
                                     
                                     if let isbn = mostBorrowedBook.isbn {
                                         Text("ISBN: \(isbn)")
@@ -584,7 +589,7 @@ struct CirculationStatsDetailView: View {
                                 VStack(alignment: .trailing, spacing: 8) {
                                     Text("\(mostBorrowedBook.borrowCount ?? 0) borrows")
                                         .font(.headline)
-                                        .foregroundColor(.teal)
+                                        .foregroundColor(Color.primary(for:colorScheme))
 
                                     if let genres = mostBorrowedBook.genreNames, !genres.isEmpty {
                                         ForEach(genres.prefix(2), id: \.self) { genre in
@@ -592,7 +597,7 @@ struct CirculationStatsDetailView: View {
                                                 .font(.caption)
                                                 .padding(.horizontal, 8)
                                                 .padding(.vertical, 4)
-                                                .background(Color.teal.opacity(0.2))
+                                                .background(Color.primary(for:colorScheme).opacity(0.2))
                                                 .cornerRadius(8)
                                         }
                                     }
@@ -663,6 +668,8 @@ struct CirculationStatsDetailView: View {
 }
 
 struct TotalBooksDetailView: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     @State private var analyticsData: LibraryAnalytics?
     @State private var isLoading = true
     @State private var error: Error?
@@ -746,7 +753,7 @@ struct TotalBooksDetailView: View {
                                     x: .value("Month", data.day),
                                     y: .value("Books", data.value)
                                 )
-                                .foregroundStyle(Color.teal)
+                                .foregroundStyle(Color.primary(for:colorScheme))
                             }
                         }
                         .frame(height: 200)
@@ -897,6 +904,7 @@ struct NewBooksDetailView: View {
 }
 
 struct NewBookItemView: View {
+    @Environment(\.colorScheme) private var colorScheme
     let title: String
     let author: String
     let category: String
@@ -905,7 +913,7 @@ struct NewBookItemView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.headline)
-                .foregroundColor(.teal)
+                .foregroundColor(Color.primary(for:colorScheme))
                 .lineLimit(2)
 
             HStack {
@@ -920,7 +928,7 @@ struct NewBookItemView: View {
                     .font(.caption)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(Color.teal.opacity(0.2))
+                    .background(Color.primary(for:colorScheme).opacity(0.2))
                     .cornerRadius(8)
             }
         }
@@ -934,6 +942,8 @@ struct NewBookItemView: View {
 }
 
 struct BorrowedBooksDetailView: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     @State private var analyticsData: LibraryAnalytics?
     @State private var isLoading = true
     @State private var error: Error?
@@ -1009,7 +1019,7 @@ struct BorrowedBooksDetailView: View {
                                     x: .value("Month", data.day),
                                     y: .value("Books", data.value)
                                 )
-                                .foregroundStyle(Color.teal)
+                                .foregroundStyle(Color.primary(for: colorScheme))
                             }
                         }
                         .frame(height: 200)
@@ -1047,6 +1057,7 @@ struct BorrowedBooksDetailView: View {
 }
 
 struct TotalFinesDetailView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @State private var analyticsData: LibraryAnalytics?
     @State private var isLoading = true
     @State private var error: Error?
@@ -1076,7 +1087,7 @@ struct TotalFinesDetailView: View {
                     .accessibilityHint("Attempts to reload the data")
                 }
             } else if let analytics = analyticsData {
-                DetailViewTemplate(title: "Total Fines", value: "₹\(analytics.details.fines.totalFines)", color: .teal) {
+                DetailViewTemplate(title: "Total Fines", value: "₹\(analytics.details.fines.totalFines)", color: Color.primary(for:colorScheme)) {
                     SectionHeaderView(title: "Fine Breakdown")
 
                     VStack(spacing: 12) {
@@ -1104,7 +1115,7 @@ struct TotalFinesDetailView: View {
                                     x: .value("Month", data.day),
                                     y: .value("Fines (₹)", data.value)
                                 )
-                                .foregroundStyle(Color.teal)
+                                .foregroundStyle(Color.primary(for: colorScheme))
                             }
                         }
                         .frame(height: 200)
@@ -1142,6 +1153,8 @@ struct TotalFinesDetailView: View {
 }
 
 struct OverdueBooksDetailView: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     @State private var analyticsData: LibraryAnalytics?
     @State private var isLoading = true
     @State private var error: Error?
@@ -1171,7 +1184,7 @@ struct OverdueBooksDetailView: View {
                     .accessibilityHint("Attempts to reload the data")
                 }
             } else if let analytics = analyticsData {
-                DetailViewTemplate(title: "Overdue Books", value: "\(analytics.details.overdueBooks.total)", color: .teal) {
+                DetailViewTemplate(title: "Overdue Books", value: "\(analytics.details.overdueBooks.total)", color: Color.primary(for:colorScheme)) {
                     SectionHeaderView(title: "Overdue Breakdown")
 
                     VStack(spacing: 12) {
@@ -1255,6 +1268,7 @@ struct FineBox: View {
         VStack(spacing: 4) {
             Text(value)
                 .font(.title3).bold()
+                
             Text(title)
                 .font(.footnote)
         }
@@ -1268,6 +1282,9 @@ struct FineBox: View {
 }
 
 struct DetailViewTemplate<Content: View>: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    
     let title: String
     let value: String
     let color: Color
@@ -1307,6 +1324,8 @@ struct DetailViewTemplate<Content: View>: View {
 }
 
 struct DetailHeaderBox: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     let title: String
     let value: String
     let color: Color
@@ -1348,6 +1367,8 @@ struct SectionHeaderView: View {
 }
 
 struct DetailItemView: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     let title: String
     let value: String
     let percentage: String?
@@ -1369,7 +1390,7 @@ struct DetailItemView: View {
             HStack(spacing: 12) {
                 Text(value)
                     .font(.headline)
-                    .foregroundColor(.teal)
+                    .foregroundColor(Color.primary(for:colorScheme))
 
                 if let percentage = percentage {
                     Text(percentage)
