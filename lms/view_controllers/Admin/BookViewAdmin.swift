@@ -418,8 +418,8 @@ struct CategoryButton: View {
                 .background(
                     Capsule()
                         .fill(selectedCategory == category ?
-                            (colorScheme == .dark ? Color.primary(for: colorScheme).opacity(0.3) : Color.secondary(for: colorScheme).opacity(0.15)) :
-                            (colorScheme == .dark ? Color(hex: ColorConstants.darkBackground1) : Color(hex: ColorConstants.lightBackground1)))
+                            ( Color.primary(for: colorScheme).opacity(0.3)) :
+                                (Color.background(for: colorScheme)))
                 )
                 .overlay(
                     Capsule()

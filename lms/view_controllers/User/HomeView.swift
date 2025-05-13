@@ -20,6 +20,8 @@ struct Book: Identifiable {
 
 // MARK: - Main View
 struct HomeView: View {
+    @ObservedObject var themeManager = ThemeManager.shared
+
     // MARK: - Properties
 
     @StateObject private var homePaginationManager = BookPaginationManager()

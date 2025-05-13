@@ -8,6 +8,8 @@ import SwiftUI
 import Combine
 
 struct ExploreBooksView: View {
+    @ObservedObject var themeManager = ThemeManager.shared
+
     // MARK: - Properties
 
     @StateObject private var explorePaginationManager = BookPaginationManager()
