@@ -5,6 +5,7 @@
 //  Created by Navdeep Lakhlan on 03/05/25.
 //
 import SwiftUI
+import Combine
 
 struct ExploreBooksView: View {
     // MARK: - Properties
@@ -21,6 +22,7 @@ struct ExploreBooksView: View {
     @State private var errorMessage: String?
     @State private var showError = false
     @State private var isLoadingInitial = false
+    @State private var cancellables = Set<AnyCancellable>()
 
     // Updated to use BookGenre structure from HomeView
     let categories = BookGenre.fictionGenres + BookGenre.nonFictionGenres
@@ -175,6 +177,17 @@ struct ExploreBooksView: View {
             print("ExploreBooksView: Refresh triggered.")
             await loadInitialBooks(isRefresh: true)
         }
+        .onAppear(){
+            BookHandler.shared.socketHandler.messagePublisher
+                .receive(on: DispatchQueue.global(qos: .default))
+                .sink { message in
+                    print(message.type)
+                    if message.type == "bookUpdated", let index = allBooks.firstIndex(where: {$0.id == message.data.id}){
+                        allBooks[index] = message.data
+                    }
+                }.store(in: &cancellables)
+        }
+        
     }
 
     // MARK: - Helper Methods
