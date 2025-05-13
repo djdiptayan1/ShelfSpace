@@ -29,6 +29,7 @@ class WebSocketManager: NSObject, URLSessionWebSocketDelegate, ObservableObject 
 
     private var jwtToken: String? // Store your JWT here (fetch from Keychain)
     private var serverURL: URL! // e.g., URL(string: "wss://yourserver.com/socket")!
+    private var libraryId: String?
 
     // Keep track if authentication message has been sent and acknowledged
     private var isAuthenticated = false
@@ -42,17 +43,22 @@ class WebSocketManager: NSObject, URLSessionWebSocketDelegate, ObservableObject 
         setupWebSocket()
     }
 
-    func configure(url: URL, token: String?) {
+    func configure(url: URL, token: String?,libraryId: String?) {
         self.serverURL = url
         self.jwtToken = token
+        self.libraryId = libraryId
     }
 
     // MARK: - Connection Management
     func setupWebSocket() {
         do{
-            guard let url = URL(string: "ws://20.193.252.127:8080/socket") else { return }
+            let libraryIdString = try KeychainManager.shared.getLibraryId()
+            guard let libraryId = UUID(uuidString: libraryIdString)else {
+                throw URLError(.badURL)
+            }
+            guard let url = URL(string: "ws://20.193.252.127:8080/socket?libraryId=\(libraryId.uuidString)") else { return }
             let token = try KeychainManager.shared.getToken() // Fetch your stored JWT
-            self.configure(url: url, token: token)
+            self.configure(url: url, token: token,libraryId: libraryId.uuidString)
             self.connect()
         } catch {
             print("Error setting up WebSocket: \(error)")

@@ -10,29 +10,32 @@ import SwiftUI
 
 // MARK: - Color Extensions
 extension Color {
+    // Access the shared ThemeManager
+    private static var theme: ThemeData { ThemeManager.shared.currentTheme }
+
     // Theme-aware colors
     static func text(for colorScheme: ColorScheme) -> Color {
-        colorScheme == .dark ? Color(hex: ColorConstants.darkText) : Color(hex: ColorConstants.lightText)
+        colorScheme == .dark ? Color(hex: theme.darkText) : Color(hex: theme.lightText)
     }
-    
+
     static func background(for colorScheme: ColorScheme) -> Color {
-        colorScheme == .dark ? Color(hex: ColorConstants.darkBackground1) : Color(hex: ColorConstants.lightBackground1)
+        colorScheme == .dark ? Color(hex: theme.darkBackground1) : Color(hex: theme.lightBackground1)
     }
-    
+
     static func TabbarBackground(for colorScheme: ColorScheme) -> Color {
-        colorScheme == .dark ? Color(hex: ColorConstants.darkBackground) : Color(hex: ColorConstants.lightBackground)
+        colorScheme == .dark ? Color(hex: theme.darkBackground) : Color(hex: theme.lightBackground)
     }
-    
+
     static func primary(for colorScheme: ColorScheme) -> Color {
-        colorScheme == .dark ? Color(hex: ColorConstants.darkPrimary) : Color(hex: ColorConstants.lightPrimary)
+        colorScheme == .dark ? Color(hex: theme.darkPrimary) : Color(hex: theme.lightPrimary)
     }
-    
+
     static func secondary(for colorScheme: ColorScheme) -> Color {
-        colorScheme == .dark ? Color(hex: ColorConstants.darkSecondary) : Color(hex: ColorConstants.lightSecondary)
+        colorScheme == .dark ? Color(hex: theme.darkSecondary) : Color(hex: theme.lightSecondary)
     }
-    
+
     static func accent(for colorScheme: ColorScheme) -> Color {
-        colorScheme == .dark ? Color(hex: ColorConstants.darkAccent) : Color(hex: ColorConstants.lightAccent)
+        colorScheme == .dark ? Color(hex: theme.darkAccent) : Color(hex: theme.lightAccent)
     }
 }
 

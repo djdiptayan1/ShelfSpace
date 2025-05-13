@@ -9,6 +9,7 @@ import Foundation
 import SwiftUI
 
 struct ReusableBackground: View {
+    @ObservedObject var themeManager = ThemeManager.shared
     let colorScheme: ColorScheme
 
     var body: some View {
