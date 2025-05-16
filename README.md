@@ -125,6 +125,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - **Diptayan Jash** - [djdiptayan](https://github.com/djdiptayan)
 - **Anwin Sharon** - [Anwin](https://github.com/darkdeathoriginal)
 - **Navdeep Lakhlan** - [Navdeep](https://github.com/Navdeep-Lakhlan)
+- **Satvik Sawhney** - [sawhneysatvik](https://github.com/SawhneySatvik)
 - **Nayaki Maneeth Reddy** - [maneethreddy](https://github.com/maneethreddy)
 - **Rakshith** - [R-Langer77](https://github.com/R-Langer77)
 - **Vansh Vineet Bhatia** - [v4vanshh](https://github.com/v4vanshh)
