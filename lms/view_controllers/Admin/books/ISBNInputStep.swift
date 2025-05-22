@@ -375,7 +375,31 @@ struct ISBNInputStep: View {
                 // Update book data with fetched info
                 bookData.bookInfo = info
                 bookData.bookTitle = info.title
-                bookData.description = info.description ?? ""
+                
+                // Check if description is empty, if so, generate one with Gemini
+                if info.description == nil ||
+                    info.description?.isEmpty == true ||
+                    info.description == "N/A" ||
+                    (info.description?.split(separator: " ").count ?? 0) < 20 {
+                    print("\n⚠️ Book description is missing. Generating one with Gemini...")
+                    do {
+                        let generatedDescription = try await FolioService.shared.generateBookDescription(
+                            title: info.title,
+                            authors: info.authors,
+                            publisher: info.publisher,
+                            publishedDateString: info.publishedDate,
+                            categories: info.categories
+                        )
+                        print("✅ Generated book description with Gemini: \(generatedDescription)")
+                        bookData.description = generatedDescription
+                    } catch {
+                        print("❌ Error generating book description: \(error.localizedDescription)")
+                        bookData.description = ""
+                    }
+                } else {
+                    bookData.description = info.description ?? ""
+                }
+                
                 bookData.authorNames = info.authors
                 bookData.publisher = info.publisher ?? ""
                 bookData.pageCount = info.pageCount.map { String($0) } ?? ""
