@@ -10,6 +10,8 @@ import SwiftUI
 struct ThemeEditorView: View {
     // Observe the shared ThemeManager
     @ObservedObject var themeManager = ThemeManager.shared
+    
+    @Environment(\.colorScheme) private var colorScheme
 
     // Local state for editing. Initialize with current theme.
     @State private var editableTheme: ThemeData
@@ -52,60 +54,69 @@ struct ThemeEditorView: View {
 
     var body: some View {
         NavigationView {
-            Form {
-                Section(header: Text("Dark Mode Colors")) {
-                    colorEditRow(label: "Text", hexString: $editableTheme.darkText, colorSelection: $darkTextColor)
-                    colorEditRow(label: "Primary Background", hexString: $editableTheme.darkBackground1, colorSelection: $darkBackground1Color)
-                    colorEditRow(label: "Tabbar Background", hexString: $editableTheme.darkBackground, colorSelection: $darkTabbarBackgroundColor)
-                    colorEditRow(label: "Primary", hexString: $editableTheme.darkPrimary, colorSelection: $darkPrimaryColor)
-                    colorEditRow(label: "Secondary", hexString: $editableTheme.darkSecondary, colorSelection: $darkSecondaryColor)
-                    colorEditRow(label: "Accent", hexString: $editableTheme.darkAccent, colorSelection: $darkAccentColor)
-                }
-
-                Section(header: Text("Light Mode Colors")) {
-                    colorEditRow(label: "Text", hexString: $editableTheme.lightText, colorSelection: $lightTextColor)
-                    colorEditRow(label: "Primary Background", hexString: $editableTheme.lightBackground1, colorSelection: $lightBackground1Color)
-                    colorEditRow(label: "Tabbar Background", hexString: $editableTheme.lightBackground, colorSelection: $lightTabbarBackgroundColor)
-                    colorEditRow(label: "Primary", hexString: $editableTheme.lightPrimary, colorSelection: $lightPrimaryColor)
-                    colorEditRow(label: "Secondary", hexString: $editableTheme.lightSecondary, colorSelection: $lightSecondaryColor)
-                    colorEditRow(label: "Accent", hexString: $editableTheme.lightAccent, colorSelection: $lightAccentColor)
-                }
-
-                Section {
-                    Button("Save Theme") {
-                        saveTheme()
+            ZStack {
+                ReusableBackground(colorScheme: colorScheme)
+                    .ignoresSafeArea(.all) // Ensure background covers entire screen
+                
+                Form {
+                    Section(header: Text("Dark Mode Colors")) {
+                        colorEditRow(label: "Text", hexString: $editableTheme.darkText, colorSelection: $darkTextColor)
+                        colorEditRow(label: "Primary Background", hexString: $editableTheme.darkBackground1, colorSelection: $darkBackground1Color)
+                        colorEditRow(label: "Tabbar Background", hexString: $editableTheme.darkBackground, colorSelection: $darkTabbarBackgroundColor)
+                        colorEditRow(label: "Primary", hexString: $editableTheme.darkPrimary, colorSelection: $darkPrimaryColor)
+                        colorEditRow(label: "Secondary", hexString: $editableTheme.darkSecondary, colorSelection: $darkSecondaryColor)
+                        colorEditRow(label: "Accent", hexString: $editableTheme.darkAccent, colorSelection: $darkAccentColor)
                     }
-                    .disabled(!hasChanges) // Disable if no changes
-
-                    Button("Reset to Defaults") {
-                        resetToDefaults()
+                    
+                    Section(header: Text("Light Mode Colors")) {
+                        colorEditRow(label: "Text", hexString: $editableTheme.lightText, colorSelection: $lightTextColor)
+                        colorEditRow(label: "Primary Background", hexString: $editableTheme.lightBackground1, colorSelection: $lightBackground1Color)
+                        colorEditRow(label: "Tabbar Background", hexString: $editableTheme.lightBackground, colorSelection: $lightTabbarBackgroundColor)
+                        colorEditRow(label: "Primary", hexString: $editableTheme.lightPrimary, colorSelection: $lightPrimaryColor)
+                        colorEditRow(label: "Secondary", hexString: $editableTheme.lightSecondary, colorSelection: $lightSecondaryColor)
+                        colorEditRow(label: "Accent", hexString: $editableTheme.lightAccent, colorSelection: $lightAccentColor)
                     }
-                    .foregroundColor(.orange)
-
-                    Button(action: {
-                        fetchFromServer()
-                    }) {
-                        HStack {
-                            Text("Fetch from Server")
-                            if isFetching {
-                                Spacer()
-                                ProgressView().scaleEffect(0.7)
+                    
+                    Section {
+                        Button("Reset to Defaults") {
+                            resetToDefaults()
+                        }
+                        .foregroundColor(.orange)
+                        
+                        Button(action: {
+                            fetchFromServer()
+                        }) {
+                            HStack {
+                                Text("Fetch from Server")
+                                if isFetching {
+                                    Spacer()
+                                    ProgressView().scaleEffect(0.7)
+                                }
                             }
                         }
+                        .foregroundColor(.blue)
+                        .disabled(isFetching)
                     }
-                    .foregroundColor(.blue)
-                    .disabled(isFetching)
                 }
+                .scrollContentBackground(.hidden) // Hide default form background to show custom background
             }
             .navigationTitle("Theme Editor")
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .navigationBarLeading) {
                     if hasChanges {
                         Button("Discard") {
                             discardChanges()
                         }
                         .foregroundColor(.red)
                     }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        saveTheme()
+                    }
+                    .disabled(!hasChanges) // Disable if no changes
+                    .fontWeight(hasChanges ? .semibold : .regular)
                 }
             }
             .alert("Theme Saved", isPresented: $showSaveConfirmation) {
