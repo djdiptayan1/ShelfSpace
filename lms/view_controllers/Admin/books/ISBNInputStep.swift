@@ -376,7 +376,7 @@ struct ISBNInputStep: View {
                 bookData.bookInfo = info
                 bookData.bookTitle = info.title
                 
-                // Check if description is empty, if so, generate one with Gemini
+                // Check if description is empty, generate one with Gemini
                 if info.description == nil ||
                     info.description?.isEmpty == true ||
                     info.description == "N/A" ||
