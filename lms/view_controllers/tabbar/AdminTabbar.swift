@@ -52,17 +52,17 @@ struct AdminTabbar: View {
                     ManagePoliciesAdmin()
                         .tag(3)
                         .tabItem {
-                            Label("Policies", systemImage: "document.badge.gearshape.fill")
+                            Label("Manage", systemImage: "document.badge.gearshape.fill")
                         }
-                        .accessibilityLabel("Policies Tab")
+                        .accessibilityLabel("management Tab")
                         .accessibilityHint("Navigates to manage library policies")
-                    ThemeEditorView()
-                        .tag(4)
-                        .tabItem {
-                            Label("Theme", systemImage: "eyedropper")
-                        }
-                        .accessibilityLabel("Theme Tab")
-                        .accessibilityHint("Navigates to theme editor")
+//                    ThemeEditorView()
+//                        .tag(4)
+//                        .tabItem {
+//                            Label("Theme", systemImage: "eyedropper")
+//                        }
+//                        .accessibilityLabel("Theme Tab")
+//                        .accessibilityHint("Navigates to theme editor")
                 }
                 .accentColor(Color.primary(for: colorScheme))
                 .toolbarBackground(Color.TabbarBackground(for: colorScheme), for: .tabBar)
