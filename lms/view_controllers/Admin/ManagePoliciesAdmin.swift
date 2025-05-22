@@ -9,6 +9,7 @@ struct ManagePoliciesAdmin: View {
         "Reservation Policy",
         "Borrowing Policy",
 //        "Privacy Policy"
+        "Theme Settings"
     ]
     
     @Environment(\.colorScheme) private var colorScheme
@@ -16,6 +17,8 @@ struct ManagePoliciesAdmin: View {
     @State private var showingFineSettings = false
     @State private var showingReservationSettings = false
     @State private var showingBorrowingSettings = false
+    @State private var showingPrivacySettings = false
+    @State private var showingThemeSettings = false
     @State private var showingLoadingError = false
     
     // Initialize with a default library ID
@@ -32,7 +35,7 @@ struct ManagePoliciesAdmin: View {
                 
                 // Content layer
                 VStack(spacing: 16) { // Increased spacing between items
-                    Text("Library Policies")
+                    Text("Library Management")
                         .font(.system(size: 28, weight: .bold, design: .rounded)) // Increased heading size
                         .foregroundColor(Color.text(for: colorScheme))
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -71,7 +74,17 @@ struct ManagePoliciesAdmin: View {
                                 }
                                 .accessibilityLabel("Open Borrowing Policy settings")
                                 .accessibilityAddTraits(.isButton)
-                            } else {
+                            } else if policy == "Theme Settings" {
+                                Button(action: {
+                                    showingThemeSettings = true
+                                }) {
+                                    policyItemView(title: policy)
+                                
+                                }
+                                .accessibilityLabel("Open Theme Settings")
+                                .accessibilityAddTraits(.isButton)
+                            }
+                            else {
                                 // For Privacy Policy, use a regular Button as placeholder
                                 Button(action: {
                                     // Action for privacy policy
@@ -106,6 +119,10 @@ struct ManagePoliciesAdmin: View {
             }
             .sheet(isPresented: $showingBorrowingSettings) {
                 BorrowingSettingsView()
+                    .environmentObject(viewModel)
+            }
+            .sheet(isPresented: $showingThemeSettings) {
+                ThemeEditorView()
                     .environmentObject(viewModel)
             }
             .alert(isPresented: $showingLoadingError) {
