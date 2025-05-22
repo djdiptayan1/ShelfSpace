@@ -1,7 +1,6 @@
 import Foundation
 import SwiftUI
 
-
 class FolioService {
     static let shared = FolioService()
     private let apiKey = APIConfig.apiKey
@@ -54,6 +53,7 @@ class FolioService {
             return fallbackSubChoices(for: primaryMood)
         }
     }
+
     func generateBookSuggestions(primaryMood: String, subChoice: String) async throws -> [BookSuggestion] {
         let prompt = """
         You are a helpful AI assistant for a library app. Based on the primary mood "\(primaryMood)" and sub-theme "\(subChoice)", suggest 3 book titles.
@@ -94,12 +94,12 @@ class FolioService {
                 print("Successfully recovered \(regexParsedSuggestions.count) book suggestions via regex.")
                 return regexParsedSuggestions
             }
-            
+
             print("All parsing attempts failed for BookSuggestions. Falling back to dummy data.")
             return fallbackBookSuggestions(for: primaryMood, subChoice: subChoice)
         }
     }
-    
+
 //    // Regex parser for book suggestions as a fallback
 //    private func parseBookSuggestionsWithRegex(_ jsonString: String) -> [BookSuggestion] {
 //        print("Attempting specialized regex fix for book suggestions JSON (with author)")
@@ -128,7 +128,6 @@ class FolioService {
 //        }
 //        return fixedArray
 //    }
-
 
     // Handle book inquiries through chat
     func processBookInquiry(query: String) async throws -> String {
@@ -175,9 +174,9 @@ class FolioService {
             print("Parsing error for Chat response. Original error: \(error)")
             print("Problematic JSON string for Chat was: '\(cleanedJsonResponseString)'")
             if !cleanedJsonResponseString.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("{") &&
-               !cleanedJsonResponseString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                 print("Chat response was not JSON, returning cleaned text directly as a fallback.")
-                 return cleanedJsonResponseString
+                !cleanedJsonResponseString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                print("Chat response was not JSON, returning cleaned text directly as a fallback.")
+                return cleanedJsonResponseString
             }
             throw GeminiServiceError.parsingError("Failed to parse chat JSON response: \(error.localizedDescription)")
         }
@@ -227,7 +226,7 @@ class FolioService {
         let responseBodyString = String(data: data, encoding: .utf8) ?? "Could not decode response body"
         print("--- Gemini API Full Response (Status: \(httpResponse.statusCode)) ---\n\(responseBodyString)\n---------------------------------")
 
-        if !(200...299).contains(httpResponse.statusCode) {
+        if !(200 ... 299).contains(httpResponse.statusCode) {
             if let errorJson = try? JSONDecoder().decode(GeminiErrorResponse.self, from: data) {
                 throw GeminiServiceError.apiError("API Error \(httpResponse.statusCode): \(errorJson.error.message) (Status: \(errorJson.error.status), Code: \(errorJson.error.code))")
             }
@@ -248,13 +247,13 @@ class FolioService {
             print("Detailed DecodingError context: \(decodingError.localizedDescription)")
             // Provide more context for debugging
             switch decodingError {
-            case .typeMismatch(let type, let context):
+            case let .typeMismatch(type, context):
                 print("Type mismatch for \(type) in \(context.codingPath): \(context.debugDescription)")
-            case .valueNotFound(let type, let context):
+            case let .valueNotFound(type, context):
                 print("Value not found for \(type) in \(context.codingPath): \(context.debugDescription)")
-            case .keyNotFound(let key, let context):
+            case let .keyNotFound(key, context):
                 print("Key not found: \(key) in \(context.codingPath): \(context.debugDescription)")
-            case .dataCorrupted(let context):
+            case let .dataCorrupted(context):
                 print("Data corrupted in \(context.codingPath): \(context.debugDescription)")
             @unknown default:
                 print("Unknown decoding error.")
@@ -263,6 +262,68 @@ class FolioService {
         } catch {
             print("An unexpected error occurred while parsing Gemini's main response: \(error)")
             throw GeminiServiceError.parsingError("Unexpected error parsing Gemini's main response: \(error.localizedDescription).")
+        }
+    }
+
+    private struct GeminiDescriptionResponse: Codable {
+        let description: String
+    }
+
+    func generateBookDescription(title: String, authors: [String], publisher: String?, publishedDateString: String?, categories: [String]?) async throws -> String {
+        var promptDetails = "Title: \(title)\\nAuthors: \(authors.joined(separator: ", "))"
+        if let pub = publisher, !pub.isEmpty {
+            promptDetails += "\\nPublisher: \(pub)"
+        }
+        if let dateStr = publishedDateString, !dateStr.isEmpty {
+            promptDetails += "\\nPublished: \(dateStr)" // Use the string directly
+        }
+        if let cats = categories, !cats.isEmpty {
+            promptDetails += "\\nCategories/Genres: \(cats.joined(separator: ", "))"
+        }
+
+        let prompt = """
+        You are an AI assistant. Based on the following book details, generate a concise and engaging book description (around 2-4 sentences, approximately 50-80 words).
+        The description should sound like a blurb you might find on a book's back cover or an online bookstore.
+        Focus on being enticing and giving a sense of the book's core.
+        Avoid phrases like "This book is about...", "The description for this book is...", or "Based on the details provided...". Just provide the description itself.
+
+        Book Details:
+        \(promptDetails)
+
+        Your entire response MUST be a valid JSON object with a single key "description" whose value is the generated description string.
+        The description string itself should not contain complex markdown, but simple newlines (\\n) are acceptable if natural for a blurb.
+
+        Example of your JSON output:
+        {
+            "description": "In a realm fractured by ancient magic, a reluctant hero must embrace a forgotten destiny. Faced with shadowy adversaries and perilous quests, their journey will determine the fate of worlds. A tale of courage, sacrifice, and the enduring power of hope."
+        }
+        Do NOT include any text, explanations, or markdown formatting outside of the JSON object itself.
+        """
+
+        let rawJsonResponseString = try await sendRequest(prompt: prompt, expectedMimeType: "application/json")
+        print("--- Raw response for BookDescription ---\n\(rawJsonResponseString)\n---------------------------------")
+        let cleanedJsonResponseString = cleanJsonResponseString(rawJsonResponseString)
+        print("--- Cleaned response for BookDescription ---\n\(cleanedJsonResponseString)\n---------------------------------")
+
+        do {
+            let decoder = JSONDecoder()
+            guard let jsonData = cleanedJsonResponseString.data(using: .utf8) else {
+                print("Error converting cleaned JSON string to Data for BookDescription. Cleaned string was: '\(cleanedJsonResponseString)'")
+                throw GeminiServiceError.invalidData
+            }
+            let response = try decoder.decode(GeminiDescriptionResponse.self, from: jsonData)
+            return response.description
+        } catch {
+            print("Parsing error for BookDescription. Original error: \(error)")
+            print("Problematic JSON string for BookDescription was: '\(cleanedJsonResponseString)'")
+            // Fallback: if the response is plain text and looks plausible as a description, use it.
+            if !cleanedJsonResponseString.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("{") &&
+                !cleanedJsonResponseString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+                cleanedJsonResponseString.count > 20 { // Arbitrary length to guess it's a description
+                print("BookDescription response was not JSON, returning cleaned text directly as a fallback description.")
+                return cleanedJsonResponseString.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            throw GeminiServiceError.parsingError("Failed to parse book description JSON response: \(error.localizedDescription)")
         }
     }
 
