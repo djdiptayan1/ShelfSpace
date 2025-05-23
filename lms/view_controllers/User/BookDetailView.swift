@@ -1,5 +1,7 @@
-import SwiftUI
 import Combine
+import Foundation
+import SwiftUI
+import UIKit
 
 struct BookDetailView: View {
     @State var book: BookModel
@@ -16,27 +18,34 @@ struct BookDetailView: View {
     @State private var isBookmarked: Bool = false
     @State private var cancellables = Set<AnyCancellable>()
 
-
     // Add tab selection state
     @State private var selectedTab: TabSection = .details
 
     enum TabSection: String, CaseIterable {
         case details = "Description"
         case reviews = "Reviews"
+        case bookClub = "Book Club"
     }
     @State private var loadedImage: UIImage? = nil
     @State private var isLoading: Bool = false
     @State private var loadError: Bool = false
-    @State private var user:User?
-    
+    @State private var user: User?
+
     @State private var isBorrowLoading: Bool = false
-    @State private var borrow:BorrowModel?
-    @State private var reservation:ReservationModel?
+    @State private var borrow: BorrowModel?
+    @State private var reservation: ReservationModel?
     @State private var isBorrowed = false
     @State private var isReserved = false
 
+    // Book Club insights
+    @State private var bookClubQuestions: [String] = []
+    @State private var bookClubThemes: [String] = []
+    @State private var bookClubFacts: [String] = []
+    @State private var isLoadingBookClubInsights: Bool = false
+    @State private var bookClubError: String? = nil
+
     var body: some View {
-        
+
         ZStack(alignment: .top) {
             // Using the reusable background instead of hard-coded color
             ReusableBackground(colorScheme: colorScheme)
@@ -67,23 +76,21 @@ struct BookDetailView: View {
 
                     // Bookmark button moved to navigation bar
                     Button(action: {
-                        Task{
-                            if(!isBookmarked){
+                        Task {
+                            if !isBookmarked {
                                 isBookmarked.toggle()
                                 LoginManager.shared.addToWishlist(bookId: book.id)
-                                do{
+                                do {
                                     try await addToWishlistAPI(bookId: book.id)
-                                }catch{
+                                } catch {
                                     LoginManager.shared.removeFromWishlist(bookId: book.id)
                                 }
-                            }
-                            else {
+                            } else {
                                 LoginManager.shared.removeFromWishlist(bookId: book.id)
                                 isBookmarked.toggle()
-                                do{
+                                do {
                                     try await removeWishListApi(bookId: book.id)
-                                }
-                                catch{
+                                } catch {
                                     LoginManager.shared.addToWishlist(bookId: book.id)
                                 }
                             }
@@ -94,9 +101,14 @@ struct BookDetailView: View {
                                 ? "bookmark.fill" : "bookmark"
                         )
                         .font(.system(size: 22))
-                        .foregroundColor(isBookmarked ? Color.primary(for: colorScheme).opacity(0.6) : Color.primary(for: colorScheme).opacity(0.6))
+                        .foregroundColor(
+                            isBookmarked
+                                ? Color.primary(for: colorScheme).opacity(0.6)
+                                : Color.primary(for: colorScheme).opacity(0.6))
                     }
-                    .accessibility(label: Text(isBookmarked ? "Remove from bookmarks" : "Add to bookmarks"))
+                    .accessibility(
+                        label: Text(isBookmarked ? "Remove from bookmarks" : "Add to bookmarks")
+                    )
                     .accessibility(hint: Text("Double tap to toggle bookmark status"))
                 }
                 .padding(.horizontal)
@@ -148,18 +160,20 @@ struct BookDetailView: View {
                                     .accessibility(addTraits: .isHeader)
 
                                 // Author with "by" prefix as shown in the image
-                                Text("by " + (book.authorNames!.isEmpty ? "" : book.authorNames![0]))
-                                    .font(.system(size: 18))
-                                    .foregroundColor(Color.text(for: colorScheme).opacity(0.7))
+                                Text(
+                                    "by " + (book.authorNames!.isEmpty ? "" : book.authorNames![0])
+                                )
+                                .font(.system(size: 18))
+                                .foregroundColor(Color.text(for: colorScheme).opacity(0.7))
                             }
                             .padding(.trailing)
-                            
+
                         }
                         // Status badge - made to look like the blue button in the image
                         Text(bookStatus.displayText)
                             .font(.system(size: 20).bold())
                             .foregroundColor(Color.secondary(for: colorScheme))
-                            .padding(.leading,16)
+                            .padding(.leading, 16)
                             .accessibility(label: Text("Book status: \(bookStatus.displayText)"))
 
                         // Genre tags in a horizontal scroll - styling similar to the teal buttons in the image
@@ -168,8 +182,8 @@ struct BookDetailView: View {
                                 ForEach(book.genreNames ?? [], id: \.self) { genre in
                                     Text(genre)
                                         .font(.system(size: 14).bold())
-                                        .padding(.horizontal,10)
-                                        .padding(.vertical,10)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 10)
                                         .background(
                                             Color.gray.opacity(0.15)
                                         )
@@ -180,7 +194,9 @@ struct BookDetailView: View {
                             .padding(.horizontal)
                         }
                         .accessibilityElement(children: .combine)
-                        .accessibility(label: Text("Genres: \(book.genreNames?.joined(separator: ", ") ?? "")"))
+                        .accessibility(
+                            label: Text("Genres: \(book.genreNames?.joined(separator: ", ") ?? "")")
+                        )
 
                         // Tab selector for Details and Reviews
                         HStack(spacing: 0) {
@@ -211,7 +227,9 @@ struct BookDetailView: View {
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 8)
                                 .accessibility(label: Text(tab.rawValue))
-                                .accessibility(addTraits: selectedTab == tab ? [.isButton, .isSelected] : .isButton)
+                                .accessibility(
+                                    addTraits: selectedTab == tab
+                                        ? [.isButton, .isSelected] : .isButton)
                             }
                         }
                         .padding(.horizontal)
@@ -225,6 +243,8 @@ struct BookDetailView: View {
                             detailsSection
                         case .reviews:
                             reviewsSectionContent()
+                        case .bookClub:
+                            bookClubSection
                         }
                     }
                     .padding(.vertical)
@@ -233,49 +253,49 @@ struct BookDetailView: View {
             .onAppear {
                 loadCoverImage()
             }
-            .onAppear(){
-                Task{
+            .onAppear {
+                Task {
                     let wishlist = try await getWishList()
                     isBookmarked = wishlist.contains(where: { $0.id == book.id })
                 }
             }
-            .onAppear(){
+            .onAppear {
                 BookHandler.shared.socketHandler.messagePublisher
                     .receive(on: DispatchQueue.global(qos: .default))
                     .sink { message in
                         print(message.type)
-                        if message.type == "bookUpdated", message.data.id == book.id{
+                        if message.type == "bookUpdated", message.data.id == book.id {
                             book = message.data
                         }
                     }.store(in: &cancellables)
             }
-            .onAppear(){
-                Task{
+            .onAppear {
+                Task {
                     self.isBorrowLoading = true
                     user = try await LoginManager.shared.getCurrentUser()
                     let borrow = try await BorrowHandler.shared.getBorrowForBookId(book.id)
-                    let reserved = try await ReservationHandler.shared.getReservationForBookId(book.id)
+                    let reserved = try await ReservationHandler.shared.getReservationForBookId(
+                        book.id)
                     isLoading = false
                     isBorrowLoading = false
-                    if reserved != nil{
-                        bookStatus =  .requested
+                    if reserved != nil {
+                        bookStatus = .requested
                         return
                     }
-                    if borrow != nil{
-                        if borrow!.status == .borrowed{
+                    if borrow != nil {
+                        if borrow!.status == .borrowed {
                             bookStatus = .reading
                             return
-                        }
-                        else{
+                        } else {
                             bookStatus = .completed(dueDate: Date())
                             return
                         }
                     }
-                    if book.availableCopies == 0{
-                        bookStatus =  .notAvailable
-                    }else{
+                    if book.availableCopies == 0 {
+                        bookStatus = .notAvailable
+                    } else {
                         bookStatus = .available
-                    
+
                     }
                 }
             }
@@ -284,7 +304,7 @@ struct BookDetailView: View {
         .accessibilityElement(children: .contain)
         .accessibility(label: Text("Book details for \(book.title)"))
     }
-    
+
     // Rest of the code remains the same...
     private func loadCoverImage() {
         // Set loading state
@@ -372,7 +392,7 @@ struct BookDetailView: View {
 
             // Description
             VStack(alignment: .leading, spacing: 10) {
-            
+
                 Text(book.description!)
                     .font(.body)
                     .lineSpacing(6)
@@ -382,7 +402,7 @@ struct BookDetailView: View {
             .accessibility(label: Text("Description: \(book.description ?? "")"))
 
             // Add Rating Section after description
-           
+
             Spacer(minLength: 30)
 
             // Action Button based on status
@@ -406,13 +426,13 @@ struct BookDetailView: View {
             // Action based on current status
             Task {
                 switch bookStatus {
-                case .available,.completed:
+                case .available, .completed:
                     withAnimation {
                         isBorrowLoading = true
                     }
                     do {
                         reservation = try await ReservationHandler.shared.reserve(bookId: book.id)
-                        if var user  = user {
+                        if var user = user {
                             user.reserved_book_ids.append(book.id)
                             UserCacheManager.shared.cacheUser(user)
                             self.user = user
@@ -435,7 +455,8 @@ struct BookDetailView: View {
                         isBorrowLoading = true
                     }
                     do {
-                        let reservation = try await ReservationHandler.shared.getReservationForBookId(book.id)
+                        let reservation = try await ReservationHandler.shared
+                            .getReservationForBookId(book.id)
                         if reservation != nil {
                             try await ReservationHandler.shared.cancelReservation(reservation!.id)
                         }
@@ -455,7 +476,7 @@ struct BookDetailView: View {
                             isBorrowLoading = false
                         }
                     }
-                case .notAvailable,.loading:
+                case .notAvailable, .loading:
                     break
                 }
             }
@@ -469,14 +490,16 @@ struct BookDetailView: View {
                     .foregroundColor(Color.text(for: colorScheme))
                     .cornerRadius(10)
                     .opacity(isBorrowLoading ? 0 : 1)
-                
+
                 // Loading indicator
                 if isBorrowLoading {
                     HStack(spacing: 8) {
                         ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: Color.text(for: colorScheme)))
+                            .progressViewStyle(
+                                CircularProgressViewStyle(tint: Color.text(for: colorScheme))
+                            )
                             .scaleEffect(0.8)
-                        
+
                         Text(loadingText())
                             .font(.subheadline)
                             .foregroundColor(Color.text(for: colorScheme))
@@ -508,7 +531,7 @@ struct BookDetailView: View {
             return "Processing..."
         }
     }
-    
+
     // Helper function for accessibility hints
     private func buttonAccessibilityHint() -> String {
         switch bookStatus {
@@ -526,7 +549,7 @@ struct BookDetailView: View {
             return "Loading book status"
         }
     }
-    
+
     private var actionButtonText: String {
         switch bookStatus {
         case .available:
@@ -547,13 +570,269 @@ struct BookDetailView: View {
 
     private var actionButtonColor: Color {
         switch bookStatus {
-        case .available,.loading,.completed:
+        case .available, .loading, .completed:
             return Color.primary(for: colorScheme).opacity(0.6)
         case .reading:
             return .gray.opacity(0.2)
-        case .requested,.notAvailable:
+        case .requested, .notAvailable:
             return .red.opacity(0.8)
 
+        }
+    }
+
+    // MARK: - Book Club Section
+    private var bookClubSection: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            if isLoadingBookClubInsights {
+                VStack(spacing: 20) {
+                    ProgressView()
+                        .scaleEffect(1.5)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 40)
+
+                    Text("Generating book club insights...")
+                        .font(.headline)
+                        .foregroundColor(Color.secondary(for: colorScheme))
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+            } else if let error = bookClubError {
+                VStack(spacing: 16) {
+                    Image(systemName: "exclamationmark.circle")
+                        .font(.system(size: 40))
+                        .foregroundColor(.red.opacity(0.8))
+                        .padding(.top, 30)
+
+                    Text("Couldn't generate insights")
+                        .font(.headline)
+
+                    Text(error)
+                        .font(.subheadline)
+                        .foregroundColor(Color.secondary(for: colorScheme))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+
+                    Button(action: {
+                        fetchBookClubInsights()
+                    }) {
+                        Text("Try Again")
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            .background(Color.blue.opacity(0.2))
+                            .cornerRadius(8)
+                    }
+                    .padding(.top, 10)
+                }
+                .frame(maxWidth: .infinity)
+            } else if bookClubQuestions.isEmpty && bookClubThemes.isEmpty && bookClubFacts.isEmpty {
+                VStack(spacing: 20) {
+                    Image(systemName: "text.bubble")
+                        .font(.system(size: 50))
+                        .foregroundColor(Color.accent(for: colorScheme).opacity(0.7))
+                        .padding(.top, 30)
+
+                    Text("Get AI-Generated Book Club Insights")
+                        .font(.headline)
+                        .multilineTextAlignment(.center)
+
+                    Text(
+                        "Generate discussion questions, explore themes, and discover interesting facts about this book."
+                    )
+                    .font(.subheadline)
+                    .foregroundColor(Color.secondary(for: colorScheme))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 20)
+
+                    Button(action: {
+                        fetchBookClubInsights()
+                    }) {
+                        Text("Generate Insights")
+                            .fontWeight(.medium)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 12)
+                            .background(Color.accent(for: colorScheme).opacity(0.2))
+                            .cornerRadius(10)
+                    }
+                    .padding(.top, 10)
+                }
+                .frame(maxWidth: .infinity)
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 30) {
+                        // Discussion Questions
+                        if !bookClubQuestions.isEmpty {
+                            VStack(alignment: .leading, spacing: 16) {
+                                HStack {
+                                    Image(systemName: "questionmark.bubble.fill")
+                                        .foregroundColor(Color.accent(for: colorScheme))
+                                    Text("Discussion Questions")
+                                        .font(.headline)
+                                        .fontWeight(.bold)
+                                }
+                                .padding(.bottom, 4)
+
+                                ForEach(Array(bookClubQuestions.enumerated()), id: \.offset) {
+                                    index, question in
+                                    HStack(alignment: .top, spacing: 10) {
+                                        Text("\(index + 1).")
+                                            .fontWeight(.medium)
+                                            .foregroundColor(Color.accent(for: colorScheme))
+
+                                        Text(question)
+                                            .foregroundColor(Color.text(for: colorScheme))
+                                    }
+                                    .padding(.vertical, 6)
+                                }
+                            }
+                            .padding()
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.primary(for: colorScheme).opacity(0.1))
+                            )
+                            .padding(.horizontal)
+                        }
+
+                        // Themes
+                        if !bookClubThemes.isEmpty {
+                            VStack(alignment: .leading, spacing: 16) {
+                                HStack {
+                                    Image(systemName: "rectangle.3.group.fill")
+                                        .foregroundColor(Color.accent(for: colorScheme))
+                                    Text("Key Themes")
+                                        .font(.headline)
+                                        .fontWeight(.bold)
+                                }
+                                .padding(.bottom, 4)
+
+                                ForEach(bookClubThemes, id: \.self) { theme in
+                                    HStack(alignment: .top, spacing: 10) {
+                                        Image(systemName: "circle.fill")
+                                            .font(.system(size: 8))
+                                            .foregroundColor(Color.accent(for: colorScheme))
+                                            .padding(.top, 6)
+
+                                        Text(theme)
+                                            .foregroundColor(Color.text(for: colorScheme))
+                                    }
+                                    .padding(.vertical, 4)
+                                }
+                            }
+                            .padding()
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.primary(for: colorScheme).opacity(0.1))
+                            )
+                            .padding(.horizontal)
+                        }
+
+                        // Interesting Facts
+                        if !bookClubFacts.isEmpty {
+                            VStack(alignment: .leading, spacing: 16) {
+                                HStack {
+                                    Image(systemName: "lightbulb.fill")
+                                        .foregroundColor(Color.accent(for: colorScheme))
+                                    Text("Interesting Facts")
+                                        .font(.headline)
+                                        .fontWeight(.bold)
+                                }
+                                .padding(.bottom, 4)
+
+                                ForEach(bookClubFacts, id: \.self) { fact in
+                                    HStack(alignment: .top, spacing: 10) {
+                                        Image(systemName: "star.fill")
+                                            .font(.system(size: 12))
+                                            .foregroundColor(Color.accent(for: colorScheme))
+                                            .padding(.top, 3)
+
+                                        Text(fact)
+                                            .foregroundColor(Color.text(for: colorScheme))
+                                    }
+                                    .padding(.vertical, 4)
+                                }
+                            }
+                            .padding()
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.primary(for: colorScheme).opacity(0.1))
+                            )
+                            .padding(.horizontal)
+                        }
+
+                        // Refresh button
+                        Button(action: {
+                            fetchBookClubInsights()
+                        }) {
+                            HStack {
+                                Image(systemName: "arrow.clockwise")
+                                Text("Refresh Insights")
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.accent(for: colorScheme).opacity(0.15))
+                            .cornerRadius(10)
+                            .foregroundColor(Color.accent(for: colorScheme))
+                        }
+                        .padding(.horizontal)
+                        .padding(.top, 10)
+                        .padding(.bottom, 30)
+                    }
+                }
+            }
+        }
+        .padding(.top)
+        .onAppear {
+            // Only fetch insights if we haven't already
+            if bookClubQuestions.isEmpty && bookClubThemes.isEmpty && bookClubFacts.isEmpty {
+                // Don't auto-fetch, let the user choose when to generate
+                // fetchBookClubInsights()
+            }
+        }
+    }
+
+    private func fetchBookClubInsights() {
+        isLoadingBookClubInsights = true
+        bookClubError = nil
+
+        Task {
+            do {
+                // Create prompt for Gemini API
+                let title = book.title
+                let description = book.description ?? "No description available"
+                let authors = book.authorNames?.joined(separator: ", ") ?? "Unknown author"
+
+                let prompt = """
+                    For the book "\(title)" by \(authors), with this description: "\(description.prefix(500))", 
+                    please generate book club insights in JSON format with these sections:
+
+                    1. discussionQuestions: 3-5 thought-provoking questions that would spark meaningful conversation in a book club
+                    2. themes: 3-4 major themes present in the book with brief descriptions
+                    3. interestingFacts: 2-3 interesting facts related to the book, its author, or its context
+
+                    Return the response in valid JSON format like this:
+                    {
+                      "discussionQuestions": ["Question 1", "Question 2", "Question 3"],
+                      "themes": ["Theme 1: Description", "Theme 2: Description"],
+                      "interestingFacts": ["Fact 1", "Fact 2"]
+                    }
+                    """
+
+                // Call Gemini API through FolioService
+                let response = try await FolioService.shared.generateBookClubInsights(
+                    prompt: prompt)
+
+                // Parse the response and update UI
+                await MainActor.run {
+                    bookClubQuestions = response.discussionQuestions
+                    bookClubThemes = response.themes
+                    bookClubFacts = response.interestingFacts
+                    isLoadingBookClubInsights = false
+                }
+            } catch {
+                print("Error generating book club insights: \(error.localizedDescription)")
+                await MainActor.run {
+                    bookClubError = "Could not generate insights. Please try again later."
+                    isLoadingBookClubInsights = false
+                }
+            }
         }
     }
 }
@@ -580,7 +859,7 @@ enum BookStatus {
         case .notAvailable:
             return "Not Available"
         case .completed:
-           return "Completed"
+            return "Completed"
 
         }
     }
@@ -602,6 +881,3 @@ enum BookStatus {
 //
 //        }
 //    }
-
-
-
